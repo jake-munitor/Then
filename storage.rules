@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isApprovedFollower(authorUid) {
+      return signedIn() &&
+        firestore.exists(/databases/(default)/documents/users/$(authorUid)/followers/$(request.auth.uid));
+    }
+
+    function momentAppearsInWander(momentId) {
+      return signedIn() &&
+        firestore.get(/databases/(default)/documents/moments/$(momentId)).data.appearInWander == true;
+    }
+
+    match /users/{uid}/avatar/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid}/moments/{momentId}/{allPaths=**} {
+      allow read: if signedIn() && (request.auth.uid == uid || isApprovedFollower(uid) || momentAppearsInWander(momentId));
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+  }
+}

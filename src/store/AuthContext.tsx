@@ -1,0 +1,125 @@
+import React, { createContext, useEffect, useMemo, useState } from 'react';
+import {
+  User as FirebaseUser,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+} from 'firebase/auth';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+
+import { auth, db } from '../firebase/firebase';
+
+export type AuthUser = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+};
+
+type AuthContextValue = {
+  user: AuthUser | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (displayName: string, email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateDisplayName: (displayName: string) => Promise<void>;
+  logout: () => Promise<void>;
+};
+
+export const AuthContext = createContext<AuthContextValue>({} as AuthContextValue);
+
+function toAuthUser(user: FirebaseUser): AuthUser {
+  return { uid: user.uid, email: user.email, displayName: user.displayName };
+}
+
+function handleFromEmail(email: string | null) {
+  return (email?.split('@')[0] ?? 'friend').toLowerCase().replace(/[^a-z0-9_]/g, '');
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
+
+    const loadingFallback = setTimeout(() => {
+      setIsLoading(false);
+    }, 4000);
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      clearTimeout(loadingFallback);
+      setUser(firebaseUser ? toAuthUser(firebaseUser) : null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      clearTimeout(loadingFallback);
+      unsubscribe();
+    };
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      isLoading,
+      login: async (email, password) => {
+        if (!auth) throw new Error('Firebase is not initialized.');
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+      },
+      register: async (displayName, email, password) => {
+        if (!auth || !db) throw new Error('Firebase is not initialized.');
+        const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const cleanName = displayName.trim();
+        await updateProfile(credential.user, { displayName: cleanName });
+
+        const baseProfile = {
+          displayName: cleanName,
+          handle: handleFromEmail(credential.user.email),
+          avatarUrl: null,
+          profileVisibility: 'private',
+          appearInWander: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        await setDoc(doc(db, 'users', credential.user.uid), {
+          ...baseProfile,
+          email: credential.user.email,
+        });
+        await setDoc(doc(db, 'publicUsers', credential.user.uid), baseProfile);
+      },
+      resetPassword: async (email) => {
+        if (!auth) throw new Error('Firebase is not initialized.');
+        await sendPasswordResetEmail(auth, email.trim());
+      },
+      updateDisplayName: async (displayName) => {
+        if (!auth?.currentUser || !db) throw new Error('Firebase is not initialized.');
+        const cleanName = displayName.trim();
+        await updateProfile(auth.currentUser, { displayName: cleanName });
+        await setDoc(
+          doc(db, 'users', auth.currentUser.uid),
+          { displayName: cleanName, updatedAt: serverTimestamp() },
+          { merge: true },
+        );
+        await setDoc(
+          doc(db, 'publicUsers', auth.currentUser.uid),
+          { displayName: cleanName, updatedAt: serverTimestamp() },
+          { merge: true },
+        );
+      },
+      logout: async () => {
+        if (!auth) throw new Error('Firebase is not initialized.');
+        await signOut(auth);
+      },
+    }),
+    [user],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

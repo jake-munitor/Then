@@ -1,0 +1,110 @@
+import '@testing-library/jest-native/extend-expect';
+
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const insets = { top: 0, bottom: 0, left: 0, right: 0 };
+
+  return {
+    SafeAreaView: ({ children, style }: any) => React.createElement(View, { style }, children),
+    SafeAreaProvider: ({ children }: any) => children,
+    SafeAreaInsetsContext: React.createContext(insets),
+    SafeAreaFrameContext: React.createContext({ x: 0, y: 0, width: 0, height: 0 }),
+    useSafeAreaInsets: () => insets,
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 0, height: 0 }),
+  };
+});
+
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+
+jest.mock('react-native-gesture-handler', () => {
+  const View = require('react-native/Libraries/Components/View/View');
+  return {
+    Swipeable: View,
+    DrawerLayout: View,
+    State: {},
+    PanGestureHandler: View,
+    TapGestureHandler: View,
+    LongPressGestureHandler: View,
+    ForceTouchGestureHandler: View,
+    RotationGestureHandler: View,
+    FlingGestureHandler: View,
+    PinchGestureHandler: View,
+    NativeViewGestureHandler: View,
+    Directions: {},
+  };
+});
+
+jest.mock('expo-font', () => ({
+  isLoaded: jest.fn(() => true),
+  loadAsync: jest.fn(async () => {}),
+  useFonts: () => [true],
+}));
+
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  requestCameraPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  launchImageLibraryAsync: jest.fn(async () => ({ canceled: true })),
+  launchCameraAsync: jest.fn(async () => ({ canceled: true })),
+  MediaTypeOptions: { Images: 'Images' },
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
+jest.mock('firebase/app', () => ({
+  getApp: jest.fn(() => ({})),
+  getApps: jest.fn(() => []),
+  initializeApp: jest.fn(() => ({})),
+}));
+
+jest.mock('firebase/auth', () => ({
+  createUserWithEmailAndPassword: jest.fn(async () => ({
+    user: { uid: 'user-1', email: 'jake@example.com', displayName: 'Jake' },
+  })),
+  getAuth: jest.fn(() => ({ currentUser: { uid: 'user-1' } })),
+  initializeAuth: jest.fn(() => ({ currentUser: { uid: 'user-1' } })),
+  getReactNativePersistence: jest.fn(() => ({})),
+  onAuthStateChanged: jest.fn((_auth, onChange) => {
+    onChange(null);
+    return () => {};
+  }),
+  sendPasswordResetEmail: jest.fn(async () => {}),
+  signInWithEmailAndPassword: jest.fn(async () => {}),
+  signOut: jest.fn(async () => {}),
+  updateProfile: jest.fn(async () => {}),
+}));
+
+jest.mock('firebase/storage', () => ({
+  getDownloadURL: jest.fn(async () => 'https://example.com/photo.jpg'),
+  getStorage: jest.fn(() => ({})),
+  ref: jest.fn(() => ({})),
+  uploadBytes: jest.fn(async () => ({})),
+}));
+
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn(() => ({})),
+  doc: jest.fn(() => ({})),
+  query: jest.fn(() => ({})),
+  orderBy: jest.fn(() => ({})),
+  limit: jest.fn(() => ({})),
+  increment: jest.fn((n: number) => n),
+  serverTimestamp: jest.fn(() => ({ __type: 'serverTimestamp' })),
+  writeBatch: jest.fn(() => ({
+    set: jest.fn(),
+    update: jest.fn(),
+    commit: jest.fn(async () => {}),
+  })),
+  onSnapshot: jest.fn((_ref: any, onNext: any) => {
+    if (typeof onNext === 'function') {
+      onNext({ docs: [], exists: () => false, data: () => ({}) });
+    }
+    return () => {};
+  }),
+  getDoc: jest.fn(async () => ({ exists: () => false, data: () => ({}) })),
+  setDoc: jest.fn(async () => {}),
+  updateDoc: jest.fn(async () => {}),
+  addDoc: jest.fn(async () => ({ id: 'test' })),
+  deleteDoc: jest.fn(async () => {}),
+}));

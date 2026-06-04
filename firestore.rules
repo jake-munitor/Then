@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isApprovedFollower(authorUid) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(authorUid)/followers/$(request.auth.uid));
+    }
+
+    function canSeeMoment(authorUid) {
+      return signedIn() && (request.auth.uid == authorUid || isApprovedFollower(authorUid));
+    }
+
+    match /users/{uid} {
+      allow read, write: if isSelf(uid);
+
+      match /following/{targetUid} {
+        allow read: if isSelf(uid);
+        allow create, update, delete: if isSelf(uid) || isSelf(targetUid);
+      }
+
+      match /followers/{followerUid} {
+        allow read: if isSelf(uid) || isSelf(followerUid);
+        allow create, update, delete: if isSelf(uid);
+      }
+
+      match /followRequests/{requesterUid} {
+        allow read: if isSelf(uid) || isSelf(requesterUid);
+        allow create: if isSelf(requesterUid);
+        allow update, delete: if isSelf(uid) || isSelf(requesterUid);
+      }
+
+      match /kept/{momentId} {
+        allow read, write: if isSelf(uid);
+      }
+    }
+
+    match /publicUsers/{uid} {
+      allow read: if signedIn();
+      allow write: if isSelf(uid);
+    }
+
+    match /moments/{momentId} {
+      allow read: if canSeeMoment(resource.data.authorUid) ||
+        (signedIn() && resource.data.appearInWander == true);
+      allow create: if signedIn() && request.auth.uid == request.resource.data.authorUid;
+      allow update: if false;
+      allow delete: if signedIn() && request.auth.uid == resource.data.authorUid;
+
+      match /back/{detailId} {
+        allow read: if signedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
+        allow create: if signedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
+        allow update: if false;
+        allow delete: if signedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
+      }
+
+      match /keeps/{uid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.auth.uid == uid;
+        allow delete: if signedIn() && (
+          request.auth.uid == uid ||
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid
+        );
+        allow update: if false;
+      }
+
+      match /notes/{noteId} {
+        allow read: if canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid);
+        allow create: if signedIn() &&
+          canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid) &&
+          request.auth.uid == request.resource.data.authorUid;
+        allow update: if signedIn() && request.auth.uid == resource.data.authorUid;
+        allow delete: if signedIn() && (
+          request.auth.uid == resource.data.authorUid ||
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid
+        );
+      }
+    }
+  }
+}
