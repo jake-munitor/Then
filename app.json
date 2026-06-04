@@ -2,6 +2,7 @@
   "expo": {
     "name": "Then",
     "slug": "then",
+    "owner": "finnman81",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -54,6 +55,11 @@
     "updates": {
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3175f2f5-905a-44f5-ae35-37406d04f794"
+      }
     }
   }
 }
