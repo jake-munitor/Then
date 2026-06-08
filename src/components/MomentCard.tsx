@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Image, Pressable, useWindowDimensions, View } from 'react-native';
 import { Button, IconButton, Text } from 'react-native-paper';
 
 import { subscribeMomentBack, subscribeMomentKeep, toggleKeep } from '../services/moments';
@@ -22,6 +22,7 @@ type Props = {
 
 export default function MomentCard({ moment, author, mode = 'feed', connectionLine, onNotes, onFollow, canFlipBack = false }: Props) {
   const { user } = useContext(AuthContext);
+  const { width: windowWidth } = useWindowDimensions();
   const [kept, setKept] = useState(false);
   const [back, setBack] = useState<MomentBack | null>(null);
   const [showBack, setShowBack] = useState(false);
@@ -47,6 +48,7 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
   const canShowBack = canFlipBack && Boolean(back?.text);
   const isBackVisible = canShowBack && showBack;
   const cardRotation = mode === 'wander' ? '0deg' : rotationForId(moment.id);
+  const cardWidth = Math.min(Math.max(windowWidth - 56, 280), 520);
 
   const handleKeep = async () => {
     if (!user?.uid || busy) return;
@@ -69,8 +71,7 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         backgroundColor: colors.paper,
         borderColor: colors.border,
         borderWidth: 1,
-        width: '100%',
-        maxWidth: 520,
+        width: cardWidth,
         alignSelf: 'center',
         marginBottom: 24,
         padding: 14,

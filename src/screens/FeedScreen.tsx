@@ -48,7 +48,7 @@ export default function FeedScreen() {
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
       <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
-        <Text style={{ fontFamily: fonts.handwriting, fontSize: 42, color: colors.ink }}>then</Text>
+        <Text style={{ fontFamily: fonts.handwriting, fontSize: 42, color: colors.ink }}>Then</Text>
         <Text style={{ color: colors.textSecondary }}>Photos from people you choose.</Text>
       </View>
       <FlatList

@@ -57,7 +57,7 @@ export default function AuthScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', marginBottom: 28 }}>
-          <Text style={{ fontFamily: fonts.handwriting, fontSize: 56, color: colors.ink }}>then</Text>
+          <Text style={{ fontFamily: fonts.handwriting, fontSize: 56, color: colors.ink }}>Then</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 16, lineHeight: 24 }}>Photos for people you choose.</Text>
         </View>
 
