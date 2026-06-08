@@ -15,7 +15,26 @@ Tagline: **see your people, not the algorithm.**
 - Posts cannot be edited after sharing. Like a polaroid, you can delete, but not revise.
 - Kept moments are private.
 - Archive is yours to find. Then never pushes old moments at you.
-- The business model is subscription-only. No advertising. Ever.
+- Core functionality is free. No ads, no algorithm, and no subscription required.
+- Revenue must come from optional support and memory artifacts, never user performance.
+
+## Revenue Philosophy
+
+- Users may optionally support Then with a one-time contribution.
+- Then may offer printed or digital memory artifacts, beginning with an annual Yearbook.
+- Contributions and purchases never unlock core social features or increase distribution.
+- Then does not sell attention, rank users, boost posts, or monetize engagement metrics.
+- Payments, ordering, and print fulfillment are intentionally outside the v1 app.
+
+## Your Year on Then
+
+The annual recap is a private reflection experience, not a performance report. It may organize a user's own photos, captions, dates, and private reflections into a consistent digital Yearbook preview.
+
+- No like totals, follower growth, rankings, streaks, or "top post" language.
+- The digital preview can be saved or ignored without affecting the app.
+- A future print option may offer hardcover and softcover copies through print-on-demand fulfillment.
+- High-resolution print files should only be generated after an order is placed.
+- See `YEARBOOK.md` for the product contract and phased implementation boundary.
 
 ## Vocabulary
 

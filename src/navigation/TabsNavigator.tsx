@@ -54,7 +54,7 @@ export default function TabsNavigator() {
         },
         tabBarBadgeStyle: {
           backgroundColor: colors.primary,
-          color: '#FFFFFF',
+          color: colors.paper,
           fontFamily: fonts.bodySemiBold,
         },
       }}

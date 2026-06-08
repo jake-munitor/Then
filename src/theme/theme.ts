@@ -16,7 +16,7 @@ export const appTheme = {
     outline: colors.border,
     outlineVariant: colors.border,
     error: colors.error,
-    onPrimary: '#FFFFFF',
+    onPrimary: colors.paper,
     onBackground: colors.textPrimary,
     onSurface: colors.textPrimary,
     onSurfaceVariant: colors.textSecondary,

@@ -127,7 +127,7 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
                   position: 'absolute',
                   right: 10,
                   bottom: 10,
-                  backgroundColor: 'rgba(255, 252, 248, 0.82)',
+                  backgroundColor: 'rgba(250, 248, 244, 0.88)',
                   paddingHorizontal: 8,
                   paddingVertical: 4,
                   borderColor: colors.border,
@@ -196,7 +196,7 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
                   backgroundColor: colors.primary,
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontFamily: fonts.bodySemiBold, fontSize: 10 }}>{moment.noteCount}</Text>
+                <Text style={{ color: colors.paper, fontFamily: fonts.bodySemiBold, fontSize: 10 }}>{moment.noteCount}</Text>
               </View>
             ) : null}
           </View>
