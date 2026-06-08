@@ -10,5 +10,6 @@ export type TabsParamList = {
   FeedTab: undefined;
   WanderTab: undefined;
   NewMomentTab: undefined;
+  FriendsTab: undefined;
   RollTab: undefined;
 };

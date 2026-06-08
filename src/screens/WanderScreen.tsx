@@ -82,11 +82,7 @@ export default function WanderScreen() {
         ListEmptyComponent={
           <EmptyState
             title={moments.length ? 'Nothing new' : 'Nothing here yet'}
-            message={
-              moments.length
-                ? 'You already follow or own everything here.'
-                : 'Public moments will show here.'
-            }
+            message={moments.length ? 'You already follow or own everything here.' : 'Public moments will show here.'}
           />
         }
         renderItem={({ item }) => (

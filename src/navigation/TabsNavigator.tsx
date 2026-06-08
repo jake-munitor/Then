@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Icon, useTheme } from 'react-native-paper';
 
 import FeedScreen from '../screens/FeedScreen';
+import FriendsScreen from '../screens/FriendsScreen';
 import NewMomentScreen from '../screens/NewMomentScreen';
 import RollScreen from '../screens/RollScreen';
 import WanderScreen from '../screens/WanderScreen';
@@ -47,7 +48,7 @@ export default function TabsNavigator() {
         },
         tabBarLabelStyle: {
           fontFamily: fonts.bodyMedium,
-          fontSize: 12,
+          fontSize: 11,
         },
         tabBarIconStyle: {
           marginTop: 2,
@@ -109,6 +110,14 @@ export default function TabsNavigator() {
               <Icon source="camera-plus-outline" color={theme.colors.onPrimary} size={30} />
             </TouchableOpacity>
           ),
+        }}
+      />
+      <Tab.Screen
+        name="FriendsTab"
+        component={FriendsScreen}
+        options={{
+          title: 'Friends',
+          tabBarIcon: ({ color, size }) => <Icon source="account-multiple-outline" color={color} size={size} />,
         }}
       />
       <Tab.Screen

@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -66,6 +67,17 @@ export async function requestFollow(params: {
     context: params.context.trim(),
     createdAt: serverTimestamp(),
   });
+}
+
+export async function getPendingFollowRequestIds(requesterUid: string, targetUids: string[]) {
+  if (!db || targetUids.length === 0) return [];
+  const firestore = db;
+  const uniqueTargets = Array.from(new Set(targetUids.filter((uid) => uid && uid !== requesterUid)));
+  const snapshots = await Promise.all(
+    uniqueTargets.map((targetUid) => getDoc(doc(firestore, 'users', targetUid, 'followRequests', requesterUid))),
+  );
+
+  return uniqueTargets.filter((_, index) => snapshots[index].exists());
 }
 
 export async function approveFollow(params: { ownerUid: string; requesterUid: string }) {
