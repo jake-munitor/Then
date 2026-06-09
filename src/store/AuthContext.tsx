@@ -34,8 +34,9 @@ function toAuthUser(user: FirebaseUser): AuthUser {
   return { uid: user.uid, email: user.email, displayName: user.displayName };
 }
 
-function handleFromEmail(email: string | null) {
-  return (email?.split('@')[0] ?? 'friend').toLowerCase().replace(/[^a-z0-9_]/g, '');
+function handleFromDisplayName(displayName: string, email: string | null) {
+  const value = displayName || email?.split('@')[0] || 'friend';
+  return value.toLowerCase().replace(/[^a-z0-9_]/g, '');
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const baseProfile = {
           displayName: cleanName,
-          handle: handleFromEmail(credential.user.email),
+          handle: handleFromDisplayName(cleanName, credential.user.email),
           avatarUrl: null,
           profileVisibility: 'private',
           appearInWander: false,

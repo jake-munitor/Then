@@ -48,15 +48,22 @@ describe('friend discovery', () => {
     expect(result.map((user) => user.uid)).toEqual(['public-user']);
   });
 
-  it('finds a private profile only by its exact handle', () => {
-    const result = filterDiscoverableUsers({
+  it('finds a private profile by its exact handle or display name', () => {
+    const byHandle = filterDiscoverableUsers({
       users,
       currentUid: 'current-user',
       following: [],
       query: '@maisiek',
     });
+    const byDisplayName = filterDiscoverableUsers({
+      users,
+      currentUid: 'current-user',
+      following: [],
+      query: 'Maisie K',
+    });
 
-    expect(result.map((user) => user.uid)).toEqual(['private-user']);
+    expect(byHandle.map((user) => user.uid)).toEqual(['private-user']);
+    expect(byDisplayName.map((user) => user.uid)).toEqual(['private-user']);
     expect(
       filterDiscoverableUsers({
         users,

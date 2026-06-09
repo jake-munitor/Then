@@ -62,7 +62,9 @@ export function filterDiscoverableUsers(params: {
     }
 
     const handleQuery = queryText.replace(/^@/, '');
-    return Boolean(publicUser.handle && publicUser.handle.toLowerCase() === handleQuery);
+    const exactDisplayName = publicUser.displayName?.trim().toLowerCase() === queryText;
+    const exactHandle = publicUser.handle?.toLowerCase() === handleQuery;
+    return Boolean(exactDisplayName || exactHandle);
   });
 }
 
@@ -97,7 +99,7 @@ export async function ensurePublicUser(uid: string, fallback: { displayName: str
 
   await setDoc(publicRef, {
     displayName: fallback.displayName ?? 'Then Friend',
-    handle: normalizeHandle(fallback.email),
+    handle: normalizeHandle(fallback.displayName ?? fallback.email),
     avatarUrl: null,
     profileVisibility: 'private',
     appearInWander: false,
