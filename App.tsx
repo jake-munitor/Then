@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { BadScript_400Regular } from '@expo-google-fonts/bad-script';
+import { SpaceMono_700Bold } from '@expo-google-fonts/space-mono';
 import { PaperProvider } from 'react-native-paper';
 
 import AppNavigator from './src/navigation/AppNavigator';
@@ -17,6 +18,7 @@ export default function App() {
     Inter_500Medium,
     Inter_600SemiBold,
     BadScript_400Regular,
+    SpaceMono_700Bold,
   });
 
   if (!loaded) {

@@ -14,6 +14,7 @@ import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { formatMemoryDate } from '../utils/dates';
+import DateStamp from './DateStamp';
 import HandwrittenText from './HandwrittenText';
 import PaperTape from './PaperTape';
 
@@ -156,23 +157,9 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
                   position: 'absolute',
                   right: 10,
                   bottom: 10,
-                  backgroundColor: 'rgba(250, 248, 244, 0.88)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderColor: colors.border,
-                  borderWidth: 1,
                 }}
               >
-                <Text
-                  style={{
-                    color: colors.textPrimary,
-                    fontFamily: fonts.bodySemiBold,
-                    fontSize: 11,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {memoryDate}
-                </Text>
+                <DateStamp value={memoryDate} />
               </View>
             ) : null}
           </View>
