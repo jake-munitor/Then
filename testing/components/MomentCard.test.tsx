@@ -16,7 +16,12 @@ jest.mock('../../src/services/moments', () => ({
     onChange(false);
     return () => {};
   }),
+  subscribeMomentSaved: jest.fn((_params, onChange) => {
+    onChange(false);
+    return () => {};
+  }),
   toggleKeep: jest.fn(async () => {}),
+  toggleSave: jest.fn(async () => {}),
 }));
 
 const moment: Moment = {
@@ -70,6 +75,7 @@ describe('MomentCard', () => {
     expect(screen.queryByText("the field behind gran's.")).toBeNull();
     fireEvent.press(screen.getByLabelText('Flip moment'));
     expect(screen.getByText("the field behind gran's.")).toBeTruthy();
+    expect(screen.getByLabelText('Show photo front')).toBeTruthy();
   });
 
   it('does not expose the private back in wander mode', () => {
@@ -82,9 +88,9 @@ describe('MomentCard', () => {
   it('renders only the normal heart, note, and save actions', () => {
     renderCard();
 
-    expect(screen.getByLabelText('Keep this')).toBeTruthy();
+    expect(screen.getByLabelText('Like this')).toBeTruthy();
     expect(screen.getByLabelText('Open notes')).toBeTruthy();
-    expect(screen.getByLabelText('Add to kept')).toBeTruthy();
+    expect(screen.getByLabelText('Save for later')).toBeTruthy();
     expect(screen.queryByLabelText('Delete moment')).toBeNull();
   });
 });

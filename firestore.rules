@@ -40,6 +40,10 @@ service cloud.firestore {
       match /kept/{momentId} {
         allow read, write: if isSelf(uid);
       }
+
+      match /saved/{momentId} {
+        allow read, write: if isSelf(uid);
+      }
     }
 
     match /publicUsers/{uid} {
@@ -51,7 +55,20 @@ service cloud.firestore {
       allow read: if canSeeMoment(resource.data.authorUid) ||
         (signedIn() && resource.data.appearInWander == true);
       allow create: if signedIn() && request.auth.uid == request.resource.data.authorUid;
-      allow update: if false;
+      allow update: if signedIn() && (
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['keptCount']) &&
+          request.resource.data.keptCount >= 0 &&
+          (
+            request.resource.data.keptCount == resource.data.keptCount + 1 ||
+            request.resource.data.keptCount == resource.data.keptCount - 1
+          )
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noteCount']) &&
+          request.resource.data.noteCount == resource.data.noteCount + 1
+        )
+      );
       allow delete: if signedIn() && request.auth.uid == resource.data.authorUid;
 
       match /back/{detailId} {

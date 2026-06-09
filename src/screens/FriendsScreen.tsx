@@ -4,6 +4,7 @@ import { Button, Dialog, Portal, Searchbar, Text, TextInput } from 'react-native
 
 import EmptyState from '../components/EmptyState';
 import Screen from '../components/Screen';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getPendingFollowRequestIds, requestFollow, subscribeFollowing } from '../services/follows';
 import type { PublicUser } from '../services/types';
 import { filterDiscoverableUsers, subscribeDiscoverableUsers } from '../services/users';
@@ -21,12 +22,20 @@ export default function FriendsScreen() {
   const [context, setContext] = useState(`I'd like to keep up.`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
-  useEffect(() => subscribeDiscoverableUsers(setPeople), []);
+  useEffect(
+    () =>
+      subscribeDiscoverableUsers((nextPeople) => {
+        setPeople(nextPeople);
+        finishRefresh();
+      }),
+    [finishRefresh, refreshKey],
+  );
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeFollowing(user.uid, setFollowing);
-  }, [user?.uid]);
+  }, [refreshKey, user?.uid]);
   useEffect(() => {
     if (!user?.uid || people.length === 0) {
       setSentRequests([]);
@@ -105,6 +114,8 @@ export default function FriendsScreen() {
 
       <FlatList
         data={visiblePeople}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         keyExtractor={(person) => person.uid}
         contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: 36, gap: 12 }}
         ListEmptyComponent={

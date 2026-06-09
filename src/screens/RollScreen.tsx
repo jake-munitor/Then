@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Image, View } from 'react-native';
-import { Button, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper';
+import { Badge, Button, IconButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -8,9 +8,10 @@ import { useNavigation } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { db } from '../firebase/firebase';
 import { approveFollow, declineFollow, subscribeFollowers, subscribeFollowing, subscribeFollowRequests } from '../services/follows';
-import { subscribeKeptMomentIds, subscribeMomentsByAuthors, subscribeMomentsByIds } from '../services/moments';
+import { subscribeMomentsByAuthors, subscribeMomentsByIds, subscribeSavedMomentIds } from '../services/moments';
 import { uploadAvatar } from '../services/photos';
 import type { FollowRequest, Moment, ProfileVisibility, PublicUser } from '../services/types';
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
@@ -19,7 +20,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { initialsFromName } from '../utils/formatters';
 
-type RollView = 'archive' | 'kept' | 'requests';
+type RollView = 'archive' | 'saved' | 'requests';
 
 export default function RollScreen() {
   const { user, logout, updateDisplayName } = useContext(AuthContext);
@@ -28,8 +29,8 @@ export default function RollScreen() {
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>('private');
   const [appearInWander, setAppearInWander] = useState(false);
   const [archive, setArchive] = useState<Moment[]>([]);
-  const [keptIds, setKeptIds] = useState<string[]>([]);
-  const [kept, setKept] = useState<Moment[]>([]);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [saved, setSaved] = useState<Moment[]>([]);
   const [requests, setRequests] = useState<FollowRequest[]>([]);
   const [followers, setFollowers] = useState<string[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
@@ -38,35 +39,42 @@ export default function RollScreen() {
   const [view, setView] = useState<RollView>('archive');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
+
+  useEffect(() => {
+    if (!user?.uid) {
+      finishRefresh();
+      return;
+    }
+    return subscribeMomentsByAuthors([user.uid], (nextArchive) => {
+      setArchive(nextArchive);
+      finishRefresh();
+    });
+  }, [finishRefresh, refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeMomentsByAuthors([user.uid], setArchive);
-  }, [user?.uid]);
+    return subscribeSavedMomentIds(user.uid, setSavedIds);
+  }, [refreshKey, user?.uid]);
 
-  useEffect(() => {
-    if (!user?.uid) return;
-    return subscribeKeptMomentIds(user.uid, setKeptIds);
-  }, [user?.uid]);
-
-  useEffect(() => subscribeMomentsByIds(keptIds, setKept), [keptIds.join('|')]);
+  useEffect(() => subscribeMomentsByIds(savedIds, setSaved), [refreshKey, savedIds.join('|')]);
 
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeFollowRequests(user.uid, setRequests);
-  }, [user?.uid]);
+  }, [refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeFollowers(user.uid, setFollowers);
-  }, [user?.uid]);
+  }, [refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeFollowing(user.uid, setFollowing);
-  }, [user?.uid]);
+  }, [refreshKey, user?.uid]);
 
-  const visibleMoments = useMemo(() => (view === 'archive' ? archive : kept), [archive, kept, view]);
+  const visibleMoments = useMemo(() => (view === 'archive' ? archive : saved), [archive, saved, view]);
   const authorUids = useMemo(() => visibleMoments.map((moment) => moment.authorUid), [visibleMoments]);
 
   useEffect(() => subscribePublicUsers(authorUids, setPublicUsers), [authorUids.join('|')]);
@@ -124,11 +132,27 @@ export default function RollScreen() {
   };
 
   return (
-    <Screen contentStyle={{ alignItems: 'center' }}>
+    <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={{ width: '100%', maxWidth: 640, gap: 18 }}>
-      <View>
-        <Text style={{ fontFamily: fonts.handwriting, fontSize: 40, color: colors.ink }}>your roll</Text>
-        <Text style={{ color: colors.textSecondary }}>Archive, kept, requests.</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View>
+          <Text style={{ fontFamily: fonts.handwriting, fontSize: 40, color: colors.ink }}>your roll</Text>
+          <Text style={{ color: colors.textSecondary }}>Archive, saved, requests.</Text>
+        </View>
+        <View>
+          <IconButton
+            icon={requests.length ? 'bell' : 'bell-outline'}
+            iconColor={requests.length ? colors.primary : colors.textSecondary}
+            size={22}
+            onPress={() => setView('requests')}
+            accessibilityLabel={requests.length ? `${requests.length} pending requests` : 'Open requests'}
+          />
+          {requests.length ? (
+            <Badge style={{ position: 'absolute', right: 2, top: 2, backgroundColor: colors.primary }}>
+              {requests.length}
+            </Badge>
+          ) : null}
+        </View>
       </View>
 
       <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 16, gap: 14 }}>
@@ -190,7 +214,7 @@ export default function RollScreen() {
         onValueChange={(value) => setView(value as RollView)}
         buttons={[
           { value: 'archive', label: 'archive' },
-          { value: 'kept', label: 'kept' },
+          { value: 'saved', label: 'saved' },
           { value: 'requests', label: `requests ${requests.length ? `(${requests.length})` : ''}` },
         ]}
       />
@@ -216,7 +240,7 @@ export default function RollScreen() {
         )
       ) : visibleMoments.length === 0 ? (
         <EmptyState
-          title={view === 'archive' ? 'Your archive is waiting' : 'Nothing kept yet'}
+          title={view === 'archive' ? 'Your archive is waiting' : 'Nothing saved yet'}
           message={view === 'archive' ? 'Shared moments appear here.' : 'Saved moments appear here.'}
         />
       ) : (
@@ -225,7 +249,7 @@ export default function RollScreen() {
             <MomentCard
               key={moment.id}
               moment={moment}
-              mode={view === 'archive' ? 'roll' : 'kept'}
+              mode={view === 'archive' ? 'roll' : 'saved'}
               author={
                 publicUsers[moment.authorUid] ?? {
                   uid: moment.authorUid,

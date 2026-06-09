@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
 import { requestFollow, subscribeFollowing } from '../services/follows';
 import { subscribeWanderMoments } from '../services/moments';
@@ -28,12 +29,20 @@ export default function WanderScreen() {
   const [context, setContext] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
-  useEffect(() => subscribeWanderMoments(setMoments), []);
+  useEffect(
+    () =>
+      subscribeWanderMoments((nextMoments) => {
+        setMoments(nextMoments);
+        finishRefresh();
+      }),
+    [finishRefresh, refreshKey],
+  );
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeFollowing(user.uid, setFollowing);
-  }, [user?.uid]);
+  }, [refreshKey, user?.uid]);
 
   const visibleMoments = useMemo(
     () => moments.filter((moment) => moment.authorUid !== user?.uid && !following.includes(moment.authorUid)),
@@ -77,6 +86,8 @@ export default function WanderScreen() {
 
       <FlatList
         data={visibleMoments}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
         contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 36, alignItems: 'center' }}
         ListEmptyComponent={

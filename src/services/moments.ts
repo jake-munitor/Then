@@ -81,14 +81,37 @@ export function subscribeWanderMoments(onChange: (moments: Moment[]) => void) {
   });
 }
 
-export function subscribeKeptMomentIds(uid: string, onChange: (momentIds: string[]) => void) {
+export function subscribeSavedMomentIds(uid: string, onChange: (momentIds: string[]) => void) {
   if (!db) {
     onChange([]);
     return () => {};
   }
-  return onSnapshot(query(collection(db, 'users', uid, 'kept'), orderBy('keptAt', 'desc')), (snap) => {
-    onChange(snap.docs.map((keptDoc) => keptDoc.id));
-  });
+
+  const savedIds = new Set<string>();
+  const legacyIds = new Set<string>();
+  const emit = () => onChange(Array.from(new Set([...savedIds, ...legacyIds])));
+
+  const unsubscribeSaved = onSnapshot(
+    query(collection(db, 'users', uid, 'saved'), orderBy('savedAt', 'desc')),
+    (snap) => {
+      savedIds.clear();
+      snap.docs.forEach((savedDoc) => savedIds.add(savedDoc.id));
+      emit();
+    },
+  );
+  const unsubscribeLegacy = onSnapshot(
+    query(collection(db, 'users', uid, 'kept'), orderBy('keptAt', 'desc')),
+    (snap) => {
+      legacyIds.clear();
+      snap.docs.forEach((keptDoc) => legacyIds.add(keptDoc.id));
+      emit();
+    },
+  );
+
+  return () => {
+    unsubscribeSaved();
+    unsubscribeLegacy();
+  };
 }
 
 export function subscribeMomentsByIds(momentIds: string[], onChange: (moments: Moment[]) => void) {
@@ -187,12 +210,10 @@ export function subscribeMomentKeep(params: { momentId: string; uid: string }, o
 export async function toggleKeep(params: { momentId: string; authorUid: string; uid: string; currentlyKept: boolean }) {
   if (!db) throw new Error('Firebase is not initialized.');
   const keepRef = doc(db, 'moments', params.momentId, 'keeps', params.uid);
-  const privateKeepRef = doc(db, 'users', params.uid, 'kept', params.momentId);
   const momentRef = doc(db, 'moments', params.momentId);
 
   if (params.currentlyKept) {
     await deleteDoc(keepRef);
-    await deleteDoc(privateKeepRef);
     await updateDoc(momentRef, { keptCount: increment(-1) });
     return;
   }
@@ -200,8 +221,53 @@ export async function toggleKeep(params: { momentId: string; authorUid: string; 
   const existing = await getDoc(keepRef);
   if (existing.exists()) return;
   await setDoc(keepRef, { uid: params.uid, createdAt: serverTimestamp() });
-  await setDoc(privateKeepRef, { momentId: params.momentId, authorUid: params.authorUid, keptAt: serverTimestamp() });
   await updateDoc(momentRef, { keptCount: increment(1) });
+}
+
+export function subscribeMomentSaved(params: { momentId: string; uid: string }, onChange: (saved: boolean) => void) {
+  if (!db) {
+    onChange(false);
+    return () => {};
+  }
+
+  let saved = false;
+  let legacySaved = false;
+  const emit = () => onChange(saved || legacySaved);
+  const unsubscribeSaved = onSnapshot(doc(db, 'users', params.uid, 'saved', params.momentId), (snap) => {
+    saved = snap.exists();
+    emit();
+  });
+  const unsubscribeLegacy = onSnapshot(doc(db, 'users', params.uid, 'kept', params.momentId), (snap) => {
+    legacySaved = snap.exists();
+    emit();
+  });
+
+  return () => {
+    unsubscribeSaved();
+    unsubscribeLegacy();
+  };
+}
+
+export async function toggleSave(params: {
+  momentId: string;
+  authorUid: string;
+  uid: string;
+  currentlySaved: boolean;
+}) {
+  if (!db) throw new Error('Firebase is not initialized.');
+  const savedRef = doc(db, 'users', params.uid, 'saved', params.momentId);
+  const legacySavedRef = doc(db, 'users', params.uid, 'kept', params.momentId);
+
+  if (params.currentlySaved) {
+    await Promise.all([deleteDoc(savedRef), deleteDoc(legacySavedRef)]);
+    return;
+  }
+
+  await setDoc(savedRef, {
+    momentId: params.momentId,
+    authorUid: params.authorUid,
+    savedAt: serverTimestamp(),
+  });
 }
 
 export function subscribeNotes(momentId: string, onChange: (notes: Note[]) => void) {

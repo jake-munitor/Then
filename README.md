@@ -49,7 +49,7 @@ The annual recap is a private reflection experience, not a performance report. I
 - **develop & share**: post action.
 - **a new moment**: upload flow.
 - **your archive**: every moment you have shared.
-- **kept**: moments from other people you saved privately.
+- **saved**: moments from other people you bookmarked privately.
 - **note**: comment.
 
 ## App Root
@@ -101,7 +101,8 @@ npm run start
 - `users/{uid}/following/{targetUid}`: approved people this user is keeping up with.
 - `users/{uid}/followers/{followerUid}`: approved people kept by this user.
 - `users/{uid}/followRequests/{requesterUid}`: approval queue with context.
-- `users/{uid}/kept/{momentId}`: private saved moments.
+- `users/{uid}/saved/{momentId}`: private saved moments.
+- `users/{uid}/kept/{momentId}`: legacy saved moments retained for existing beta users.
 - `moments/{momentId}`: front-facing moment metadata.
 - `moments/{momentId}/back/details`: optional private back reflection, visible only to the author.
 - `moments/{momentId}/keeps/{uid}`: private keep marker.

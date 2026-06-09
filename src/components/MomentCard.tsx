@@ -2,7 +2,13 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Image, Pressable, useWindowDimensions, View } from 'react-native';
 import { Button, IconButton, Text } from 'react-native-paper';
 
-import { subscribeMomentBack, subscribeMomentKeep, toggleKeep } from '../services/moments';
+import {
+  subscribeMomentBack,
+  subscribeMomentKeep,
+  subscribeMomentSaved,
+  toggleKeep,
+  toggleSave,
+} from '../services/moments';
 import type { Moment, MomentBack, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
@@ -13,7 +19,7 @@ import PaperTape from './PaperTape';
 type Props = {
   moment: Moment;
   author?: PublicUser;
-  mode?: 'feed' | 'wander' | 'roll' | 'kept';
+  mode?: 'feed' | 'wander' | 'roll' | 'saved';
   connectionLine?: string;
   onNotes: (moment: Moment) => void;
   onFollow?: (moment: Moment) => void;
@@ -24,13 +30,19 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
   const { user } = useContext(AuthContext);
   const { width: windowWidth } = useWindowDimensions();
   const [kept, setKept] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [back, setBack] = useState<MomentBack | null>(null);
   const [showBack, setShowBack] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<'keep' | 'save' | null>(null);
 
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeMomentKeep({ momentId: moment.id, uid: user.uid }, setKept);
+  }, [moment.id, user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeMomentSaved({ momentId: moment.id, uid: user.uid }, setSaved);
   }, [moment.id, user?.uid]);
 
   useEffect(() => {
@@ -51,8 +63,8 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
   const cardWidth = Math.min(Math.max(windowWidth - 56, 280), 520);
 
   const handleKeep = async () => {
-    if (!user?.uid || busy) return;
-    setBusy(true);
+    if (!user?.uid || busyAction) return;
+    setBusyAction('keep');
     try {
       await toggleKeep({
         momentId: moment.id,
@@ -61,7 +73,22 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         currentlyKept: kept,
       });
     } finally {
-      setBusy(false);
+      setBusyAction(null);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user?.uid || busyAction) return;
+    setBusyAction('save');
+    try {
+      await toggleSave({
+        momentId: moment.id,
+        authorUid: moment.authorUid,
+        uid: user.uid,
+        currentlySaved: saved,
+      });
+    } finally {
+      setBusyAction(null);
     }
   };
 
@@ -73,8 +100,8 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         borderWidth: 1,
         width: cardWidth,
         alignSelf: 'center',
-        marginBottom: 24,
-        padding: 14,
+        marginBottom: 18,
+        padding: 10,
         transform: [{ rotate: cardRotation }],
         shadowColor: '#3B2F25',
         shadowOpacity: 0.08,
@@ -153,35 +180,41 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
 
       <Text
         style={{
-          marginTop: 16,
-          minHeight: 32,
+          marginTop: 7,
+          minHeight: 44,
+          paddingHorizontal: 8,
+          paddingTop: 3,
+          paddingBottom: 5,
           fontFamily: fonts.handwriting,
-          fontSize: 27,
+          fontSize: 25,
           color: colors.ink,
-          lineHeight: 32,
+          lineHeight: 34,
           textAlign: 'center',
+          flexShrink: 1,
         }}
       >
         {moment.frontText || 'untitled'}
       </Text>
 
-      <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ marginTop: 2, minHeight: 38, flexDirection: 'row', alignItems: 'center' }}>
         <IconButton
           icon={kept ? 'heart' : 'heart-outline'}
-          size={29}
+          size={22}
           iconColor={kept ? colors.saved : colors.ink}
           onPress={handleKeep}
-          disabled={busy}
-          accessibilityLabel={kept ? 'Unkeep this' : 'Keep this'}
+          disabled={Boolean(busyAction)}
+          accessibilityLabel={kept ? 'Unlike this' : 'Like this'}
+          style={{ width: 38, height: 38, margin: 0 }}
         />
         {canLeaveNote ? (
           <View>
             <IconButton
               icon="comment-outline"
-              size={27}
+              size={21}
               iconColor={colors.ink}
               onPress={() => onNotes(moment)}
               accessibilityLabel="Open notes"
+              style={{ width: 38, height: 38, margin: 0 }}
             />
             {moment.noteCount > 0 ? (
               <View
@@ -202,19 +235,31 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
             ) : null}
           </View>
         ) : null}
+        {canShowBack ? (
+          <IconButton
+            icon="rotate-3d-variant"
+            size={21}
+            iconColor={showBack ? colors.primary : colors.ink}
+            onPress={() => setShowBack((current) => !current)}
+            accessibilityLabel={showBack ? 'Show photo front' : 'Show private reflection'}
+            style={{ width: 38, height: 38, margin: 0 }}
+          />
+        ) : null}
         <View style={{ flex: 1 }} />
         <IconButton
-          icon={kept ? 'bookmark' : 'bookmark-outline'}
-          size={27}
-          iconColor={kept ? colors.saved : colors.ink}
-          onPress={handleKeep}
-          accessibilityLabel={kept ? 'Remove from kept' : 'Add to kept'}
+          icon={saved ? 'bookmark' : 'bookmark-outline'}
+          size={21}
+          iconColor={saved ? colors.saved : colors.ink}
+          onPress={handleSave}
+          disabled={Boolean(busyAction)}
+          accessibilityLabel={saved ? 'Remove from saved' : 'Save for later'}
+          style={{ width: 38, height: 38, margin: 0 }}
         />
       </View>
 
       <Pressable
         onPress={() => canLeaveNote && onNotes(moment)}
-        style={{ marginTop: 6, borderTopColor: colors.border, borderTopWidth: 1, paddingTop: 12 }}
+        style={{ marginTop: 2, borderTopColor: colors.border, borderTopWidth: 1, paddingTop: 8 }}
       >
         <Text variant="labelMedium" style={{ color: colors.textMuted, textTransform: 'uppercase' }}>
           {authorName}

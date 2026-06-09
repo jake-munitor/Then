@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { RootStackParamList, TabsParamList } from '../navigation/types';
 import { subscribeFollowing } from '../services/follows';
 import { subscribeMomentsByAuthors } from '../services/moments';
@@ -25,14 +26,25 @@ export default function FeedScreen() {
   const [following, setFollowing] = useState<string[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
+  const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      finishRefresh();
+      return;
+    }
     return subscribeFollowing(user.uid, setFollowing);
-  }, [user?.uid]);
+  }, [finishRefresh, refreshKey, user?.uid]);
 
   const homeAuthorUids = useMemo(() => (user?.uid ? [user.uid, ...following] : following), [following, user?.uid]);
-  useEffect(() => subscribeMomentsByAuthors(homeAuthorUids, setMoments), [homeAuthorUids.join('|')]);
+  useEffect(
+    () =>
+      subscribeMomentsByAuthors(homeAuthorUids, (nextMoments) => {
+        setMoments(nextMoments);
+        finishRefresh();
+      }),
+    [finishRefresh, homeAuthorUids.join('|'), refreshKey],
+  );
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
   useEffect(() => subscribePublicUsers(authorUids, setPublicUsers), [authorUids.join('|')]);
@@ -53,6 +65,8 @@ export default function FeedScreen() {
       </View>
       <FlatList
         data={moments}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
         contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 36, alignItems: 'center' }}
         ListEmptyComponent={
