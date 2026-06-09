@@ -21,7 +21,7 @@
         "NSPhotoLibraryUsageDescription": "Then needs access to your photos so you can develop and share moments.",
         "NSCameraUsageDescription": "Then needs camera access so you can take and share new moments."
       },
-      "buildNumber": "8"
+      "buildNumber": "9"
     },
     "android": {
       "package": "com.then.app",
