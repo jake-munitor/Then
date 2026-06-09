@@ -74,6 +74,18 @@ export default function RollScreen() {
     return subscribeFollowing(user.uid, setFollowing);
   }, [refreshKey, user?.uid]);
 
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribePublicUsers([user.uid], (profiles) => {
+      const profile = profiles[user.uid];
+      if (!profile) return;
+      setName(profile.displayName ?? user.displayName ?? '');
+      setAvatarUri(profile.avatarUrl);
+      setProfileVisibility(profile.profileVisibility);
+      setAppearInWander(profile.appearInWander);
+    });
+  }, [user?.displayName, user?.uid]);
+
   const visibleMoments = useMemo(() => (view === 'archive' ? archive : saved), [archive, saved, view]);
   const authorUids = useMemo(() => visibleMoments.map((moment) => moment.authorUid), [visibleMoments]);
 
@@ -192,8 +204,8 @@ export default function RollScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text variant="titleSmall">show in wander</Text>
-            <Text style={{ color: colors.textSecondary }}>Let others find your front posts.</Text>
+            <Text variant="titleSmall">default to wander</Text>
+            <Text style={{ color: colors.textSecondary }}>New moments start opted in.</Text>
           </View>
           <Switch value={appearInWander} onValueChange={setAppearInWander} disabled={busy} />
         </View>

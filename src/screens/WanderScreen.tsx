@@ -44,11 +44,7 @@ export default function WanderScreen() {
     return subscribeFollowing(user.uid, setFollowing);
   }, [refreshKey, user?.uid]);
 
-  const visibleMoments = useMemo(
-    () => moments.filter((moment) => moment.authorUid !== user?.uid && !following.includes(moment.authorUid)),
-    [following, moments, user?.uid],
-  );
-  const authorUids = useMemo(() => visibleMoments.map((moment) => moment.authorUid), [visibleMoments]);
+  const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
   useEffect(() => subscribePublicUsers(authorUids, setPublicUsers), [authorUids.join('|')]);
 
   const openRequest = (moment: Moment) => {
@@ -85,7 +81,7 @@ export default function WanderScreen() {
       </View>
 
       <FlatList
-        data={visibleMoments}
+        data={moments}
         refreshing={refreshing}
         onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
@@ -101,9 +97,11 @@ export default function WanderScreen() {
             moment={item}
             mode="wander"
             author={publicUsers[item.authorUid]}
-            connectionLine="wander"
+            connectionLine={
+              item.authorUid === user?.uid ? 'your Wander post' : following.includes(item.authorUid) ? 'keeping up' : 'wander'
+            }
             onNotes={(moment) => navigation.navigate('Notes', { moment })}
-            onFollow={openRequest}
+            onFollow={item.authorUid !== user?.uid && !following.includes(item.authorUid) ? openRequest : undefined}
           />
         )}
       />

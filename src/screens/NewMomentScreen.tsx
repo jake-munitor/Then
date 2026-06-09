@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import HandwrittenText from '../components/HandwrittenText';
 import Screen from '../components/Screen';
 import { createMoment } from '../services/moments';
+import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { dateFromImagePickerAsset, isValidYYYYMMDD, todayYYYYMMDD } from '../utils/dates';
@@ -21,8 +22,18 @@ export default function NewMomentScreen() {
   const [backText, setBackText] = useState('');
   const [memoryDate, setMemoryDate] = useState(todayYYYYMMDD());
   const [appearInWander, setAppearInWander] = useState(false);
+  const [wanderDefault, setWanderDefault] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!user?.uid) return;
+    return subscribePublicUsers([user.uid], (profiles) => {
+      const preference = Boolean(profiles[user.uid]?.appearInWander);
+      setWanderDefault(preference);
+      setAppearInWander(preference);
+    });
+  }, [user?.uid]);
 
   const pickPhoto = async () => {
     setError(null);
@@ -91,7 +102,7 @@ export default function NewMomentScreen() {
       setFrontText('');
       setBackText('');
       setMemoryDate(todayYYYYMMDD());
-      setAppearInWander(false);
+      setAppearInWander(wanderDefault);
       navigation.navigate('FeedTab');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not share.');
