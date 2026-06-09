@@ -3,6 +3,7 @@ import { FlatList, Image, View } from 'react-native';
 import { Button, Dialog, Portal, Searchbar, Text, TextInput } from 'react-native-paper';
 
 import EmptyState from '../components/EmptyState';
+import HandwrittenText from '../components/HandwrittenText';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getPendingFollowRequestIds, requestFollow, subscribeFollowing } from '../services/follows';
@@ -64,10 +65,9 @@ export default function FriendsScreen() {
       filterDiscoverableUsers({
         users: people,
         currentUid: user?.uid,
-        following,
         query,
       }),
-    [following, people, query, user?.uid],
+    [people, query, user?.uid],
   );
 
   const openRequest = (person: PublicUser) => {
@@ -100,7 +100,7 @@ export default function FriendsScreen() {
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
       <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', padding: 16, paddingBottom: 8, gap: 12 }}>
         <View>
-          <Text style={{ fontFamily: fonts.handwriting, fontSize: 40, color: colors.ink }}>friends</Text>
+          <HandwrittenText>friends</HandwrittenText>
           <Text style={{ color: colors.textSecondary }}>Find people you know and ask to keep up.</Text>
         </View>
         <Searchbar
@@ -121,11 +121,12 @@ export default function FriendsScreen() {
         ListEmptyComponent={
           <EmptyState
             title={query.trim() ? 'No people found' : 'No one to show yet'}
-            message={query.trim() ? 'Try a display name or handle.' : 'Public profiles and Wander opt-ins appear here.'}
+            message={query.trim() ? 'Try a display name or handle.' : 'New Then profiles will appear here.'}
           />
         }
         renderItem={({ item }) => {
           const requested = sentRequests.includes(item.uid);
+          const isFollowing = following.includes(item.uid);
           return (
             <View
               style={{
@@ -162,12 +163,12 @@ export default function FriendsScreen() {
                 </View>
               </View>
               <Button
-                mode={requested ? 'outlined' : 'contained'}
-                icon={requested ? 'check' : 'account-plus-outline'}
+                mode={requested || isFollowing ? 'outlined' : 'contained'}
+                icon={requested || isFollowing ? 'check' : 'account-plus-outline'}
                 onPress={() => openRequest(item)}
-                disabled={requested}
+                disabled={requested || isFollowing}
               >
-                {requested ? 'Request sent' : 'Add friend'}
+                {isFollowing ? 'Following' : requested ? 'Request sent' : 'Add friend'}
               </Button>
             </View>
           );

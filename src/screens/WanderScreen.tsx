@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
+import HandwrittenText from '../components/HandwrittenText';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -15,7 +16,6 @@ import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
-import { fonts } from '../theme/fonts';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -80,7 +80,7 @@ export default function WanderScreen() {
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
       <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
-        <Text style={{ fontFamily: fonts.handwriting, fontSize: 40, color: colors.ink }}>wander</Text>
+        <HandwrittenText>wander</HandwrittenText>
         <Text style={{ color: colors.textSecondary }}>Opt-in posts from people outside your feed.</Text>
       </View>
 

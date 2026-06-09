@@ -6,6 +6,7 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
+import HandwrittenText from '../components/HandwrittenText';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -17,7 +18,6 @@ import type { FollowRequest, Moment, ProfileVisibility, PublicUser } from '../se
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
-import { fonts } from '../theme/fonts';
 import { initialsFromName } from '../utils/formatters';
 
 type RollView = 'archive' | 'saved' | 'requests';
@@ -135,8 +135,8 @@ export default function RollScreen() {
     <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={{ width: '100%', maxWidth: 640, gap: 18 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View>
-          <Text style={{ fontFamily: fonts.handwriting, fontSize: 40, color: colors.ink }}>your roll</Text>
+        <View style={{ flex: 1 }}>
+          <HandwrittenText>your roll</HandwrittenText>
           <Text style={{ color: colors.textSecondary }}>Archive, saved, requests.</Text>
         </View>
         <View>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
 
 import MomentCard from '../../src/components/MomentCard';
 import type { Moment } from '../../src/services/types';
@@ -92,5 +93,22 @@ describe('MomentCard', () => {
     expect(screen.getByLabelText('Open notes')).toBeTruthy();
     expect(screen.getByLabelText('Save for later')).toBeTruthy();
     expect(screen.queryByLabelText('Delete moment')).toBeNull();
+  });
+
+  it('gives long captions enough line height and vertical padding to wrap cleanly', () => {
+    renderCard({
+      moment: {
+        ...moment,
+        frontText: 'A longer memory title with letters that descend.',
+      },
+    });
+
+    const caption = screen.getByTestId('moment-caption');
+    const mergedStyle = StyleSheet.flatten(caption.props.style);
+
+    expect(caption.props.numberOfLines).toBeUndefined();
+    expect(mergedStyle.lineHeight).toBeGreaterThan(mergedStyle.fontSize);
+    expect(mergedStyle.paddingTop).toBeGreaterThan(0);
+    expect(mergedStyle.paddingBottom).toBeGreaterThan(0);
   });
 });

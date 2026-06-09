@@ -2,10 +2,10 @@ import React, { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 
+import HandwrittenText from '../components/HandwrittenText';
 import Screen from '../components/Screen';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
-import { fonts } from '../theme/fonts';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -57,7 +57,7 @@ export default function AuthScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', marginBottom: 28 }}>
-          <Text style={{ fontFamily: fonts.handwriting, fontSize: 56, color: colors.ink }}>Then</Text>
+          <HandwrittenText size={56}>Then</HandwrittenText>
           <Text style={{ color: colors.textSecondary, fontSize: 16, lineHeight: 24 }}>Photos for people you choose.</Text>
         </View>
 

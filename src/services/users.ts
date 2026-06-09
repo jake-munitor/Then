@@ -41,31 +41,23 @@ function searchText(user: PublicUser) {
 export function filterDiscoverableUsers(params: {
   users: PublicUser[];
   currentUid?: string | null;
-  following: string[];
   query: string;
 }) {
   const queryText = params.query.trim().toLowerCase();
-  const following = new Set(params.following);
 
-  return params.users.filter((publicUser) => {
-    if (!publicUser.uid || publicUser.uid === params.currentUid || following.has(publicUser.uid)) {
-      return false;
-    }
+  return params.users
+    .filter((publicUser) => {
+      if (!publicUser.uid || publicUser.uid === params.currentUid) {
+        return false;
+      }
 
-    const isBrowsable = publicUser.profileVisibility === 'public' || publicUser.appearInWander;
-    if (!queryText) {
-      return isBrowsable;
-    }
-
-    if (isBrowsable) {
-      return searchText(publicUser).includes(queryText);
-    }
-
-    const handleQuery = queryText.replace(/^@/, '');
-    const exactDisplayName = publicUser.displayName?.trim().toLowerCase() === queryText;
-    const exactHandle = publicUser.handle?.toLowerCase() === handleQuery;
-    return Boolean(exactDisplayName || exactHandle);
-  });
+      return !queryText || searchText(publicUser).includes(queryText.replace(/^@/, ''));
+    })
+    .sort((left, right) => {
+      const leftName = left.displayName ?? left.handle ?? '';
+      const rightName = right.displayName ?? right.handle ?? '';
+      return leftName.localeCompare(rightName);
+    });
 }
 
 export function subscribeDiscoverableUsers(onChange: (users: PublicUser[]) => void) {

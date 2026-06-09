@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import HandwrittenText from '../components/HandwrittenText';
 import Screen from '../components/Screen';
 import type { RootStackParamList } from '../navigation/types';
 import { addNote, subscribeNotes } from '../services/moments';
@@ -10,7 +11,6 @@ import { subscribePublicUsers } from '../services/users';
 import type { Note, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
-import { fonts } from '../theme/fonts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notes'>;
 
@@ -47,7 +47,7 @@ export default function NotesScreen({ route }: Props) {
       <Screen contentStyle={{ alignItems: 'center' }}>
         <View style={{ width: '100%', maxWidth: 560, gap: 16 }}>
         <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 16 }}>
-          <Text style={{ fontFamily: fonts.handwriting, fontSize: 28, color: colors.ink }}>{moment.frontText}</Text>
+          <HandwrittenText size={28}>{moment.frontText}</HandwrittenText>
           <Text style={{ color: colors.textSecondary }}>
             by {publicUsers[moment.authorUid]?.displayName ?? 'Then Friend'}
           </Text>

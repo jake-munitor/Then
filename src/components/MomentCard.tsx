@@ -14,6 +14,7 @@ import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { formatMemoryDate } from '../utils/dates';
+import HandwrittenText from './HandwrittenText';
 import PaperTape from './PaperTape';
 
 type Props = {
@@ -178,23 +179,17 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         )}
       </Pressable>
 
-      <Text
+      <HandwrittenText
+        testID="moment-caption"
+        size={25}
         style={{
-          marginTop: 7,
-          minHeight: 44,
+          marginTop: 4,
           paddingHorizontal: 8,
-          paddingTop: 3,
-          paddingBottom: 5,
-          fontFamily: fonts.handwriting,
-          fontSize: 25,
-          color: colors.ink,
-          lineHeight: 34,
           textAlign: 'center',
-          flexShrink: 1,
         }}
       >
         {moment.frontText || 'untitled'}
-      </Text>
+      </HandwrittenText>
 
       <View style={{ marginTop: 2, minHeight: 38, flexDirection: 'row', alignItems: 'center' }}>
         <IconButton

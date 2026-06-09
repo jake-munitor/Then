@@ -4,11 +4,11 @@ import { Button, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
+import HandwrittenText from '../components/HandwrittenText';
 import Screen from '../components/Screen';
 import { createMoment } from '../services/moments';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
-import { fonts } from '../theme/fonts';
 import { dateFromImagePickerAsset, isValidYYYYMMDD, todayYYYYMMDD } from '../utils/dates';
 
 const FRONT_LIMIT = 50;
@@ -105,7 +105,7 @@ export default function NewMomentScreen() {
       <Screen contentStyle={{ alignItems: 'center' }}>
         <View style={{ width: '100%', maxWidth: 560, gap: 14 }}>
           <View>
-            <Text style={{ fontFamily: fonts.handwriting, fontSize: 40, color: colors.ink }}>new moment</Text>
+            <HandwrittenText>new moment</HandwrittenText>
             <Text style={{ color: colors.textSecondary }}>One photo. Front, back, date.</Text>
           </View>
 
