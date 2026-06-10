@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "then-d6a3c",
-    "production": "then-prod-finnman81"
+    "default": "then-prod-finnman81",
+    "production": "then-prod-finnman81",
+    "legacy": "then-d6a3c"
   }
 }

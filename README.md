@@ -82,7 +82,7 @@ EXPO_PUBLIC_FIREBASE_APP_ID=...
 Deploy rules from this folder when ready:
 
 ```powershell
-npx firebase deploy --only firestore:rules,storage
+npx firebase deploy --only firestore:rules,storage --project then-prod-finnman81
 ```
 
 ## Commands
