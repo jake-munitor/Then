@@ -1,4 +1,11 @@
-import { dateFromImagePickerAsset, formatMemoryDate, isValidYYYYMMDD, parseExifMemoryDate, todayYYYYMMDD } from '../../src/utils/dates';
+import {
+  dateFromImagePickerAsset,
+  formatMemoryDate,
+  formatMomentTime,
+  isValidYYYYMMDD,
+  parseExifMemoryDate,
+  todayYYYYMMDD,
+} from '../../src/utils/dates';
 import { initialsFromName, keptCopy } from '../../src/utils/formatters';
 
 describe('date helpers', () => {
@@ -13,7 +20,11 @@ describe('date helpers', () => {
   });
 
   it('formats memory dates for post cards', () => {
-    expect(formatMemoryDate('2026-05-09')).toContain('may');
+    expect(formatMemoryDate('2026-05-09')).toBe('May 9, 2026');
+  });
+
+  it('formats the share time when a Firestore timestamp is available', () => {
+    expect(formatMomentTime({ toDate: () => new Date(2026, 4, 9, 19, 42) })).toMatch(/7:42 PM/i);
   });
 
   it('parses native EXIF date fields', () => {

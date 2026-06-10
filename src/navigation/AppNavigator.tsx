@@ -7,6 +7,7 @@ import { Text } from 'react-native-paper';
 import { firebaseInitError, isFirebaseConfigured } from '../firebase/firebase';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 import AuthScreen from '../screens/AuthScreen';
 import NotesScreen from '../screens/NotesScreen';
 import FirebaseConfigScreen from '../screens/FirebaseConfigScreen';
@@ -49,6 +50,7 @@ export default function AppNavigator() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.textPrimary,
+          headerTitleStyle: { fontFamily: fonts.displayMedium, fontSize: 24 },
           contentStyle: { backgroundColor: colors.background },
         }}
       >
@@ -57,7 +59,7 @@ export default function AppNavigator() {
         ) : (
           <>
             <Stack.Screen name="MainTabs" component={TabsNavigator} options={{ headerShown: false }} />
-            <Stack.Screen name="Notes" component={NotesScreen} options={{ title: 'Notes', presentation: 'modal' }} />
+            <Stack.Screen name="Notes" component={NotesScreen} options={{ headerShown: false, presentation: 'modal' }} />
           </>
         )}
       </Stack.Navigator>

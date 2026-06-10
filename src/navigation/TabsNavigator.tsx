@@ -36,11 +36,11 @@ export default function TabsNavigator() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: colors.paper,
           borderTopColor: theme.colors.outlineVariant,
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 10,
+          height: 76,
+          paddingTop: 9,
+          paddingBottom: 11,
         },
         tabBarItemStyle: {
           height: 58,
@@ -48,7 +48,7 @@ export default function TabsNavigator() {
         },
         tabBarLabelStyle: {
           fontFamily: fonts.bodyMedium,
-          fontSize: 11,
+          fontSize: 10,
         },
         tabBarIconStyle: {
           marginTop: 2,
@@ -91,23 +91,23 @@ export default function TabsNavigator() {
               style={[
                 props.style,
                 {
-                  marginTop: -20,
-                  width: 66,
-                  height: 66,
+                  marginTop: -16,
+                  width: 58,
+                  height: 58,
                   borderRadius: 999,
                   alignItems: 'center',
                   justifyContent: 'center',
                   alignSelf: 'center',
                   backgroundColor: theme.colors.primary,
                   shadowColor: '#3B2F25',
-                  shadowOpacity: 0.16,
-                  shadowRadius: 12,
+                  shadowOpacity: 0.13,
+                  shadowRadius: 10,
                   shadowOffset: { width: 0, height: 4 },
                   elevation: 3,
                 },
               ]}
             >
-              <Icon source="camera-plus-outline" color={theme.colors.onPrimary} size={30} />
+              <Icon source="camera-outline" color={theme.colors.onPrimary} size={28} />
             </TouchableOpacity>
           ),
         }}

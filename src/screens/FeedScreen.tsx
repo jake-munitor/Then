@@ -5,9 +5,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
-import HandwrittenText from '../components/HandwrittenText';
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
+import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { RootStackParamList, TabsParamList } from '../navigation/types';
@@ -17,6 +17,9 @@ import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
+import { todayYYYYMMDD } from '../utils/dates';
+import { initialsFromName } from '../utils/formatters';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -54,7 +57,10 @@ export default function FeedScreen() {
     [finishRefresh, homeAuthorUids.join('|'), refreshKey],
   );
 
-  const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
+  const authorUids = useMemo(
+    () => Array.from(new Set(moments.map((moment) => moment.authorUid).concat(user?.uid ?? []))),
+    [moments, user?.uid],
+  );
   useEffect(
     () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
     [authorUids.join('|')],
@@ -67,20 +73,40 @@ export default function FeedScreen() {
       : 'When someone shares, it will show up here.';
   const emptyAction = moments.length === 0 && following.length === 0 ? 'New moment' : 'Wander';
   const emptyTarget = moments.length === 0 && following.length === 0 ? 'NewMomentTab' : 'WanderTab';
+  const sectionTitle = moments[0]?.memoryDate === todayYYYYMMDD() ? 'Today' : 'Recent';
 
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
-      <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
-        <HandwrittenText size={42}>Then</HandwrittenText>
-        <Text style={{ color: colors.textSecondary }}>Photos from people you choose.</Text>
-      </View>
+      <PageHeader
+        title="Then"
+        subtitle="Photos from people you choose."
+        avatarUrl={user?.uid ? publicUsers[user.uid]?.avatarUrl : null}
+        initials={initialsFromName(user?.displayName)}
+        onAvatarPress={() => tabNavigation.navigate('RollTab' as keyof TabsParamList)}
+      />
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
       <FlatList
         data={moments}
         refreshing={refreshing}
         onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
-        contentContainerStyle={{ padding: 16, paddingTop: 20, paddingBottom: 36, alignItems: 'center' }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 36, alignItems: 'center' }}
+        ListHeaderComponent={
+          moments.length ? (
+            <View style={{ width: '100%', maxWidth: 560, marginBottom: 14 }}>
+              <Text
+                style={{
+                  color: colors.textPrimary,
+                  fontFamily: fonts.displayMedium,
+                  fontSize: 31,
+                  lineHeight: 36,
+                }}
+              >
+                {sectionTitle}
+              </Text>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <EmptyState
             title={emptyTitle}

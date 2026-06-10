@@ -13,10 +13,8 @@ import type { Moment, MomentBack, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
-import { formatMemoryDate } from '../utils/dates';
+import { formatMemoryDate, formatMomentTime } from '../utils/dates';
 import DateStamp from './DateStamp';
-import HandwrittenText from './HandwrittenText';
-import PaperTape from './PaperTape';
 
 type Props = {
   moment: Moment;
@@ -78,8 +76,9 @@ export default function MomentCard({
   const canLeaveNote = mode !== 'wander';
   const canShowBack = canFlipBack && Boolean(back?.text);
   const isBackVisible = canShowBack && showBack;
-  const cardRotation = mode === 'wander' ? '0deg' : rotationForId(moment.id);
-  const cardWidth = Math.min(Math.max(windowWidth - 56, 280), 520);
+  const memoryTime = formatMomentTime(moment.createdAt);
+  const cardWidth = Math.min(Math.max(windowWidth - 32, 288), 560);
+  const stackActions = cardWidth < 340 || (canShowBack && Boolean(onDelete));
 
   const handleKeep = async () => {
     if (!user?.uid || busyAction) return;
@@ -120,188 +119,223 @@ export default function MomentCard({
   return (
     <View
       style={{
-        backgroundColor: colors.paper,
-        borderColor: colors.border,
-        borderWidth: 1,
         width: cardWidth,
         alignSelf: 'center',
-        marginBottom: 18,
-        padding: 10,
-        transform: [{ rotate: cardRotation }],
-        shadowColor: '#3B2F25',
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 5 },
-        elevation: 2,
+        marginBottom: 24,
+        borderRadius: 8,
+        shadowColor: '#2A211B',
+        shadowOpacity: 0.07,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 7 },
+        elevation: 3,
       }}
     >
-      <PaperTape />
-      <Pressable
-        onPress={() => canShowBack && setShowBack((current) => !current)}
-        accessibilityRole={canShowBack ? 'button' : undefined}
-        accessibilityLabel={canShowBack ? 'Flip moment' : moment.frontText || 'Then moment'}
-      >
-        {isBackVisible ? (
-          <View
-            style={{
-              width: '100%',
-              aspectRatio: 1,
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderWidth: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-            }}
-          >
-            <Text
-              style={{
-                color: colors.textPrimary,
-                fontFamily: fonts.bodyRegular,
-                fontSize: 17,
-                lineHeight: 26,
-                textAlign: 'center',
-              }}
-            >
-              {back?.text}
-            </Text>
-          </View>
-        ) : (
-          <View>
-            <Image
-              source={{ uri: moment.imageUrl }}
-              resizeMode="cover"
-              style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.surfaceWarm }}
-              accessibilityLabel={moment.frontText || 'Then moment'}
-            />
-            {memoryDate ? (
-              <View
-                style={{
-                  position: 'absolute',
-                  right: 10,
-                  bottom: 10,
-                }}
-              >
-                <DateStamp value={memoryDate} />
-              </View>
-            ) : null}
-          </View>
-        )}
-      </Pressable>
-
-      <HandwrittenText
-        testID="moment-caption"
-        size={25}
+      <View
         style={{
-          marginTop: 4,
-          paddingHorizontal: 8,
-          textAlign: 'center',
+          backgroundColor: colors.paper,
+          borderColor: colors.border,
+          borderWidth: 1,
+          borderRadius: 8,
+          overflow: 'hidden',
         }}
       >
-        {moment.frontText || 'untitled'}
-      </HandwrittenText>
-
-      <View style={{ marginTop: 2, minHeight: 38, flexDirection: 'row', alignItems: 'center' }}>
-        <IconButton
-          icon={kept ? 'heart' : 'heart-outline'}
-          size={22}
-          iconColor={kept ? colors.saved : colors.ink}
-          onPress={handleKeep}
-          disabled={Boolean(busyAction)}
-          accessibilityLabel={kept ? 'Unlike this' : 'Like this'}
-          style={{ width: 38, height: 38, margin: 0 }}
-        />
-        {canLeaveNote ? (
-          <View>
-            <IconButton
-              icon="comment-outline"
-              size={21}
-              iconColor={colors.ink}
-              onPress={() => onNotes(moment)}
-              accessibilityLabel="Open notes"
-              style={{ width: 38, height: 38, margin: 0 }}
-            />
-            {moment.noteCount > 0 ? (
-              <View
+        <Pressable
+          onPress={() => canShowBack && setShowBack((current) => !current)}
+          accessibilityRole={canShowBack ? 'button' : undefined}
+          accessibilityLabel={canShowBack ? 'Flip moment' : moment.frontText || 'Then moment'}
+        >
+          {isBackVisible ? (
+            <View
+              style={{
+                width: '100%',
+                aspectRatio: 4 / 3,
+                backgroundColor: colors.surface,
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 32,
+              }}
+            >
+              <Text
                 style={{
-                  position: 'absolute',
-                  top: 4,
-                  right: 2,
-                  minWidth: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: colors.primary,
+                  color: colors.textPrimary,
+                  fontFamily: fonts.displayRegular,
+                  fontSize: 24,
+                  lineHeight: 32,
+                  textAlign: 'center',
                 }}
               >
-                <Text style={{ color: colors.paper, fontFamily: fonts.bodySemiBold, fontSize: 10 }}>{moment.noteCount}</Text>
+                {back?.text}
+              </Text>
+            </View>
+          ) : (
+            <View>
+              <Image
+                source={{ uri: moment.imageUrl }}
+                resizeMode="cover"
+                style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.surfaceWarm }}
+                accessibilityLabel={moment.frontText || 'Then moment'}
+              />
+              {memoryDate ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: 18,
+                    top: 16,
+                  }}
+                >
+                  <DateStamp value={memoryDate} secondaryValue={memoryTime} />
+                </View>
+              ) : null}
+            </View>
+          )}
+        </Pressable>
+
+        <View
+          style={{
+            paddingHorizontal: 18,
+            paddingTop: 16,
+            paddingBottom: 14,
+            flexDirection: stackActions ? 'column' : 'row',
+            alignItems: 'flex-start',
+            gap: 10,
+          }}
+        >
+          <Pressable
+            onPress={() => canLeaveNote && onNotes(moment)}
+            style={{ flex: 1, minWidth: 0, paddingRight: 2 }}
+          >
+            <Text
+              testID="moment-caption"
+              maxFontSizeMultiplier={1.25}
+              style={{
+                color: colors.textPrimary,
+                fontFamily: fonts.displayMedium,
+                fontSize: 27,
+                lineHeight: 31,
+                paddingTop: 1,
+                paddingBottom: 2,
+                flexShrink: 1,
+              }}
+            >
+              {moment.frontText || 'Untitled'}
+            </Text>
+            <Text
+              style={{
+                color: colors.textSecondary,
+                fontFamily: fonts.bodyRegular,
+                fontSize: 14,
+                lineHeight: 20,
+                marginTop: 1,
+              }}
+            >
+              From {authorName}
+            </Text>
+            {connectionLine ? (
+              <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12, marginTop: 3 }}>
+                {connectionLine}
+              </Text>
+            ) : null}
+          </Pressable>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingTop: stackActions ? 0 : 7,
+              alignSelf: stackActions ? 'flex-end' : 'auto',
+            }}
+          >
+            <IconButton
+              icon={kept ? 'heart' : 'heart-outline'}
+              size={23}
+              iconColor={kept ? colors.saved : colors.primary}
+              onPress={handleKeep}
+              disabled={Boolean(busyAction)}
+              accessibilityLabel={kept ? 'Unlike this' : 'Like this'}
+              style={{ width: 38, height: 38, margin: 0 }}
+            />
+            {canLeaveNote ? (
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                }}
+              >
+                <IconButton
+                  icon="comment-outline"
+                  size={22}
+                  iconColor={colors.primary}
+                  onPress={() => onNotes(moment)}
+                  accessibilityLabel="Open notes"
+                  style={{ width: 38, height: 38, margin: 0 }}
+                />
+                {moment.noteCount > 0 ? (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: -1,
+                      minWidth: 17,
+                      height: 17,
+                      borderRadius: 9,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: colors.primary,
+                    }}
+                  >
+                    <Text style={{ color: colors.paper, fontFamily: fonts.bodySemiBold, fontSize: 9 }}>
+                      {moment.noteCount}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
+            {canShowBack ? (
+              <IconButton
+                icon="rotate-3d-variant"
+                size={22}
+                iconColor={showBack ? colors.saved : colors.primary}
+                onPress={() => setShowBack((current) => !current)}
+                accessibilityLabel={showBack ? 'Show photo front' : 'Show private reflection'}
+                style={{ width: 38, height: 38, margin: 0 }}
+              />
+            ) : null}
+            <IconButton
+              icon={saved ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              iconColor={saved ? colors.saved : colors.primary}
+              onPress={handleSave}
+              disabled={Boolean(busyAction)}
+              accessibilityLabel={saved ? 'Remove from saved' : 'Save for later'}
+              style={{ width: 38, height: 38, margin: 0 }}
+            />
+            {onDelete ? (
+              <IconButton
+                icon="dots-horizontal"
+                size={21}
+                iconColor={colors.textSecondary}
+                onPress={() => onDelete(moment)}
+                accessibilityLabel="Delete moment"
+                style={{ width: 34, height: 38, margin: 0 }}
+              />
+            ) : null}
+          </View>
+        </View>
+
+        {listenerError ? (
+          <Text variant="bodySmall" style={{ color: colors.error, paddingHorizontal: 18, paddingBottom: 12 }}>
+            {listenerError}
+          </Text>
+        ) : null}
+
+        {mode === 'wander' && onFollow ? (
+          <View style={{ borderTopColor: colors.border, borderTopWidth: 1, padding: 12 }}>
+            <Button mode="text" icon="account-plus-outline" onPress={() => onFollow(moment)}>
+              Ask to keep up
+            </Button>
           </View>
         ) : null}
-        {canShowBack ? (
-          <IconButton
-            icon="rotate-3d-variant"
-            size={21}
-            iconColor={showBack ? colors.primary : colors.ink}
-            onPress={() => setShowBack((current) => !current)}
-            accessibilityLabel={showBack ? 'Show photo front' : 'Show private reflection'}
-            style={{ width: 38, height: 38, margin: 0 }}
-          />
-        ) : null}
-        <View style={{ flex: 1 }} />
-        <IconButton
-          icon={saved ? 'bookmark' : 'bookmark-outline'}
-          size={21}
-          iconColor={saved ? colors.saved : colors.ink}
-          onPress={handleSave}
-          disabled={Boolean(busyAction)}
-          accessibilityLabel={saved ? 'Remove from saved' : 'Save for later'}
-          style={{ width: 38, height: 38, margin: 0 }}
-        />
       </View>
-
-      {listenerError ? (
-        <Text variant="bodySmall" style={{ color: colors.error, paddingHorizontal: 8, paddingBottom: 6 }}>
-          {listenerError}
-        </Text>
-      ) : null}
-
-      <View style={{ marginTop: 2, borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center' }}>
-        <Pressable onPress={() => canLeaveNote && onNotes(moment)} style={{ flex: 1, paddingTop: 8 }}>
-          <Text variant="labelMedium" style={{ color: colors.textMuted, textTransform: 'uppercase' }}>
-            {authorName}
-          </Text>
-          {connectionLine ? (
-            <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 4 }}>
-              {connectionLine}
-            </Text>
-          ) : null}
-        </Pressable>
-        {onDelete ? (
-          <IconButton
-            icon="dots-horizontal"
-            size={20}
-            iconColor={colors.textSecondary}
-            onPress={() => onDelete(moment)}
-            accessibilityLabel="Delete moment"
-            style={{ width: 36, height: 36, margin: 0 }}
-          />
-        ) : null}
-      </View>
-
-      {mode === 'wander' && onFollow ? (
-        <Button mode="outlined" icon="account-plus-outline" onPress={() => onFollow(moment)} style={{ marginTop: 12 }}>
-          Request
-        </Button>
-      ) : null}
     </View>
   );
-}
-
-function rotationForId(id: string) {
-  const total = id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const degrees = ((total % 7) - 3) * 0.45;
-  return `${degrees}deg`;
 }

@@ -1,11 +1,12 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
-import { StyleSheet } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 
 import MomentCard from '../../src/components/MomentCard';
 import type { Moment } from '../../src/services/types';
 import { AuthContext } from '../../src/store/AuthContext';
+import { fonts } from '../../src/theme/fonts';
 import { appTheme } from '../../src/theme/theme';
 
 jest.mock('../../src/services/moments', () => ({
@@ -119,5 +120,17 @@ describe('MomentCard', () => {
     expect(mergedStyle.lineHeight).toBeGreaterThan(mergedStyle.fontSize);
     expect(mergedStyle.paddingTop).toBeGreaterThan(0);
     expect(mergedStyle.paddingBottom).toBeGreaterThan(0);
+  });
+
+  it('uses the editorial 4:3 photo and serif caption treatment', () => {
+    renderCard();
+
+    const photo = screen.UNSAFE_getAllByType(Image)[0];
+    const photoStyle = StyleSheet.flatten(photo.props.style);
+    const captionStyle = StyleSheet.flatten(screen.getByTestId('moment-caption').props.style);
+
+    expect(photoStyle.aspectRatio).toBe(4 / 3);
+    expect(captionStyle.fontFamily).toBe(fonts.displayMedium);
+    expect(screen.getByText('From Maisie K')).toBeTruthy();
   });
 });

@@ -16,7 +16,22 @@ export function formatMemoryDate(value?: string | null) {
   if (!value || !isValidYYYYMMDD(value)) return '';
   const [year, month, day] = value.split('-').map(Number);
   const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase();
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function formatMomentTime(value?: { toDate?: () => Date; seconds?: number } | Date | null) {
+  if (!value) return '';
+  const date =
+    value instanceof Date
+      ? value
+      : typeof value.toDate === 'function'
+        ? value.toDate()
+        : typeof value.seconds === 'number'
+          ? new Date(value.seconds * 1000)
+          : null;
+
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 const EXIF_DATE_KEYS = ['DateTimeOriginal', 'DateTimeDigitized', 'DateTime', 'CreateDate', 'ModifyDate'];

@@ -3,8 +3,8 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import HandwrittenText from '../components/HandwrittenText';
 import ListenerError from '../components/ListenerError';
+import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
@@ -67,11 +67,12 @@ export default function NotesScreen({ route }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
         <View style={{ width: '100%', maxWidth: 560, gap: 16 }}>
+        <PageHeader title="Notes" subtitle="A quiet conversation around this moment." />
         <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
-        <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 16 }}>
-          <HandwrittenText size={28}>{moment.frontText}</HandwrittenText>
+        <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 18 }}>
+          <Text variant="headlineSmall">{moment.frontText}</Text>
           <Text style={{ color: colors.textSecondary }}>
-            by {publicUsers[moment.authorUid]?.displayName ?? 'Then Friend'}
+            From {publicUsers[moment.authorUid]?.displayName ?? 'Then Friend'}
           </Text>
         </View>
 
@@ -80,15 +81,15 @@ export default function NotesScreen({ route }: Props) {
             <Text style={{ color: colors.textSecondary }}>No notes yet.</Text>
           ) : (
             notes.map((note) => (
-              <View key={note.id} style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 14 }}>
-                <Text variant="labelLarge">{publicUsers[note.authorUid]?.displayName ?? 'Then Friend'}</Text>
+              <View key={note.id} style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 16 }}>
+                <Text variant="titleMedium">{publicUsers[note.authorUid]?.displayName ?? 'Then Friend'}</Text>
                 <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 4 }}>{note.text}</Text>
               </View>
             ))
           )}
         </View>
 
-        <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 14, gap: 10 }}>
+        <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }}>
           <TextInput label="leave a note" value={text} onChangeText={setText} multiline disabled={busy} />
           {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
           <Button mode="contained" onPress={submit} loading={busy} disabled={busy || !text.trim()}>

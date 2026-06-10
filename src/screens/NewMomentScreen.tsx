@@ -4,7 +4,7 @@ import { Button, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
-import HandwrittenText from '../components/HandwrittenText';
+import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { createMoment } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
@@ -119,10 +119,7 @@ export default function NewMomentScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ alignItems: 'center' }}>
         <View style={{ width: '100%', maxWidth: 560, gap: 14 }}>
-          <View>
-            <HandwrittenText>new moment</HandwrittenText>
-            <Text style={{ color: colors.textSecondary }}>One photo. Front, back, date.</Text>
-          </View>
+          <PageHeader title="New moment" subtitle="One photo, one memory, kept simply." />
 
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <Button mode="contained" icon="camera-outline" onPress={takePhoto} disabled={busy} style={{ flex: 1 }}>
@@ -134,7 +131,11 @@ export default function NewMomentScreen() {
           </View>
 
           {uri ? (
-            <Image source={{ uri }} style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.surfaceWarm }} resizeMode="cover" />
+            <Image
+              source={{ uri }}
+              style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 8, backgroundColor: colors.surfaceWarm }}
+              resizeMode="cover"
+            />
           ) : (
             <View
               style={{
@@ -144,6 +145,7 @@ export default function NewMomentScreen() {
                 borderWidth: 1,
                 borderStyle: 'dashed',
                 borderColor: colors.border,
+                borderRadius: 8,
                 backgroundColor: colors.surface,
               }}
             >
@@ -166,6 +168,7 @@ export default function NewMomentScreen() {
               backgroundColor: colors.paper,
               borderColor: colors.border,
               borderWidth: 1,
+              borderRadius: 8,
               padding: 14,
               flexDirection: 'row',
               alignItems: 'center',

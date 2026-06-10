@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 
-import HandwrittenText from '../components/HandwrittenText';
+import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
@@ -56,10 +56,7 @@ export default function AuthScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-        <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', marginBottom: 28 }}>
-          <HandwrittenText size={56}>Then</HandwrittenText>
-          <Text style={{ color: colors.textSecondary, fontSize: 16, lineHeight: 24 }}>Photos for people you choose.</Text>
-        </View>
+        <PageHeader title="Then" subtitle="Photos from people you choose." />
 
         <View
           style={{
@@ -69,11 +66,12 @@ export default function AuthScreen() {
             backgroundColor: colors.paper,
             borderColor: colors.border,
             borderWidth: 1,
-            padding: 18,
-            gap: 12,
+            borderRadius: 8,
+            padding: 20,
+            gap: 14,
           }}
         >
-          <Text variant="titleLarge">{title}</Text>
+          <Text variant="headlineSmall">{title}</Text>
           {mode === 'register' ? (
             <TextInput label="Your name" value={displayName} onChangeText={setDisplayName} disabled={busy} />
           ) : null}

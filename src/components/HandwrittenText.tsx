@@ -17,11 +17,11 @@ export default function HandwrittenText({ size = 40, style, ...props }: Props) {
       style={[
         {
           color: colors.ink,
-          fontFamily: fonts.handwriting,
+          fontFamily: fonts.displayRegular,
           fontSize: size,
-          lineHeight: Math.ceil(size * 1.55),
-          paddingTop: Math.ceil(size * 0.2),
-          paddingBottom: Math.ceil(size * 0.24),
+          lineHeight: Math.ceil(size * 1.12),
+          paddingTop: Math.ceil(size * 0.08),
+          paddingBottom: Math.ceil(size * 0.1),
           maxWidth: '100%',
           flexShrink: 1,
         },

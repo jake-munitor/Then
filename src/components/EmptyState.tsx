@@ -24,8 +24,8 @@ export default function EmptyState({ title, message, actionLabel, onAction }: Pr
         paddingHorizontal: 18,
       }}
     >
-      <View style={{ width: 44, height: 2, backgroundColor: colors.sage, opacity: 0.55, marginBottom: 4 }} />
-      <Text variant="titleMedium" style={{ color: colors.textPrimary, textAlign: 'center' }}>
+      <View style={{ width: 34, height: 1, backgroundColor: colors.sage, opacity: 0.55, marginBottom: 4 }} />
+      <Text variant="headlineSmall" style={{ color: colors.textPrimary, textAlign: 'center' }}>
         {title}
       </Text>
       <Text variant="bodyMedium" style={{ color: colors.textSecondary, textAlign: 'center', lineHeight: 22 }}>

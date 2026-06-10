@@ -3,8 +3,8 @@ import { FlatList, Image, View } from 'react-native';
 import { Button, Dialog, Portal, Searchbar, Text, TextInput } from 'react-native-paper';
 
 import EmptyState from '../components/EmptyState';
-import HandwrittenText from '../components/HandwrittenText';
 import ListenerError from '../components/ListenerError';
+import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import {
@@ -131,16 +131,14 @@ export default function FriendsScreen() {
 
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
-      <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', padding: 16, paddingBottom: 8, gap: 12 }}>
-        <View>
-          <HandwrittenText>friends</HandwrittenText>
-          <Text style={{ color: colors.textSecondary }}>Find people you know and ask to keep up.</Text>
-        </View>
+      <PageHeader title="Friends" subtitle="Find people you know and ask to keep up." />
+      <View style={{ width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 12 }}>
         <Searchbar
           placeholder="Search names or handles"
           value={query}
           onChangeText={setQuery}
-          style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1 }}
+          elevation={0}
+          style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8 }}
           inputStyle={{ fontFamily: fonts.bodyRegular }}
         />
       </View>
@@ -172,7 +170,8 @@ export default function FriendsScreen() {
                 backgroundColor: colors.paper,
                 borderColor: colors.border,
                 borderWidth: 1,
-                padding: 14,
+                borderRadius: 8,
+                padding: 16,
                 gap: 12,
               }}
             >
@@ -194,7 +193,9 @@ export default function FriendsScreen() {
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
-                  <Text variant="titleMedium">{item.displayName ?? 'Then Friend'}</Text>
+                  <Text variant="titleLarge" style={{ fontSize: 23 }}>
+                    {item.displayName ?? 'Then Friend'}
+                  </Text>
                   <Text style={{ color: colors.textSecondary }}>{item.handle ? `@${item.handle}` : 'Then profile'}</Text>
                 </View>
               </View>

@@ -21,6 +21,7 @@ export default function ListenerError({ message, onRetry }: Props) {
         backgroundColor: colors.paper,
         borderColor: colors.error,
         borderWidth: 1,
+        borderRadius: 8,
         padding: 14,
         gap: 8,
       }}

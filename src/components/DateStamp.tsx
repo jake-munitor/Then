@@ -7,33 +7,50 @@ import { fonts } from '../theme/fonts';
 
 type Props = {
   value: string;
+  secondaryValue?: string;
 };
 
-export default function DateStamp({ value }: Props) {
+export default function DateStamp({ value, secondaryValue }: Props) {
   return (
     <View
       testID="date-stamp"
       style={{
-        backgroundColor: 'rgba(250, 248, 244, 0.9)',
-        borderColor: colors.border,
-        borderWidth: 1,
-        paddingHorizontal: 7,
-        paddingVertical: 4,
+        paddingHorizontal: 2,
+        paddingVertical: 2,
+        gap: 2,
       }}
     >
       <Text
         maxFontSizeMultiplier={1.1}
         style={{
-          color: colors.textPrimary,
-          fontFamily: fonts.dateStamp,
-          fontSize: 10,
-          lineHeight: 13,
+          color: colors.white,
+          fontFamily: fonts.bodyMedium,
+          fontSize: 15,
+          lineHeight: 20,
           fontVariant: ['tabular-nums'],
-          textTransform: 'uppercase',
+          textShadowColor: 'rgba(0, 0, 0, 0.3)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 4,
         }}
       >
         {value}
       </Text>
+      {secondaryValue ? (
+        <Text
+          style={{
+            color: colors.white,
+            fontFamily: fonts.bodyRegular,
+            fontSize: 14,
+            lineHeight: 18,
+            fontVariant: ['tabular-nums'],
+            textShadowColor: 'rgba(0, 0, 0, 0.3)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 4,
+          }}
+        >
+          {secondaryValue}
+        </Text>
+      ) : null}
     </View>
   );
 }

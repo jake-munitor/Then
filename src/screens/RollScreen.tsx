@@ -6,9 +6,9 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
-import HandwrittenText from '../components/HandwrittenText';
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
+import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { db } from '../firebase/firebase';
@@ -215,29 +215,29 @@ export default function RollScreen() {
   return (
     <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={{ width: '100%', maxWidth: 640, gap: 18 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1 }}>
-          <HandwrittenText>your roll</HandwrittenText>
-          <Text style={{ color: colors.textSecondary }}>Archive, saved, requests.</Text>
-        </View>
-        <View>
-          <IconButton
-            icon={requests.length ? 'bell' : 'bell-outline'}
-            iconColor={requests.length ? colors.primary : colors.textSecondary}
-            size={22}
-            onPress={() => setView('requests')}
-            accessibilityLabel={requests.length ? `${requests.length} pending requests` : 'Open requests'}
-          />
-          {requests.length ? (
-            <Badge style={{ position: 'absolute', right: 2, top: 2, backgroundColor: colors.primary }}>
-              {requests.length}
-            </Badge>
-          ) : null}
-        </View>
-      </View>
+      <PageHeader
+        title="Your roll"
+        subtitle="Your archive, saved moments, and requests."
+        right={
+          <View>
+            <IconButton
+              icon={requests.length ? 'bell' : 'bell-outline'}
+              iconColor={requests.length ? colors.primary : colors.textSecondary}
+              size={22}
+              onPress={() => setView('requests')}
+              accessibilityLabel={requests.length ? `${requests.length} pending requests` : 'Open requests'}
+            />
+            {requests.length ? (
+              <Badge style={{ position: 'absolute', right: 2, top: 2, backgroundColor: colors.primary }}>
+                {requests.length}
+              </Badge>
+            ) : null}
+          </View>
+        }
+      />
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
 
-      <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 16, gap: 14 }}>
+      <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 18, gap: 14 }}>
         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
           {avatarUri ? (
             <Image source={{ uri: avatarUri }} style={{ width: 72, height: 72, borderRadius: 999 }} />
@@ -256,7 +256,7 @@ export default function RollScreen() {
             </View>
           )}
           <View style={{ flex: 1 }}>
-            <Text variant="titleMedium">{user?.displayName ?? 'Then Friend'}</Text>
+            <Text variant="headlineSmall">{user?.displayName ?? 'Then Friend'}</Text>
             <Text style={{ color: colors.textSecondary }}>keeping up {following.length} / kept by {followers.length}</Text>
           </View>
         </View>
@@ -274,7 +274,7 @@ export default function RollScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text variant="titleSmall">default to wander</Text>
+            <Text variant="titleSmall">Default to Wander</Text>
             <Text style={{ color: colors.textSecondary }}>New moments start opted in.</Text>
           </View>
           <Switch value={appearInWander} onValueChange={setAppearInWander} disabled={busy} />
@@ -295,9 +295,9 @@ export default function RollScreen() {
         value={view}
         onValueChange={(value) => setView(value as RollView)}
         buttons={[
-          { value: 'archive', label: 'archive' },
-          { value: 'saved', label: 'saved' },
-          { value: 'requests', label: `requests ${requests.length ? `(${requests.length})` : ''}` },
+          { value: 'archive', label: 'Archive' },
+          { value: 'saved', label: 'Saved' },
+          { value: 'requests', label: `Requests ${requests.length ? `(${requests.length})` : ''}` },
         ]}
       />
 
@@ -306,8 +306,11 @@ export default function RollScreen() {
           <EmptyState title="No follow requests" message="Follow requests land here." />
         ) : (
           requests.map((request) => (
-            <View key={request.requesterUid} style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 14, gap: 10 }}>
-              <Text variant="titleMedium">{request.displayName ?? 'Then Friend'}</Text>
+            <View
+              key={request.requesterUid}
+              style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }}
+            >
+              <Text variant="titleLarge">{request.displayName ?? 'Then Friend'}</Text>
               <Text style={{ color: colors.textSecondary }}>{request.context}</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Button mode="contained" onPress={() => handleApprove(request.requesterUid)} style={{ flex: 1 }}>

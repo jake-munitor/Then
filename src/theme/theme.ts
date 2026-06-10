@@ -5,7 +5,7 @@ import { fonts } from './fonts';
 
 export const appTheme = {
   ...MD3LightTheme,
-  roundness: 8,
+  roundness: 6,
   colors: {
     ...MD3LightTheme.colors,
     primary: colors.primary,
@@ -30,11 +30,11 @@ export const appTheme = {
       labelLarge: { ...MD3LightTheme.fonts.labelLarge, fontFamily: fonts.bodySemiBold },
       labelMedium: { ...MD3LightTheme.fonts.labelMedium, fontFamily: fonts.bodyMedium },
       labelSmall: { ...MD3LightTheme.fonts.labelSmall, fontFamily: fonts.bodyMedium },
-      titleLarge: { ...MD3LightTheme.fonts.titleLarge, fontFamily: fonts.bodySemiBold },
-      titleMedium: { ...MD3LightTheme.fonts.titleMedium, fontFamily: fonts.bodySemiBold },
+      titleLarge: { ...MD3LightTheme.fonts.titleLarge, fontFamily: fonts.displayMedium },
+      titleMedium: { ...MD3LightTheme.fonts.titleMedium, fontFamily: fonts.displayMedium },
       titleSmall: { ...MD3LightTheme.fonts.titleSmall, fontFamily: fonts.bodySemiBold },
-      headlineSmall: { ...MD3LightTheme.fonts.headlineSmall, fontFamily: fonts.bodySemiBold },
-      headlineMedium: { ...MD3LightTheme.fonts.headlineMedium, fontFamily: fonts.bodySemiBold },
+      headlineSmall: { ...MD3LightTheme.fonts.headlineSmall, fontFamily: fonts.displayMedium },
+      headlineMedium: { ...MD3LightTheme.fonts.headlineMedium, fontFamily: fonts.displayMedium },
     },
   }),
 };
