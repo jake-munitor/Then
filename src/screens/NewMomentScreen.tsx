@@ -28,11 +28,15 @@ export default function NewMomentScreen() {
 
   React.useEffect(() => {
     if (!user?.uid) return;
-    return subscribePublicUsers([user.uid], (profiles) => {
-      const preference = Boolean(profiles[user.uid]?.appearInWander);
-      setWanderDefault(preference);
-      setAppearInWander(preference);
-    });
+    return subscribePublicUsers(
+      [user.uid],
+      (profiles) => {
+        const preference = Boolean(profiles[user.uid]?.appearInWander);
+        setWanderDefault(preference);
+        setAppearInWander(preference);
+      },
+      () => setError('Your Wander preference could not be loaded.'),
+    );
   }, [user?.uid]);
 
   const pickPhoto = async () => {

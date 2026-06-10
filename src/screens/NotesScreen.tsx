@@ -4,7 +4,9 @@ import { Button, Text, TextInput } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import HandwrittenText from '../components/HandwrittenText';
+import ListenerError from '../components/ListenerError';
 import Screen from '../components/Screen';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
 import { addNote, subscribeNotes } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
@@ -22,11 +24,30 @@ export default function NotesScreen({ route }: Props) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
+  const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
-  useEffect(() => subscribeNotes(moment.id, setNotes), [moment.id]);
+  useEffect(
+    () =>
+      subscribeNotes(
+        moment.id,
+        (nextNotes) => {
+          setNotes(nextNotes);
+          finishRefresh();
+        },
+        () => {
+          setListenerError('Notes could not be loaded.');
+          finishRefresh();
+        },
+      ),
+    [finishRefresh, moment.id, refreshKey],
+  );
 
   const uids = useMemo(() => notes.map((note) => note.authorUid).concat(moment.authorUid), [notes, moment.authorUid]);
-  useEffect(() => subscribePublicUsers(uids, setPublicUsers), [uids.join('|')]);
+  useEffect(
+    () => subscribePublicUsers(uids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
+    [uids.join('|')],
+  );
 
   const submit = async () => {
     if (!user?.uid || !text.trim()) return;
@@ -44,8 +65,9 @@ export default function NotesScreen({ route }: Props) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Screen contentStyle={{ alignItems: 'center' }}>
+      <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
         <View style={{ width: '100%', maxWidth: 560, gap: 16 }}>
+        <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
         <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 16 }}>
           <HandwrittenText size={28}>{moment.frontText}</HandwrittenText>
           <Text style={{ color: colors.textSecondary }}>

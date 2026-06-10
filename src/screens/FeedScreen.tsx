@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
 import HandwrittenText from '../components/HandwrittenText';
+import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -26,6 +27,7 @@ export default function FeedScreen() {
   const [following, setFollowing] = useState<string[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
+  const [listenerError, setListenerError] = useState<string | null>(null);
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
   useEffect(() => {
@@ -33,7 +35,10 @@ export default function FeedScreen() {
       finishRefresh();
       return;
     }
-    return subscribeFollowing(user.uid, setFollowing);
+    return subscribeFollowing(user.uid, setFollowing, () => {
+      setListenerError('Your friend list could not be loaded.');
+      finishRefresh();
+    });
   }, [finishRefresh, refreshKey, user?.uid]);
 
   const homeAuthorUids = useMemo(() => (user?.uid ? [user.uid, ...following] : following), [following, user?.uid]);
@@ -42,12 +47,18 @@ export default function FeedScreen() {
       subscribeMomentsByAuthors(homeAuthorUids, (nextMoments) => {
         setMoments(nextMoments);
         finishRefresh();
+      }, () => {
+        setListenerError('Your moments could not be loaded.');
+        finishRefresh();
       }),
     [finishRefresh, homeAuthorUids.join('|'), refreshKey],
   );
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
-  useEffect(() => subscribePublicUsers(authorUids, setPublicUsers), [authorUids.join('|')]);
+  useEffect(
+    () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
+    [authorUids.join('|')],
+  );
 
   const emptyTitle = moments.length === 0 && following.length === 0 ? 'No moments yet' : 'Nothing new';
   const emptyMessage =
@@ -63,6 +74,7 @@ export default function FeedScreen() {
         <HandwrittenText size={42}>Then</HandwrittenText>
         <Text style={{ color: colors.textSecondary }}>Photos from people you choose.</Text>
       </View>
+      <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
       <FlatList
         data={moments}
         refreshing={refreshing}

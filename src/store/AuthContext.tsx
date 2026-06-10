@@ -2,7 +2,10 @@ import React, { createContext, useEffect, useMemo, useState } from 'react';
 import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
+  deleteUser,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -11,6 +14,7 @@ import {
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import { auth, db } from '../firebase/firebase';
+import { deleteAccountData } from '../services/account';
 
 export type AuthUser = {
   uid: string;
@@ -25,6 +29,7 @@ type AuthContextValue = {
   register: (displayName: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateDisplayName: (displayName: string) => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -113,6 +118,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           { displayName: cleanName, updatedAt: serverTimestamp() },
           { merge: true },
         );
+      },
+      deleteAccount: async (password) => {
+        if (!auth?.currentUser || !auth.currentUser.email) throw new Error('Sign in again before deleting your account.');
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        const uid = auth.currentUser.uid;
+        await deleteAccountData(uid);
+        await deleteUser(auth.currentUser);
       },
       logout: async () => {
         if (!auth) throw new Error('Firebase is not initialized.');

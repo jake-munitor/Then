@@ -17,12 +17,28 @@ service firebase.storage {
 
     match /users/{uid}/avatar/{allPaths=**} {
       allow read: if signedIn();
-      allow write: if signedIn() && request.auth.uid == uid;
+      allow write: if signedIn() &&
+        request.auth.uid == uid &&
+        (
+          request.resource == null ||
+          (
+            request.resource.size < 5 * 1024 * 1024 &&
+            request.resource.contentType.matches('image/(jpeg|png|heic|heif|webp)')
+          )
+        );
     }
 
     match /users/{uid}/moments/{momentId}/{allPaths=**} {
       allow read: if signedIn() && (request.auth.uid == uid || isApprovedFollower(uid) || momentAppearsInWander(momentId));
-      allow write: if signedIn() && request.auth.uid == uid;
+      allow write: if signedIn() &&
+        request.auth.uid == uid &&
+        (
+          request.resource == null ||
+          (
+            request.resource.size < 10 * 1024 * 1024 &&
+            request.resource.contentType.matches('image/(jpeg|png|heic|heif|webp)')
+          )
+        );
     }
   }
 }

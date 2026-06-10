@@ -63,6 +63,8 @@ jest.mock('firebase/auth', () => ({
   createUserWithEmailAndPassword: jest.fn(async () => ({
     user: { uid: 'user-1', email: 'jake@example.com', displayName: 'Jake' },
   })),
+  deleteUser: jest.fn(async () => {}),
+  EmailAuthProvider: { credential: jest.fn(() => ({})) },
   getAuth: jest.fn(() => ({ currentUser: { uid: 'user-1' } })),
   initializeAuth: jest.fn(() => ({ currentUser: { uid: 'user-1' } })),
   getReactNativePersistence: jest.fn(() => ({})),
@@ -70,6 +72,7 @@ jest.mock('firebase/auth', () => ({
     onChange(null);
     return () => {};
   }),
+  reauthenticateWithCredential: jest.fn(async () => {}),
   sendPasswordResetEmail: jest.fn(async () => {}),
   signInWithEmailAndPassword: jest.fn(async () => {}),
   signOut: jest.fn(async () => {}),
@@ -77,8 +80,10 @@ jest.mock('firebase/auth', () => ({
 }));
 
 jest.mock('firebase/storage', () => ({
+  deleteObject: jest.fn(async () => {}),
   getDownloadURL: jest.fn(async () => 'https://example.com/photo.jpg'),
   getStorage: jest.fn(() => ({})),
+  listAll: jest.fn(async () => ({ items: [] })),
   ref: jest.fn(() => ({})),
   uploadBytes: jest.fn(async () => ({})),
 }));
@@ -87,11 +92,13 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => ({})),
   doc: jest.fn(() => ({})),
   query: jest.fn(() => ({})),
+  where: jest.fn(() => ({})),
   orderBy: jest.fn(() => ({})),
   limit: jest.fn(() => ({})),
   increment: jest.fn((n: number) => n),
   serverTimestamp: jest.fn(() => ({ __type: 'serverTimestamp' })),
   writeBatch: jest.fn(() => ({
+    delete: jest.fn(),
     set: jest.fn(),
     update: jest.fn(),
     commit: jest.fn(async () => {}),
@@ -103,6 +110,7 @@ jest.mock('firebase/firestore', () => ({
     return () => {};
   }),
   getDoc: jest.fn(async () => ({ exists: () => false, data: () => ({}) })),
+  getDocs: jest.fn(async () => ({ docs: [] })),
   setDoc: jest.fn(async () => {}),
   updateDoc: jest.fn(async () => {}),
   addDoc: jest.fn(async () => ({ id: 'test' })),

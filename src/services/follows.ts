@@ -12,46 +12,58 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
-import type { FollowRequest } from './types';
+import type { FollowRequest, ListenerErrorHandler } from './types';
 
-export function subscribeFollowing(uid: string, onChange: (uids: string[]) => void) {
+export function subscribeFollowing(uid: string, onChange: (uids: string[]) => void, onError?: ListenerErrorHandler) {
   if (!db) {
     onChange([]);
     return () => {};
   }
 
-  return onSnapshot(query(collection(db, 'users', uid, 'following'), orderBy('approvedAt', 'desc')), (snap) => {
-    onChange(snap.docs.map((followingDoc) => followingDoc.id));
-  });
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'following'), orderBy('approvedAt', 'desc')),
+    (snap) => onChange(snap.docs.map((followingDoc) => followingDoc.id)),
+    onError,
+  );
 }
 
-export function subscribeFollowers(uid: string, onChange: (uids: string[]) => void) {
+export function subscribeFollowers(uid: string, onChange: (uids: string[]) => void, onError?: ListenerErrorHandler) {
   if (!db) {
     onChange([]);
     return () => {};
   }
 
-  return onSnapshot(query(collection(db, 'users', uid, 'followers'), orderBy('approvedAt', 'desc')), (snap) => {
-    onChange(snap.docs.map((followerDoc) => followerDoc.id));
-  });
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'followers'), orderBy('approvedAt', 'desc')),
+    (snap) => onChange(snap.docs.map((followerDoc) => followerDoc.id)),
+    onError,
+  );
 }
 
-export function subscribeFollowRequests(uid: string, onChange: (requests: FollowRequest[]) => void) {
+export function subscribeFollowRequests(
+  uid: string,
+  onChange: (requests: FollowRequest[]) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db) {
     onChange([]);
     return () => {};
   }
 
-  return onSnapshot(query(collection(db, 'users', uid, 'followRequests'), orderBy('createdAt', 'desc')), (snap) => {
-    onChange(
-      snap.docs.map((requestDoc) => ({
-        requesterUid: requestDoc.id,
-        displayName: (requestDoc.data().displayName as string | null | undefined) ?? null,
-        context: String(requestDoc.data().context ?? ''),
-        createdAt: requestDoc.data().createdAt ?? null,
-      })),
-    );
-  });
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'followRequests'), orderBy('createdAt', 'desc')),
+    (snap) => {
+      onChange(
+        snap.docs.map((requestDoc) => ({
+          requesterUid: requestDoc.id,
+          displayName: (requestDoc.data().displayName as string | null | undefined) ?? null,
+          context: String(requestDoc.data().context ?? ''),
+          createdAt: requestDoc.data().createdAt ?? null,
+        })),
+      );
+    },
+    onError,
+  );
 }
 
 export async function requestFollow(params: {
@@ -98,4 +110,17 @@ export async function approveFollow(params: { ownerUid: string; requesterUid: st
 export async function declineFollow(params: { ownerUid: string; requesterUid: string }) {
   if (!db) throw new Error('Firebase is not initialized.');
   await deleteDoc(doc(db, 'users', params.ownerUid, 'followRequests', params.requesterUid));
+}
+
+export async function cancelFollowRequest(params: { requesterUid: string; targetUid: string }) {
+  if (!db) throw new Error('Firebase is not initialized.');
+  await deleteDoc(doc(db, 'users', params.targetUid, 'followRequests', params.requesterUid));
+}
+
+export async function removeFollow(params: { followerUid: string; targetUid: string }) {
+  if (!db) throw new Error('Firebase is not initialized.');
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'users', params.followerUid, 'following', params.targetUid));
+  batch.delete(doc(db, 'users', params.targetUid, 'followers', params.followerUid));
+  await batch.commit();
 }

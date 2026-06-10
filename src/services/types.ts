@@ -40,3 +40,5 @@ export type Note = {
   text: string;
   createdAt?: Timestamp | null;
 };
+
+export type ListenerErrorHandler = (error: Error) => void;

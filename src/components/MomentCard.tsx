@@ -25,10 +25,20 @@ type Props = {
   connectionLine?: string;
   onNotes: (moment: Moment) => void;
   onFollow?: (moment: Moment) => void;
+  onDelete?: (moment: Moment) => void;
   canFlipBack?: boolean;
 };
 
-export default function MomentCard({ moment, author, mode = 'feed', connectionLine, onNotes, onFollow, canFlipBack = false }: Props) {
+export default function MomentCard({
+  moment,
+  author,
+  mode = 'feed',
+  connectionLine,
+  onNotes,
+  onFollow,
+  onDelete,
+  canFlipBack = false,
+}: Props) {
   const { user } = useContext(AuthContext);
   const { width: windowWidth } = useWindowDimensions();
   const [kept, setKept] = useState(false);
@@ -36,15 +46,20 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
   const [back, setBack] = useState<MomentBack | null>(null);
   const [showBack, setShowBack] = useState(false);
   const [busyAction, setBusyAction] = useState<'keep' | 'save' | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeMomentKeep({ momentId: moment.id, uid: user.uid }, setKept);
+    return subscribeMomentKeep({ momentId: moment.id, uid: user.uid }, setKept, () => {
+      setListenerError('Some moment actions could not be loaded.');
+    });
   }, [moment.id, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeMomentSaved({ momentId: moment.id, uid: user.uid }, setSaved);
+    return subscribeMomentSaved({ momentId: moment.id, uid: user.uid }, setSaved, () => {
+      setListenerError('Some moment actions could not be loaded.');
+    });
   }, [moment.id, user?.uid]);
 
   useEffect(() => {
@@ -53,7 +68,9 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
       setShowBack(false);
       return;
     }
-    return subscribeMomentBack(moment.id, setBack);
+    return subscribeMomentBack(moment.id, setBack, () => {
+      setListenerError('The private reflection could not be loaded.');
+    });
   }, [canFlipBack, moment.id]);
 
   const authorName = author?.displayName ?? 'Then Friend';
@@ -74,6 +91,9 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         uid: user.uid,
         currentlyKept: kept,
       });
+      setListenerError(null);
+    } catch {
+      setListenerError('This like could not be updated.');
     } finally {
       setBusyAction(null);
     }
@@ -89,6 +109,9 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         uid: user.uid,
         currentlySaved: saved,
       });
+      setListenerError(null);
+    } catch {
+      setListenerError('This save could not be updated.');
     } finally {
       setBusyAction(null);
     }
@@ -239,19 +262,34 @@ export default function MomentCard({ moment, author, mode = 'feed', connectionLi
         />
       </View>
 
-      <Pressable
-        onPress={() => canLeaveNote && onNotes(moment)}
-        style={{ marginTop: 2, borderTopColor: colors.border, borderTopWidth: 1, paddingTop: 8 }}
-      >
-        <Text variant="labelMedium" style={{ color: colors.textMuted, textTransform: 'uppercase' }}>
-          {authorName}
+      {listenerError ? (
+        <Text variant="bodySmall" style={{ color: colors.error, paddingHorizontal: 8, paddingBottom: 6 }}>
+          {listenerError}
         </Text>
-        {connectionLine ? (
-          <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 4 }}>
-            {connectionLine}
+      ) : null}
+
+      <View style={{ marginTop: 2, borderTopColor: colors.border, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={() => canLeaveNote && onNotes(moment)} style={{ flex: 1, paddingTop: 8 }}>
+          <Text variant="labelMedium" style={{ color: colors.textMuted, textTransform: 'uppercase' }}>
+            {authorName}
           </Text>
+          {connectionLine ? (
+            <Text variant="bodySmall" style={{ color: colors.textSecondary, marginTop: 4 }}>
+              {connectionLine}
+            </Text>
+          ) : null}
+        </Pressable>
+        {onDelete ? (
+          <IconButton
+            icon="dots-horizontal"
+            size={20}
+            iconColor={colors.textSecondary}
+            onPress={() => onDelete(moment)}
+            accessibilityLabel="Delete moment"
+            style={{ width: 36, height: 36, margin: 0 }}
+          />
         ) : null}
-      </Pressable>
+      </View>
 
       {mode === 'wander' && onFollow ? (
         <Button mode="outlined" icon="account-plus-outline" onPress={() => onFollow(moment)} style={{ marginTop: 12 }}>

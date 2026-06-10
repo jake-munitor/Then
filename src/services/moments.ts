@@ -18,8 +18,8 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
-import { uploadMomentPhoto } from './photos';
-import type { Moment, MomentBack, Note } from './types';
+import { deleteStoredFile, uploadMomentPhoto } from './photos';
+import type { ListenerErrorHandler, Moment, MomentBack, Note } from './types';
 
 function momentFromSnap(id: string, data: any): Moment {
   return {
@@ -39,7 +39,11 @@ function sortMoments(moments: Moment[]) {
   return moments.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
 }
 
-export function subscribeMomentsByAuthors(authorUids: string[], onChange: (moments: Moment[]) => void) {
+export function subscribeMomentsByAuthors(
+  authorUids: string[],
+  onChange: (moments: Moment[]) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db || authorUids.length === 0) {
     onChange([]);
     return () => {};
@@ -53,19 +57,23 @@ export function subscribeMomentsByAuthors(authorUids: string[], onChange: (momen
       where('authorUid', '==', authorUid),
       limit(50),
     );
-    return onSnapshot(momentsQuery, (snap) => {
-      grouped.set(
-        authorUid,
-        snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
-      );
-      onChange(sortMoments(Array.from(grouped.values()).flat()));
-    });
+    return onSnapshot(
+      momentsQuery,
+      (snap) => {
+        grouped.set(
+          authorUid,
+          snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
+        );
+        onChange(sortMoments(Array.from(grouped.values()).flat()));
+      },
+      onError,
+    );
   });
 
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 }
 
-export function subscribeWanderMoments(onChange: (moments: Moment[]) => void) {
+export function subscribeWanderMoments(onChange: (moments: Moment[]) => void, onError?: ListenerErrorHandler) {
   if (!db) {
     onChange([]);
     return () => {};
@@ -76,12 +84,18 @@ export function subscribeWanderMoments(onChange: (moments: Moment[]) => void) {
     where('appearInWander', '==', true),
     limit(100),
   );
-  return onSnapshot(momentsQuery, (snap) => {
-    onChange(sortMoments(snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data()))));
-  });
+  return onSnapshot(
+    momentsQuery,
+    (snap) => onChange(sortMoments(snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())))),
+    onError,
+  );
 }
 
-export function subscribeSavedMomentIds(uid: string, onChange: (momentIds: string[]) => void) {
+export function subscribeSavedMomentIds(
+  uid: string,
+  onChange: (momentIds: string[]) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db) {
     onChange([]);
     return () => {};
@@ -98,6 +112,7 @@ export function subscribeSavedMomentIds(uid: string, onChange: (momentIds: strin
       snap.docs.forEach((savedDoc) => savedIds.add(savedDoc.id));
       emit();
     },
+    onError,
   );
   const unsubscribeLegacy = onSnapshot(
     query(collection(db, 'users', uid, 'kept'), orderBy('keptAt', 'desc')),
@@ -106,6 +121,7 @@ export function subscribeSavedMomentIds(uid: string, onChange: (momentIds: strin
       snap.docs.forEach((keptDoc) => legacyIds.add(keptDoc.id));
       emit();
     },
+    onError,
   );
 
   return () => {
@@ -114,7 +130,11 @@ export function subscribeSavedMomentIds(uid: string, onChange: (momentIds: strin
   };
 }
 
-export function subscribeMomentsByIds(momentIds: string[], onChange: (moments: Moment[]) => void) {
+export function subscribeMomentsByIds(
+  momentIds: string[],
+  onChange: (moments: Moment[]) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db || momentIds.length === 0) {
     onChange([]);
     return () => {};
@@ -123,10 +143,14 @@ export function subscribeMomentsByIds(momentIds: string[], onChange: (moments: M
   const firestore = db;
   const current = new Map<string, Moment>();
   const unsubscribes = momentIds.map((momentId) =>
-    onSnapshot(doc(firestore, 'moments', momentId), (snap) => {
-      if (snap.exists()) current.set(momentId, momentFromSnap(snap.id, snap.data()));
-      onChange(momentIds.map((id) => current.get(id)).filter(Boolean) as Moment[]);
-    }),
+    onSnapshot(
+      doc(firestore, 'moments', momentId),
+      (snap) => {
+        if (snap.exists()) current.set(momentId, momentFromSnap(snap.id, snap.data()));
+        onChange(momentIds.map((id) => current.get(id)).filter(Boolean) as Moment[]);
+      },
+      onError,
+    ),
   );
 
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
@@ -185,26 +209,39 @@ export async function deleteMoment(params: { momentId: string; uid: string }) {
   batch.delete(momentRef);
 
   await batch.commit();
+  await deleteStoredFile(String(momentSnap.data().imageUrl ?? ''));
 }
 
-export function subscribeMomentBack(momentId: string, onChange: (back: MomentBack | null) => void) {
+export function subscribeMomentBack(
+  momentId: string,
+  onChange: (back: MomentBack | null) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db) {
     onChange(null);
     return () => {};
   }
-  return onSnapshot(doc(db, 'moments', momentId, 'back', 'details'), (snap) => {
-    onChange(snap.exists() ? ({ text: String(snap.data()?.text ?? '') } as MomentBack) : null);
-  });
+  return onSnapshot(
+    doc(db, 'moments', momentId, 'back', 'details'),
+    (snap) => onChange(snap.exists() ? ({ text: String(snap.data()?.text ?? '') } as MomentBack) : null),
+    onError,
+  );
 }
 
-export function subscribeMomentKeep(params: { momentId: string; uid: string }, onChange: (kept: boolean) => void) {
+export function subscribeMomentKeep(
+  params: { momentId: string; uid: string },
+  onChange: (kept: boolean) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db) {
     onChange(false);
     return () => {};
   }
-  return onSnapshot(doc(db, 'moments', params.momentId, 'keeps', params.uid), (snap) => {
-    onChange(snap.exists());
-  });
+  return onSnapshot(
+    doc(db, 'moments', params.momentId, 'keeps', params.uid),
+    (snap) => onChange(snap.exists()),
+    onError,
+  );
 }
 
 export async function toggleKeep(params: { momentId: string; authorUid: string; uid: string; currentlyKept: boolean }) {
@@ -224,7 +261,11 @@ export async function toggleKeep(params: { momentId: string; authorUid: string; 
   await updateDoc(momentRef, { keptCount: increment(1) });
 }
 
-export function subscribeMomentSaved(params: { momentId: string; uid: string }, onChange: (saved: boolean) => void) {
+export function subscribeMomentSaved(
+  params: { momentId: string; uid: string },
+  onChange: (saved: boolean) => void,
+  onError?: ListenerErrorHandler,
+) {
   if (!db) {
     onChange(false);
     return () => {};
@@ -233,14 +274,22 @@ export function subscribeMomentSaved(params: { momentId: string; uid: string }, 
   let saved = false;
   let legacySaved = false;
   const emit = () => onChange(saved || legacySaved);
-  const unsubscribeSaved = onSnapshot(doc(db, 'users', params.uid, 'saved', params.momentId), (snap) => {
-    saved = snap.exists();
-    emit();
-  });
-  const unsubscribeLegacy = onSnapshot(doc(db, 'users', params.uid, 'kept', params.momentId), (snap) => {
-    legacySaved = snap.exists();
-    emit();
-  });
+  const unsubscribeSaved = onSnapshot(
+    doc(db, 'users', params.uid, 'saved', params.momentId),
+    (snap) => {
+      saved = snap.exists();
+      emit();
+    },
+    onError,
+  );
+  const unsubscribeLegacy = onSnapshot(
+    doc(db, 'users', params.uid, 'kept', params.momentId),
+    (snap) => {
+      legacySaved = snap.exists();
+      emit();
+    },
+    onError,
+  );
 
   return () => {
     unsubscribeSaved();
@@ -270,22 +319,26 @@ export async function toggleSave(params: {
   });
 }
 
-export function subscribeNotes(momentId: string, onChange: (notes: Note[]) => void) {
+export function subscribeNotes(momentId: string, onChange: (notes: Note[]) => void, onError?: ListenerErrorHandler) {
   if (!db) {
     onChange([]);
     return () => {};
   }
   const notesQuery = query(collection(db, 'moments', momentId, 'notes'), orderBy('createdAt', 'asc'));
-  return onSnapshot(notesQuery, (snap) => {
-    onChange(
-      snap.docs.map((noteDoc) => ({
-        id: noteDoc.id,
-        authorUid: String(noteDoc.data().authorUid ?? ''),
-        text: String(noteDoc.data().text ?? ''),
-        createdAt: noteDoc.data().createdAt ?? null,
-      })),
-    );
-  });
+  return onSnapshot(
+    notesQuery,
+    (snap) => {
+      onChange(
+        snap.docs.map((noteDoc) => ({
+          id: noteDoc.id,
+          authorUid: String(noteDoc.data().authorUid ?? ''),
+          text: String(noteDoc.data().text ?? ''),
+          createdAt: noteDoc.data().createdAt ?? null,
+        })),
+      );
+    },
+    onError,
+  );
 }
 
 export async function addNote(params: { momentId: string; uid: string; text: string }) {

@@ -28,7 +28,8 @@ service cloud.firestore {
 
       match /followers/{followerUid} {
         allow read: if isSelf(uid) || isSelf(followerUid);
-        allow create, update, delete: if isSelf(uid);
+        allow create, update: if isSelf(uid);
+        allow delete: if isSelf(uid) || isSelf(followerUid);
       }
 
       match /followRequests/{requesterUid} {

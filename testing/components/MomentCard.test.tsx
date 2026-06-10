@@ -48,6 +48,7 @@ describe('MomentCard', () => {
             register: jest.fn(),
             resetPassword: jest.fn(),
             updateDisplayName: jest.fn(),
+            deleteAccount: jest.fn(),
             logout: jest.fn(),
           }}
         >
@@ -93,6 +94,14 @@ describe('MomentCard', () => {
     expect(screen.getByLabelText('Open notes')).toBeTruthy();
     expect(screen.getByLabelText('Save for later')).toBeTruthy();
     expect(screen.queryByLabelText('Delete moment')).toBeNull();
+  });
+
+  it('shows owner deletion only when an explicit delete action is provided', () => {
+    const onDelete = jest.fn();
+    renderCard({ mode: 'roll', onDelete });
+
+    fireEvent.press(screen.getByLabelText('Delete moment'));
+    expect(onDelete).toHaveBeenCalledWith(moment);
   });
 
   it('gives long captions enough line height and vertical padding to wrap cleanly', () => {

@@ -4,9 +4,16 @@ import { Button, Dialog, Portal, Searchbar, Text, TextInput } from 'react-native
 
 import EmptyState from '../components/EmptyState';
 import HandwrittenText from '../components/HandwrittenText';
+import ListenerError from '../components/ListenerError';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { getPendingFollowRequestIds, requestFollow, subscribeFollowing } from '../services/follows';
+import {
+  cancelFollowRequest,
+  getPendingFollowRequestIds,
+  removeFollow,
+  requestFollow,
+  subscribeFollowing,
+} from '../services/follows';
 import type { PublicUser } from '../services/types';
 import { filterDiscoverableUsers, subscribeDiscoverableUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
@@ -19,10 +26,12 @@ export default function FriendsScreen() {
   const [people, setPeople] = useState<PublicUser[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
   const [requesting, setRequesting] = useState<PublicUser | null>(null);
+  const [confirming, setConfirming] = useState<{ person: PublicUser; action: 'cancel' | 'remove' } | null>(null);
   const [sentRequests, setSentRequests] = useState<string[]>([]);
   const [context, setContext] = useState(`I'd like to keep up.`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
   useEffect(
@@ -30,12 +39,15 @@ export default function FriendsScreen() {
       subscribeDiscoverableUsers((nextPeople) => {
         setPeople(nextPeople);
         finishRefresh();
+      }, () => {
+        setListenerError('The people directory could not be loaded.');
+        finishRefresh();
       }),
     [finishRefresh, refreshKey],
   );
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeFollowing(user.uid, setFollowing);
+    return subscribeFollowing(user.uid, setFollowing, () => setListenerError('Your friend list could not be loaded.'));
   }, [refreshKey, user?.uid]);
   useEffect(() => {
     if (!user?.uid || people.length === 0) {
@@ -53,6 +65,7 @@ export default function FriendsScreen() {
       })
       .catch(() => {
         if (active) setSentRequests([]);
+        if (active) setListenerError('Pending friend requests could not be checked.');
       });
 
     return () => {
@@ -96,6 +109,26 @@ export default function FriendsScreen() {
     }
   };
 
+  const confirmRelationshipChange = async () => {
+    if (!user?.uid || !confirming) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (confirming.action === 'cancel') {
+        await cancelFollowRequest({ requesterUid: user.uid, targetUid: confirming.person.uid });
+        setSentRequests((current) => current.filter((uid) => uid !== confirming.person.uid));
+      } else {
+        await removeFollow({ followerUid: user.uid, targetUid: confirming.person.uid });
+        setFollowing((current) => current.filter((uid) => uid !== confirming.person.uid));
+      }
+      setConfirming(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update this friendship.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
       <View style={{ width: '100%', maxWidth: 520, alignSelf: 'center', padding: 16, paddingBottom: 8, gap: 12 }}>
@@ -110,6 +143,9 @@ export default function FriendsScreen() {
           style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1 }}
           inputStyle={{ fontFamily: fonts.bodyRegular }}
         />
+      </View>
+      <View style={{ paddingHorizontal: 16 }}>
+        <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
       </View>
 
       <FlatList
@@ -164,11 +200,14 @@ export default function FriendsScreen() {
               </View>
               <Button
                 mode={requested || isFollowing ? 'outlined' : 'contained'}
-                icon={requested || isFollowing ? 'check' : 'account-plus-outline'}
-                onPress={() => openRequest(item)}
-                disabled={requested || isFollowing}
+                icon={isFollowing ? 'account-minus-outline' : requested ? 'close' : 'account-plus-outline'}
+                onPress={() => {
+                  if (isFollowing) setConfirming({ person: item, action: 'remove' });
+                  else if (requested) setConfirming({ person: item, action: 'cancel' });
+                  else openRequest(item);
+                }}
               >
-                {isFollowing ? 'Following' : requested ? 'Request sent' : 'Add friend'}
+                {isFollowing ? 'Remove friend' : requested ? 'Cancel request' : 'Add friend'}
               </Button>
             </View>
           );
@@ -191,6 +230,25 @@ export default function FriendsScreen() {
             </Button>
             <Button onPress={submitRequest} loading={busy} disabled={busy || !context.trim()}>
               Send
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={Boolean(confirming)} onDismiss={() => setConfirming(null)}>
+          <Dialog.Title>{confirming?.action === 'remove' ? 'Remove friend?' : 'Cancel request?'}</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary }}>
+              {confirming?.action === 'remove'
+                ? `You will stop seeing private moments from ${confirming.person.displayName ?? 'this person'}.`
+                : `Your request to ${confirming?.person.displayName ?? 'this person'} will be withdrawn.`}
+            </Text>
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setConfirming(null)} disabled={busy}>
+              Keep
+            </Button>
+            <Button onPress={confirmRelationshipChange} loading={busy} disabled={busy} textColor={colors.error}>
+              Confirm
             </Button>
           </Dialog.Actions>
         </Dialog>

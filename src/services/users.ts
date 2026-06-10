@@ -1,13 +1,17 @@
 import { collection, doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
-import type { ProfileVisibility, PublicUser } from './types';
+import type { ListenerErrorHandler, ProfileVisibility, PublicUser } from './types';
 
 function normalizeHandle(value: string | null) {
   return (value?.split('@')[0] ?? 'friend').toLowerCase().replace(/[^a-z0-9_]/g, '');
 }
 
-export function subscribePublicUsers(uids: string[], onChange: (users: Record<string, PublicUser>) => void) {
+export function subscribePublicUsers(
+  uids: string[],
+  onChange: (users: Record<string, PublicUser>) => void,
+  onError?: ListenerErrorHandler,
+) {
   const unique = Array.from(new Set(uids.filter(Boolean)));
   if (!db || unique.length === 0) {
     onChange({});
@@ -17,18 +21,22 @@ export function subscribePublicUsers(uids: string[], onChange: (users: Record<st
   const firestore = db;
   const current: Record<string, PublicUser> = {};
   const unsubscribes = unique.map((uid) =>
-    onSnapshot(doc(firestore, 'publicUsers', uid), (snap) => {
-      const data = snap.data() as Partial<PublicUser> | undefined;
-      current[uid] = {
-        uid,
-        displayName: data?.displayName ?? null,
-        handle: data?.handle ?? null,
-        avatarUrl: data?.avatarUrl ?? null,
-        profileVisibility: data?.profileVisibility ?? 'private',
-        appearInWander: Boolean(data?.appearInWander),
-      };
-      onChange({ ...current });
-    }),
+    onSnapshot(
+      doc(firestore, 'publicUsers', uid),
+      (snap) => {
+        const data = snap.data() as Partial<PublicUser> | undefined;
+        current[uid] = {
+          uid,
+          displayName: data?.displayName ?? null,
+          handle: data?.handle ?? null,
+          avatarUrl: data?.avatarUrl ?? null,
+          profileVisibility: data?.profileVisibility ?? 'private',
+          appearInWander: Boolean(data?.appearInWander),
+        };
+        onChange({ ...current });
+      },
+      onError,
+    ),
   );
 
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
@@ -60,27 +68,31 @@ export function filterDiscoverableUsers(params: {
     });
 }
 
-export function subscribeDiscoverableUsers(onChange: (users: PublicUser[]) => void) {
+export function subscribeDiscoverableUsers(onChange: (users: PublicUser[]) => void, onError?: ListenerErrorHandler) {
   if (!db) {
     onChange([]);
     return () => {};
   }
 
-  return onSnapshot(collection(db, 'publicUsers'), (snap) => {
-    onChange(
-      snap.docs.map((publicDoc) => {
-        const data = publicDoc.data() as Partial<PublicUser>;
-        return {
-          uid: publicDoc.id,
-          displayName: data.displayName ?? null,
-          handle: data.handle ?? null,
-          avatarUrl: data.avatarUrl ?? null,
-          profileVisibility: data.profileVisibility ?? 'private',
-          appearInWander: Boolean(data.appearInWander),
-        };
-      }),
-    );
-  });
+  return onSnapshot(
+    collection(db, 'publicUsers'),
+    (snap) => {
+      onChange(
+        snap.docs.map((publicDoc) => {
+          const data = publicDoc.data() as Partial<PublicUser>;
+          return {
+            uid: publicDoc.id,
+            displayName: data.displayName ?? null,
+            handle: data.handle ?? null,
+            avatarUrl: data.avatarUrl ?? null,
+            profileVisibility: data.profileVisibility ?? 'private',
+            appearInWander: Boolean(data.appearInWander),
+          };
+        }),
+      );
+    },
+    onError,
+  );
 }
 
 export async function ensurePublicUser(uid: string, fallback: { displayName: string | null; email: string | null }) {

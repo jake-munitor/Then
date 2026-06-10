@@ -1,19 +1,20 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Image, View } from 'react-native';
-import { Badge, Button, IconButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper';
+import { Badge, Button, Dialog, IconButton, Portal, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
 import HandwrittenText from '../components/HandwrittenText';
+import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { db } from '../firebase/firebase';
 import { approveFollow, declineFollow, subscribeFollowers, subscribeFollowing, subscribeFollowRequests } from '../services/follows';
-import { subscribeMomentsByAuthors, subscribeMomentsByIds, subscribeSavedMomentIds } from '../services/moments';
-import { uploadAvatar } from '../services/photos';
+import { deleteMoment, subscribeMomentsByAuthors, subscribeMomentsByIds, subscribeSavedMomentIds } from '../services/moments';
+import { deleteStoredFile, uploadAvatar } from '../services/photos';
 import type { FollowRequest, Moment, ProfileVisibility, PublicUser } from '../services/types';
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
@@ -23,7 +24,7 @@ import { initialsFromName } from '../utils/formatters';
 type RollView = 'archive' | 'saved' | 'requests';
 
 export default function RollScreen() {
-  const { user, logout, updateDisplayName } = useContext(AuthContext);
+  const { user, deleteAccount, logout, updateDisplayName } = useContext(AuthContext);
   const navigation = useNavigation<any>();
   const [name, setName] = useState(user?.displayName ?? '');
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>('private');
@@ -39,6 +40,10 @@ export default function RollScreen() {
   const [view, setView] = useState<RollView>('archive');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
+  const [deletingMoment, setDeletingMoment] = useState<Moment | null>(null);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
   useEffect(() => {
@@ -49,47 +54,60 @@ export default function RollScreen() {
     return subscribeMomentsByAuthors([user.uid], (nextArchive) => {
       setArchive(nextArchive);
       finishRefresh();
+    }, () => {
+      setListenerError('Your archive could not be loaded.');
+      finishRefresh();
     });
   }, [finishRefresh, refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeSavedMomentIds(user.uid, setSavedIds);
+    return subscribeSavedMomentIds(user.uid, setSavedIds, () => setListenerError('Saved moments could not be loaded.'));
   }, [refreshKey, user?.uid]);
 
-  useEffect(() => subscribeMomentsByIds(savedIds, setSaved), [refreshKey, savedIds.join('|')]);
+  useEffect(
+    () => subscribeMomentsByIds(savedIds, setSaved, () => setListenerError('Some saved moments could not be loaded.')),
+    [refreshKey, savedIds.join('|')],
+  );
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeFollowRequests(user.uid, setRequests);
-  }, [refreshKey, user?.uid]);
-
-  useEffect(() => {
-    if (!user?.uid) return;
-    return subscribeFollowers(user.uid, setFollowers);
-  }, [refreshKey, user?.uid]);
-
-  useEffect(() => {
-    if (!user?.uid) return;
-    return subscribeFollowing(user.uid, setFollowing);
+    return subscribeFollowRequests(user.uid, setRequests, () => setListenerError('Follow requests could not be loaded.'));
   }, [refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribePublicUsers([user.uid], (profiles) => {
-      const profile = profiles[user.uid];
-      if (!profile) return;
-      setName(profile.displayName ?? user.displayName ?? '');
-      setAvatarUri(profile.avatarUrl);
-      setProfileVisibility(profile.profileVisibility);
-      setAppearInWander(profile.appearInWander);
-    });
+    return subscribeFollowers(user.uid, setFollowers, () => setListenerError('Follower details could not be loaded.'));
+  }, [refreshKey, user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeFollowing(user.uid, setFollowing, () => setListenerError('Your friend list could not be loaded.'));
+  }, [refreshKey, user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribePublicUsers(
+      [user.uid],
+      (profiles) => {
+        const profile = profiles[user.uid];
+        if (!profile) return;
+        setName(profile.displayName ?? user.displayName ?? '');
+        setAvatarUri(profile.avatarUrl);
+        setProfileVisibility(profile.profileVisibility);
+        setAppearInWander(profile.appearInWander);
+      },
+      () => setListenerError('Your profile could not be loaded.'),
+    );
   }, [user?.displayName, user?.uid]);
 
   const visibleMoments = useMemo(() => (view === 'archive' ? archive : saved), [archive, saved, view]);
   const authorUids = useMemo(() => visibleMoments.map((moment) => moment.authorUid), [visibleMoments]);
 
-  useEffect(() => subscribePublicUsers(authorUids, setPublicUsers), [authorUids.join('|')]);
+  useEffect(
+    () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
+    [authorUids.join('|')],
+  );
 
   const saveProfile = async () => {
     if (!user?.uid || !name.trim()) return;
@@ -122,10 +140,12 @@ export default function RollScreen() {
 
     setBusy(true);
     try {
+      const previousAvatar = avatarUri;
       const url = await uploadAvatar({ uid: user.uid, uri: result.assets[0].uri });
       await setDoc(doc(db, 'users', user.uid), { avatarUrl: url, updatedAt: serverTimestamp() }, { merge: true });
       await setDoc(doc(db, 'publicUsers', user.uid), { avatarUrl: url, updatedAt: serverTimestamp() }, { merge: true });
       setAvatarUri(url);
+      await deleteStoredFile(previousAvatar).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update avatar.');
     } finally {
@@ -135,12 +155,61 @@ export default function RollScreen() {
 
   const handleApprove = async (requesterUid: string) => {
     if (!user?.uid) return;
-    await approveFollow({ ownerUid: user.uid, requesterUid });
+    setError(null);
+    try {
+      await approveFollow({ ownerUid: user.uid, requesterUid });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not approve this request.');
+    }
   };
 
   const handleDecline = async (requesterUid: string) => {
     if (!user?.uid) return;
-    await declineFollow({ ownerUid: user.uid, requesterUid });
+    setError(null);
+    try {
+      await declineFollow({ ownerUid: user.uid, requesterUid });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not decline this request.');
+    }
+  };
+
+  const confirmDeleteMoment = async () => {
+    if (!user?.uid || !deletingMoment) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteMoment({ momentId: deletingMoment.id, uid: user.uid });
+      setDeletingMoment(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete this moment.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openDeleteMoment = (moment: Moment) => {
+    setError(null);
+    setDeletingMoment(moment);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!deletePassword) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteAccount(deletePassword);
+      setShowDeleteAccount(false);
+    } catch (e: any) {
+      const message =
+        e?.code === 'auth/invalid-credential' || e?.code === 'auth/wrong-password'
+          ? 'Password is incorrect.'
+          : e instanceof Error
+            ? e.message
+            : 'Could not delete the account.';
+      setError(message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -166,6 +235,7 @@ export default function RollScreen() {
           ) : null}
         </View>
       </View>
+      <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
 
       <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, padding: 16, gap: 14 }}>
         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
@@ -273,6 +343,7 @@ export default function RollScreen() {
                 }
               }
               canFlipBack={view === 'archive' && moment.authorUid === user?.uid}
+              onDelete={view === 'archive' && moment.authorUid === user?.uid ? openDeleteMoment : undefined}
               onNotes={(selectedMoment) => navigation.navigate('Notes', { moment: selectedMoment })}
             />
           ))}
@@ -282,7 +353,61 @@ export default function RollScreen() {
       <Button mode="text" onPress={logout} textColor={colors.error}>
         Sign out
       </Button>
+      <Button
+        mode="outlined"
+        icon="account-remove-outline"
+        onPress={() => {
+          setError(null);
+          setDeletePassword('');
+          setShowDeleteAccount(true);
+        }}
+        textColor={colors.error}
+      >
+        Delete account
+      </Button>
       </View>
+
+      <Portal>
+        <Dialog visible={Boolean(deletingMoment)} onDismiss={() => setDeletingMoment(null)}>
+          <Dialog.Title>Delete this moment?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary }}>The photo, notes, likes, and private reflection will be permanently removed.</Text>
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeletingMoment(null)} disabled={busy}>Keep</Button>
+            <Button onPress={confirmDeleteMoment} loading={busy} disabled={busy} textColor={colors.error}>Delete</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={showDeleteAccount} onDismiss={() => setShowDeleteAccount(false)}>
+          <Dialog.Title>Delete your account?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
+              This permanently removes your profile, moments, friendships, saved items, and current uploaded media. Enter your password to confirm.
+            </Text>
+            <TextInput
+              label="Password"
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              disabled={busy}
+            />
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowDeleteAccount(false)} disabled={busy}>Cancel</Button>
+            <Button
+              onPress={confirmDeleteAccount}
+              loading={busy}
+              disabled={busy || !deletePassword}
+              textColor={colors.error}
+            >
+              Delete account
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </Screen>
   );
 }

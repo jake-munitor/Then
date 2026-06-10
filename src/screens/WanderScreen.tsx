@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
 import HandwrittenText from '../components/HandwrittenText';
+import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -29,6 +30,7 @@ export default function WanderScreen() {
   const [context, setContext] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
   useEffect(
@@ -36,16 +38,22 @@ export default function WanderScreen() {
       subscribeWanderMoments((nextMoments) => {
         setMoments(nextMoments);
         finishRefresh();
+      }, () => {
+        setListenerError('Wander moments could not be loaded.');
+        finishRefresh();
       }),
     [finishRefresh, refreshKey],
   );
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeFollowing(user.uid, setFollowing);
+    return subscribeFollowing(user.uid, setFollowing, () => setListenerError('Your friend list could not be loaded.'));
   }, [refreshKey, user?.uid]);
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
-  useEffect(() => subscribePublicUsers(authorUids, setPublicUsers), [authorUids.join('|')]);
+  useEffect(
+    () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
+    [authorUids.join('|')],
+  );
 
   const openRequest = (moment: Moment) => {
     setRequesting(moment);
@@ -79,6 +87,7 @@ export default function WanderScreen() {
         <HandwrittenText>wander</HandwrittenText>
         <Text style={{ color: colors.textSecondary }}>Opt-in posts from people outside your feed.</Text>
       </View>
+      <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
 
       <FlatList
         data={moments}

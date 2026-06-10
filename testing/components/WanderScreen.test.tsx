@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { PaperProvider } from 'react-native-paper';
 
 import WanderScreen from '../../src/screens/WanderScreen';
+import { subscribeWanderMoments } from '../../src/services/moments';
 import { AuthContext } from '../../src/store/AuthContext';
 import { appTheme } from '../../src/theme/theme';
 
@@ -59,6 +60,7 @@ describe('WanderScreen', () => {
             register: jest.fn(),
             resetPassword: jest.fn(),
             updateDisplayName: jest.fn(),
+            deleteAccount: jest.fn(),
             logout: jest.fn(),
           }}
         >
@@ -76,5 +78,36 @@ describe('WanderScreen', () => {
     expect(screen.getByText('keeping up')).toBeTruthy();
     expect(screen.getAllByText('no request')).toHaveLength(2);
     expect(screen.getByText('request available')).toBeTruthy();
+  });
+
+  it('shows a retry state when the Wander listener fails', () => {
+    (subscribeWanderMoments as jest.Mock).mockImplementationOnce((_onChange, onError) => {
+      onError(new Error('permission denied'));
+      return () => {};
+    });
+
+    render(
+      <PaperProvider theme={appTheme}>
+        <AuthContext.Provider
+          value={{
+            user: { uid: 'user-1', email: 'jake@example.com', displayName: 'Jake' },
+            isLoading: false,
+            login: jest.fn(),
+            register: jest.fn(),
+            resetPassword: jest.fn(),
+            updateDisplayName: jest.fn(),
+            deleteAccount: jest.fn(),
+            logout: jest.fn(),
+          }}
+        >
+          <NavigationContainer>
+            <WanderScreen />
+          </NavigationContainer>
+        </AuthContext.Provider>
+      </PaperProvider>,
+    );
+
+    expect(screen.getByText('Could not refresh this page')).toBeTruthy();
+    expect(screen.getByText('Wander moments could not be loaded.')).toBeTruthy();
   });
 });
