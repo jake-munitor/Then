@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Image, View } from 'react-native';
+import { Image, Share, View } from 'react-native';
 import { Badge, Button, Dialog, IconButton, Portal, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
@@ -13,15 +13,22 @@ import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { db } from '../firebase/firebase';
 import { approveFollow, declineFollow, subscribeFollowers, subscribeFollowing, subscribeFollowRequests } from '../services/follows';
-import { deleteMoment, subscribeMomentsByAuthors, subscribeMomentsByIds, subscribeSavedMomentIds } from '../services/moments';
+import {
+  deleteMoment,
+  saveMomentBack,
+  subscribeMomentsByAuthors,
+  subscribeMomentsByIds,
+  subscribeSavedMomentIds,
+} from '../services/moments';
+import { markAllNotificationsRead, subscribeNotifications } from '../services/notifications';
 import { deleteStoredFile, uploadAvatar } from '../services/photos';
-import type { FollowRequest, Moment, ProfileVisibility, PublicUser } from '../services/types';
+import type { AppNotification, FollowRequest, Moment, ProfileVisibility, PublicUser } from '../services/types';
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { initialsFromName } from '../utils/formatters';
 
-type RollView = 'archive' | 'saved' | 'requests';
+type RollView = 'archive' | 'saved' | 'requests' | 'activity';
 
 export default function RollScreen() {
   const { user, deleteAccount, logout, updateDisplayName } = useContext(AuthContext);
@@ -29,10 +36,12 @@ export default function RollScreen() {
   const [name, setName] = useState(user?.displayName ?? '');
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>('private');
   const [appearInWander, setAppearInWander] = useState(false);
+  const [profileHandle, setProfileHandle] = useState<string | null>(null);
   const [archive, setArchive] = useState<Moment[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [saved, setSaved] = useState<Moment[]>([]);
   const [requests, setRequests] = useState<FollowRequest[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [followers, setFollowers] = useState<string[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
@@ -43,6 +52,8 @@ export default function RollScreen() {
   const [listenerError, setListenerError] = useState<string | null>(null);
   const [deletingMoment, setDeletingMoment] = useState<Moment | null>(null);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [editingReflection, setEditingReflection] = useState<Moment | null>(null);
+  const [reflectionText, setReflectionText] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
@@ -74,6 +85,14 @@ export default function RollScreen() {
     if (!user?.uid) return;
     return subscribeFollowRequests(user.uid, setRequests, () => setListenerError('Follow requests could not be loaded.'));
   }, [refreshKey, user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeNotifications(
+      user.uid,
+      setNotifications,
+      () => setListenerError('Note activity could not be loaded.'),
+    );
+  }, [refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -93,6 +112,7 @@ export default function RollScreen() {
         const profile = profiles[user.uid];
         if (!profile) return;
         setName(profile.displayName ?? user.displayName ?? '');
+        setProfileHandle(profile.handle);
         setAvatarUri(profile.avatarUrl);
         setProfileVisibility(profile.profileVisibility);
         setAppearInWander(profile.appearInWander);
@@ -102,7 +122,17 @@ export default function RollScreen() {
   }, [user?.displayName, user?.uid]);
 
   const visibleMoments = useMemo(() => (view === 'archive' ? archive : saved), [archive, saved, view]);
-  const authorUids = useMemo(() => visibleMoments.map((moment) => moment.authorUid), [visibleMoments]);
+  const authorUids = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          visibleMoments
+            .map((moment) => moment.authorUid)
+            .concat(notifications.map((notification) => notification.actorUid)),
+        ),
+      ),
+    [notifications, visibleMoments],
+  );
 
   useEffect(
     () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
@@ -173,6 +203,43 @@ export default function RollScreen() {
     }
   };
 
+  const openActivity = () => {
+    setView('activity');
+    if (user?.uid) markAllNotificationsRead(user.uid).catch(() => {});
+  };
+
+  const shareProfile = async () => {
+    const handle = profileHandle ? `@${profileHandle}` : user?.displayName ?? 'me';
+    await Share.share({
+      message: `Find ${handle} on Then: https://apps.apple.com/app/id6778068657`,
+    });
+  };
+
+  const openReflectionEditor = (moment: Moment, currentText: string) => {
+    setEditingReflection(moment);
+    setReflectionText(currentText);
+    setError(null);
+  };
+
+  const saveReflection = async () => {
+    if (!user?.uid || !editingReflection) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await saveMomentBack({
+        momentId: editingReflection.id,
+        uid: user.uid,
+        text: reflectionText,
+      });
+      setEditingReflection(null);
+      setReflectionText('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save this reflection.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmDeleteMoment = async () => {
     if (!user?.uid || !deletingMoment) return;
     setBusy(true);
@@ -221,15 +288,15 @@ export default function RollScreen() {
         right={
           <View>
             <IconButton
-              icon={requests.length ? 'bell' : 'bell-outline'}
-              iconColor={requests.length ? colors.primary : colors.textSecondary}
+              icon={notifications.some((item) => !item.readAt) ? 'bell' : 'bell-outline'}
+              iconColor={notifications.some((item) => !item.readAt) ? colors.primary : colors.textSecondary}
               size={22}
-              onPress={() => setView('requests')}
-              accessibilityLabel={requests.length ? `${requests.length} pending requests` : 'Open requests'}
+              onPress={openActivity}
+              accessibilityLabel="Open activity"
             />
-            {requests.length ? (
+            {notifications.filter((item) => !item.readAt).length ? (
               <Badge style={{ position: 'absolute', right: 2, top: 2, backgroundColor: colors.primary }}>
-                {requests.length}
+                {notifications.filter((item) => !item.readAt).length}
               </Badge>
             ) : null}
           </View>
@@ -288,12 +355,18 @@ export default function RollScreen() {
             Avatar
           </Button>
         </View>
+        <Button mode="text" icon="share-variant-outline" onPress={shareProfile} disabled={busy}>
+          Share my profile
+        </Button>
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
       </View>
 
       <SegmentedButtons
         value={view}
-        onValueChange={(value) => setView(value as RollView)}
+        onValueChange={(value) => {
+          if (value === 'activity') openActivity();
+          else setView(value as RollView);
+        }}
         buttons={[
           { value: 'archive', label: 'Archive' },
           { value: 'saved', label: 'Saved' },
@@ -301,7 +374,24 @@ export default function RollScreen() {
         ]}
       />
 
-      {view === 'requests' ? (
+      {view === 'activity' ? (
+        notifications.length === 0 ? (
+          <EmptyState title="No note activity" message="New notes on your moments will appear here." />
+        ) : (
+          notifications.map((notification) => (
+            <View
+              key={notification.id}
+              style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 16, gap: 6 }}
+            >
+              <Text variant="titleMedium">
+                {publicUsers[notification.actorUid]?.displayName ?? 'A friend'} left a note
+              </Text>
+              <Text style={{ color: colors.textPrimary }}>{notification.text}</Text>
+              <Text style={{ color: colors.textSecondary }}>On {notification.frontText || 'your moment'}</Text>
+            </View>
+          ))
+        )
+      ) : view === 'requests' ? (
         requests.length === 0 ? (
           <EmptyState title="No follow requests" message="Follow requests land here." />
         ) : (
@@ -346,6 +436,7 @@ export default function RollScreen() {
                 }
               }
               canFlipBack={view === 'archive' && moment.authorUid === user?.uid}
+              onEditBack={view === 'archive' && moment.authorUid === user?.uid ? openReflectionEditor : undefined}
               onDelete={view === 'archive' && moment.authorUid === user?.uid ? openDeleteMoment : undefined}
               onNotes={(selectedMoment) => navigation.navigate('Notes', { moment: selectedMoment })}
             />
@@ -371,6 +462,26 @@ export default function RollScreen() {
       </View>
 
       <Portal>
+        <Dialog visible={Boolean(editingReflection)} onDismiss={() => setEditingReflection(null)}>
+          <Dialog.Title>Private reflection</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
+              This stays private and can be revisited whenever you like.
+            </Text>
+            <TextInput
+              label="on the back"
+              value={reflectionText}
+              onChangeText={setReflectionText}
+              multiline
+              disabled={busy}
+            />
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setEditingReflection(null)} disabled={busy}>Cancel</Button>
+            <Button onPress={saveReflection} loading={busy} disabled={busy}>Save</Button>
+          </Dialog.Actions>
+        </Dialog>
         <Dialog visible={Boolean(deletingMoment)} onDismiss={() => setDeletingMoment(null)}>
           <Dialog.Title>Delete this moment?</Dialog.Title>
           <Dialog.Content>

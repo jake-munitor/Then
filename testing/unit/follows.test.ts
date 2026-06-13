@@ -1,4 +1,4 @@
-import { deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 
 import { approveFollow, cancelFollowRequest, declineFollow, removeFollow } from '../../src/services/follows';
 
@@ -32,20 +32,25 @@ describe('friend relationship writes', () => {
       expect.objectContaining({ uid: 'owner' }),
     );
     expect(mockDelete).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/owner/followRequests/requester' }));
+    expect(mockDelete).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/requester/outgoingFollowRequests/owner' }));
     expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 
   it('declines a request without creating a relationship', async () => {
     await declineFollow({ ownerUid: 'owner', requesterUid: 'requester' });
 
-    expect(deleteDoc).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/owner/followRequests/requester' }));
+    expect(mockDelete).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/owner/followRequests/requester' }));
+    expect(mockDelete).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/requester/outgoingFollowRequests/owner' }));
     expect(mockSet).not.toHaveBeenCalled();
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 
   it('cancels an outgoing request', async () => {
     await cancelFollowRequest({ requesterUid: 'requester', targetUid: 'owner' });
 
-    expect(deleteDoc).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/owner/followRequests/requester' }));
+    expect(mockDelete).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/owner/followRequests/requester' }));
+    expect(mockDelete).toHaveBeenCalledWith(expect.objectContaining({ path: 'users/requester/outgoingFollowRequests/owner' }));
+    expect(mockCommit).toHaveBeenCalledTimes(1);
   });
 
   it('removes both sides of an approved friendship', async () => {

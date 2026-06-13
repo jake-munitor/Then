@@ -9,6 +9,7 @@ import NewMomentScreen from '../screens/NewMomentScreen';
 import RollScreen from '../screens/RollScreen';
 import WanderScreen from '../screens/WanderScreen';
 import { subscribeFollowRequests } from '../services/follows';
+import { subscribeNotifications } from '../services/notifications';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -20,6 +21,7 @@ export default function TabsNavigator() {
   const theme = useTheme();
   const { user } = useContext(AuthContext);
   const [requestCount, setRequestCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -27,6 +29,16 @@ export default function TabsNavigator() {
       return;
     }
     return subscribeFollowRequests(user.uid, (requests) => setRequestCount(requests.length));
+  }, [user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) {
+      setNotificationCount(0);
+      return;
+    }
+    return subscribeNotifications(
+      user.uid,
+      (notifications) => setNotificationCount(notifications.filter((item) => !item.readAt).length),
+    );
   }, [user?.uid]);
 
   return (
@@ -126,7 +138,7 @@ export default function TabsNavigator() {
         options={{
           title: 'Your roll',
           tabBarIcon: ({ color, size }) => <Icon source="filmstrip" color={color} size={size} />,
-          tabBarBadge: requestCount || undefined,
+          tabBarBadge: requestCount + notificationCount || undefined,
         }}
       />
     </Tab.Navigator>

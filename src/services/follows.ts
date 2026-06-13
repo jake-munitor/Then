@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -66,6 +65,23 @@ export function subscribeFollowRequests(
   );
 }
 
+export function subscribeOutgoingFollowRequestIds(
+  requesterUid: string,
+  onChange: (targetUids: string[]) => void,
+  onError?: ListenerErrorHandler,
+) {
+  if (!db) {
+    onChange([]);
+    return () => {};
+  }
+
+  return onSnapshot(
+    query(collection(db, 'users', requesterUid, 'outgoingFollowRequests'), orderBy('createdAt', 'desc')),
+    (snap) => onChange(snap.docs.map((requestDoc) => requestDoc.id)),
+    onError,
+  );
+}
+
 export async function requestFollow(params: {
   requesterUid: string;
   targetUid: string;
@@ -73,12 +89,20 @@ export async function requestFollow(params: {
   context: string;
 }) {
   if (!db) throw new Error('Firebase is not initialized.');
-  await setDoc(doc(db, 'users', params.targetUid, 'followRequests', params.requesterUid), {
+  const approved = await getDoc(doc(db, 'users', params.requesterUid, 'following', params.targetUid));
+  if (approved.exists()) return;
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'users', params.targetUid, 'followRequests', params.requesterUid), {
     requesterUid: params.requesterUid,
     displayName: params.displayName ?? 'Then Friend',
     context: params.context.trim(),
     createdAt: serverTimestamp(),
   });
+  batch.set(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.targetUid), {
+    targetUid: params.targetUid,
+    createdAt: serverTimestamp(),
+  });
+  await batch.commit();
 }
 
 export async function getPendingFollowRequestIds(requesterUid: string, targetUids: string[]) {
@@ -104,17 +128,24 @@ export async function approveFollow(params: { ownerUid: string; requesterUid: st
     approvedAt: serverTimestamp(),
   });
   batch.delete(doc(db, 'users', params.ownerUid, 'followRequests', params.requesterUid));
+  batch.delete(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.ownerUid));
   await batch.commit();
 }
 
 export async function declineFollow(params: { ownerUid: string; requesterUid: string }) {
   if (!db) throw new Error('Firebase is not initialized.');
-  await deleteDoc(doc(db, 'users', params.ownerUid, 'followRequests', params.requesterUid));
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'users', params.ownerUid, 'followRequests', params.requesterUid));
+  batch.delete(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.ownerUid));
+  await batch.commit();
 }
 
 export async function cancelFollowRequest(params: { requesterUid: string; targetUid: string }) {
   if (!db) throw new Error('Firebase is not initialized.');
-  await deleteDoc(doc(db, 'users', params.targetUid, 'followRequests', params.requesterUid));
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'users', params.targetUid, 'followRequests', params.requesterUid));
+  batch.delete(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.targetUid));
+  await batch.commit();
 }
 
 export async function removeFollow(params: { followerUid: string; targetUid: string }) {

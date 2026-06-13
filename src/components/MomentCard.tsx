@@ -24,6 +24,7 @@ type Props = {
   onNotes: (moment: Moment) => void;
   onFollow?: (moment: Moment) => void;
   onDelete?: (moment: Moment) => void;
+  onEditBack?: (moment: Moment, currentText: string) => void;
   canFlipBack?: boolean;
 };
 
@@ -35,6 +36,7 @@ export default function MomentCard({
   onNotes,
   onFollow,
   onDelete,
+  onEditBack,
   canFlipBack = false,
 }: Props) {
   const { user } = useContext(AuthContext);
@@ -74,8 +76,8 @@ export default function MomentCard({
   const authorName = author?.displayName ?? 'Then Friend';
   const memoryDate = formatMemoryDate(moment.memoryDate);
   const canLeaveNote = mode !== 'wander';
-  const canShowBack = canFlipBack && Boolean(back?.text);
-  const isBackVisible = canShowBack && showBack;
+  const canShowBack = canFlipBack;
+  const isBackVisible = canFlipBack && showBack;
   const memoryTime = formatMomentTime(moment.createdAt);
   const cardWidth = Math.min(Math.max(windowWidth - 32, 288), 560);
   const stackActions = cardWidth < 340 || (canShowBack && Boolean(onDelete));
@@ -164,7 +166,7 @@ export default function MomentCard({
                   textAlign: 'center',
                 }}
               >
-                {back?.text}
+                {back?.text || 'No private reflection yet.'}
               </Text>
             </View>
           ) : (
@@ -297,6 +299,16 @@ export default function MomentCard({
                 iconColor={showBack ? colors.saved : colors.primary}
                 onPress={() => setShowBack((current) => !current)}
                 accessibilityLabel={showBack ? 'Show photo front' : 'Show private reflection'}
+                style={{ width: 38, height: 38, margin: 0 }}
+              />
+            ) : null}
+            {canFlipBack && onEditBack ? (
+              <IconButton
+                icon={back?.text ? 'pencil-outline' : 'plus'}
+                size={22}
+                iconColor={colors.primary}
+                onPress={() => onEditBack(moment, back?.text ?? '')}
+                accessibilityLabel={back?.text ? 'Edit private reflection' : 'Add private reflection'}
                 style={{ width: 38, height: 38, margin: 0 }}
               />
             ) : null}

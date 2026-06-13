@@ -11,7 +11,7 @@ import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
-import { requestFollow, subscribeFollowing } from '../services/follows';
+import { requestFollow, subscribeFollowing, subscribeOutgoingFollowRequestIds } from '../services/follows';
 import { subscribeWanderMoments } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
@@ -26,6 +26,7 @@ export default function WanderScreen() {
   const navigation = useNavigation<Nav>();
   const [moments, setMoments] = useState<Moment[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<string[]>([]);
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
   const [requesting, setRequesting] = useState<Moment | null>(null);
   const [context, setContext] = useState('');
@@ -48,6 +49,14 @@ export default function WanderScreen() {
   useEffect(() => {
     if (!user?.uid) return;
     return subscribeFollowing(user.uid, setFollowing, () => setListenerError('Your friend list could not be loaded.'));
+  }, [refreshKey, user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeOutgoingFollowRequestIds(
+      user.uid,
+      setPendingRequests,
+      () => setListenerError('Pending friend requests could not be loaded.'),
+    );
   }, [refreshKey, user?.uid]);
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
@@ -114,10 +123,22 @@ export default function WanderScreen() {
             mode="wander"
             author={publicUsers[item.authorUid]}
             connectionLine={
-              item.authorUid === user?.uid ? 'your Wander post' : following.includes(item.authorUid) ? 'keeping up' : 'wander'
+              item.authorUid === user?.uid
+                ? 'your Wander post'
+                : following.includes(item.authorUid)
+                  ? 'keeping up'
+                  : pendingRequests.includes(item.authorUid)
+                    ? 'request pending'
+                    : 'wander'
             }
             onNotes={(moment) => navigation.navigate('Notes', { moment })}
-            onFollow={item.authorUid !== user?.uid && !following.includes(item.authorUid) ? openRequest : undefined}
+            onFollow={
+              item.authorUid !== user?.uid &&
+              !following.includes(item.authorUid) &&
+              !pendingRequests.includes(item.authorUid)
+                ? openRequest
+                : undefined
+            }
           />
         )}
       />

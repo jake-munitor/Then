@@ -38,6 +38,24 @@ service cloud.firestore {
         allow update, delete: if isSelf(uid) || isSelf(requesterUid);
       }
 
+      match /outgoingFollowRequests/{targetUid} {
+        allow read, create, update: if isSelf(uid);
+        allow delete: if isSelf(uid) || isSelf(targetUid);
+      }
+
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isSelf(uid);
+        allow create: if signedIn() &&
+          request.auth.uid == request.resource.data.actorUid &&
+          get(/databases/$(database)/documents/moments/$(request.resource.data.momentId)).data.authorUid == uid &&
+          existsAfter(/databases/$(database)/documents/moments/$(request.resource.data.momentId)/notes/$(notificationId)) &&
+          getAfter(/databases/$(database)/documents/moments/$(request.resource.data.momentId)/notes/$(notificationId)).data.authorUid == request.auth.uid;
+      }
+
+      match /pushTokens/{tokenId} {
+        allow read, write: if isSelf(uid);
+      }
+
       match /kept/{momentId} {
         allow read, write: if isSelf(uid);
       }
@@ -77,7 +95,8 @@ service cloud.firestore {
           request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
         allow create: if signedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
-        allow update: if false;
+        allow update: if signedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
         allow delete: if signedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
       }

@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -186,6 +185,31 @@ export async function createMoment(params: {
   return momentRef.id;
 }
 
+export async function saveMomentBack(params: { momentId: string; uid: string; text: string }) {
+  if (!db) throw new Error('Firebase is not initialized.');
+  const momentRef = doc(db, 'moments', params.momentId);
+  const momentSnap = await getDoc(momentRef);
+  if (!momentSnap.exists() || String(momentSnap.data().authorUid ?? '') !== params.uid) {
+    throw new Error('Only the person who shared this moment can edit its reflection.');
+  }
+
+  const text = params.text.trim();
+  const backRef = doc(db, 'moments', params.momentId, 'back', 'details');
+  if (!text) {
+    await deleteDoc(backRef);
+    return;
+  }
+
+  await setDoc(
+    backRef,
+    {
+      text,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
 export async function deleteMoment(params: { momentId: string; uid: string }) {
   if (!db) throw new Error('Firebase is not initialized.');
 
@@ -345,12 +369,32 @@ export async function addNote(params: { momentId: string; uid: string; text: str
   if (!db) throw new Error('Firebase is not initialized.');
   const text = params.text.trim();
   if (!text) return;
-  await addDoc(collection(db, 'moments', params.momentId, 'notes'), {
+  const momentRef = doc(db, 'moments', params.momentId);
+  const momentSnap = await getDoc(momentRef);
+  if (!momentSnap.exists()) throw new Error('This moment is no longer available.');
+
+  const ownerUid = String(momentSnap.data().authorUid ?? '');
+  const noteRef = doc(collection(db, 'moments', params.momentId, 'notes'));
+  const batch = writeBatch(db);
+  batch.set(noteRef, {
     authorUid: params.uid,
     text,
     createdAt: serverTimestamp(),
   });
-  await updateDoc(doc(db, 'moments', params.momentId), {
+  batch.update(momentRef, {
     noteCount: increment(1),
   });
+  if (ownerUid && ownerUid !== params.uid) {
+    batch.set(doc(db, 'users', ownerUid, 'notifications', noteRef.id), {
+      type: 'note',
+      actorUid: params.uid,
+      momentId: params.momentId,
+      noteId: noteRef.id,
+      frontText: String(momentSnap.data().frontText ?? ''),
+      text,
+      readAt: null,
+      createdAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
 }

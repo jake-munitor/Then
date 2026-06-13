@@ -10,6 +10,7 @@ import {
 import { PaperProvider } from 'react-native-paper';
 
 import AppNavigator from './src/navigation/AppNavigator';
+import PushNotificationRegistrar from './src/components/PushNotificationRegistrar';
 import { AuthProvider } from './src/store/AuthContext';
 import { colors } from './src/theme/colors';
 import { appTheme } from './src/theme/theme';
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <PaperProvider theme={appTheme}>
       <AuthProvider>
+        <PushNotificationRegistrar />
         <AppNavigator />
         <StatusBar style="dark" />
       </AuthProvider>

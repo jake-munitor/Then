@@ -39,6 +39,10 @@ jest.mock('../../src/services/follows', () => ({
     onChange(['user-2']);
     return () => {};
   }),
+  subscribeOutgoingFollowRequestIds: jest.fn((_uid, onChange) => {
+    onChange([]);
+    return () => {};
+  }),
 }));
 
 jest.mock('../../src/services/users', () => ({

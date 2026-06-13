@@ -4,6 +4,7 @@ import { PaperProvider } from 'react-native-paper';
 import { Image, StyleSheet } from 'react-native';
 
 import MomentCard from '../../src/components/MomentCard';
+import { subscribeMomentBack } from '../../src/services/moments';
 import type { Moment } from '../../src/services/types';
 import { AuthContext } from '../../src/store/AuthContext';
 import { fonts } from '../../src/theme/fonts';
@@ -79,6 +80,20 @@ describe('MomentCard', () => {
     fireEvent.press(screen.getByLabelText('Flip moment'));
     expect(screen.getByText("the field behind gran's.")).toBeTruthy();
     expect(screen.getByLabelText('Show photo front')).toBeTruthy();
+  });
+
+  it('allows an owner to add a reflection after posting without one', () => {
+    (subscribeMomentBack as jest.Mock).mockImplementationOnce((_momentId, onChange) => {
+      onChange(null);
+      return () => {};
+    });
+    const onEditBack = jest.fn();
+    renderCard({ mode: 'roll', canFlipBack: true, onEditBack });
+
+    fireEvent.press(screen.getByLabelText('Flip moment'));
+    expect(screen.getByText('No private reflection yet.')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Add private reflection'));
+    expect(onEditBack).toHaveBeenCalledWith(moment, '');
   });
 
   it('does not expose the private back in wander mode', () => {

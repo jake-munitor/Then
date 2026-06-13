@@ -1,14 +1,14 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Button, IconButton, Text, TextInput } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import ListenerError from '../components/ListenerError';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
-import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
 import { addNote, subscribeNotes } from '../services/moments';
+import { markMomentNotificationsRead } from '../services/notifications';
 import { subscribePublicUsers } from '../services/users';
 import type { Note, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
@@ -16,7 +16,7 @@ import { colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notes'>;
 
-export default function NotesScreen({ route }: Props) {
+export default function NotesScreen({ route, navigation }: Props) {
   const { user } = useContext(AuthContext);
   const { moment } = route.params;
   const [notes, setNotes] = useState<Note[]>([]);
@@ -25,7 +25,7 @@ export default function NotesScreen({ route }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
-  const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
+  const [loading, setLoading] = useState(true);
 
   useEffect(
     () =>
@@ -33,15 +33,21 @@ export default function NotesScreen({ route }: Props) {
         moment.id,
         (nextNotes) => {
           setNotes(nextNotes);
-          finishRefresh();
+          setLoading(false);
         },
         () => {
           setListenerError('Notes could not be loaded.');
-          finishRefresh();
+          setLoading(false);
         },
       ),
-    [finishRefresh, moment.id, refreshKey],
+    [moment.id],
   );
+
+  useEffect(() => {
+    if (user?.uid === moment.authorUid) {
+      markMomentNotificationsRead(user.uid, moment.id).catch(() => {});
+    }
+  }, [moment.authorUid, moment.id, user?.uid]);
 
   const uids = useMemo(() => notes.map((note) => note.authorUid).concat(moment.authorUid), [notes, moment.authorUid]);
   useEffect(
@@ -65,10 +71,20 @@ export default function NotesScreen({ route }: Props) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
+      <Screen contentStyle={{ alignItems: 'center' }}>
         <View style={{ width: '100%', maxWidth: 560, gap: 16 }}>
-        <PageHeader title="Notes" subtitle="A quiet conversation around this moment." />
-        <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
+        <PageHeader
+          title="Notes"
+          subtitle="A quiet conversation around this moment."
+          right={
+            <IconButton
+              icon="close"
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Close notes"
+            />
+          }
+        />
+        <ListenerError message={listenerError} onRetry={() => setListenerError(null)} />
         <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 18 }}>
           <Text variant="headlineSmall">{moment.frontText}</Text>
           <Text style={{ color: colors.textSecondary }}>
@@ -77,7 +93,9 @@ export default function NotesScreen({ route }: Props) {
         </View>
 
         <View style={{ gap: 12 }}>
-          {notes.length === 0 ? (
+          {loading ? (
+            <ActivityIndicator />
+          ) : notes.length === 0 ? (
             <Text style={{ color: colors.textSecondary }}>No notes yet.</Text>
           ) : (
             notes.map((note) => (

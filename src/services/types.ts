@@ -41,4 +41,16 @@ export type Note = {
   createdAt?: Timestamp | null;
 };
 
+export type AppNotification = {
+  id: string;
+  type: 'note';
+  actorUid: string;
+  momentId: string;
+  noteId: string;
+  frontText: string;
+  text: string;
+  readAt?: Timestamp | null;
+  createdAt?: Timestamp | null;
+};
+
 export type ListenerErrorHandler = (error: Error) => void;

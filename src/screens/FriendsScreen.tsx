@@ -9,10 +9,10 @@ import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import {
   cancelFollowRequest,
-  getPendingFollowRequestIds,
   removeFollow,
   requestFollow,
   subscribeFollowing,
+  subscribeOutgoingFollowRequestIds,
 } from '../services/follows';
 import type { PublicUser } from '../services/types';
 import { filterDiscoverableUsers, subscribeDiscoverableUsers } from '../services/users';
@@ -50,28 +50,16 @@ export default function FriendsScreen() {
     return subscribeFollowing(user.uid, setFollowing, () => setListenerError('Your friend list could not be loaded.'));
   }, [refreshKey, user?.uid]);
   useEffect(() => {
-    if (!user?.uid || people.length === 0) {
+    if (!user?.uid) {
       setSentRequests([]);
       return;
     }
-
-    let active = true;
-    getPendingFollowRequestIds(
+    return subscribeOutgoingFollowRequestIds(
       user.uid,
-      people.map((person) => person.uid),
-    )
-      .then((requestIds) => {
-        if (active) setSentRequests(requestIds);
-      })
-      .catch(() => {
-        if (active) setSentRequests([]);
-        if (active) setListenerError('Pending friend requests could not be checked.');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [people, user?.uid]);
+      setSentRequests,
+      () => setListenerError('Pending friend requests could not be checked.'),
+    );
+  }, [refreshKey, user?.uid]);
 
   const visiblePeople = useMemo(
     () =>
