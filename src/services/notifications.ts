@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import {
   collection,
   getDocs,
@@ -54,7 +53,6 @@ export async function markAllNotificationsRead(uid: string) {
   const batch = writeBatch(db);
   unread.forEach((item) => batch.update(item.ref, { readAt: serverTimestamp() }));
   await batch.commit();
-  await Notifications.setBadgeCountAsync(0).catch(() => {});
 }
 
 export async function markMomentNotificationsRead(uid: string, momentId: string) {
