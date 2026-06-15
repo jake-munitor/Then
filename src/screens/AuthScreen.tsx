@@ -2,10 +2,12 @@ import React, { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Text, TextInput } from 'react-native-paper';
 
+import FilmStripe from '../components/FilmStripe';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -61,19 +63,54 @@ export default function AuthScreen() {
         <View
           style={{
             width: '100%',
-            maxWidth: 520,
+            maxWidth: 440,
             alignSelf: 'center',
             backgroundColor: colors.paper,
-            borderColor: colors.border,
+            borderColor: colors.borderStrong,
             borderWidth: 1,
-            borderRadius: 8,
-            padding: 20,
-            gap: 14,
+            borderRadius: 2,
+            paddingHorizontal: 22,
+            paddingTop: 24,
+            paddingBottom: 20,
+            gap: 13,
+            shadowColor: '#332A21',
+            shadowOpacity: 0.1,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
           }}
         >
-          <Text variant="headlineSmall">{title}</Text>
+          <View style={{ gap: 5, marginBottom: 3 }}>
+            <Text
+              style={{
+                color: colors.textPrimary,
+                fontFamily: fonts.displayMedium,
+                fontSize: 31,
+                lineHeight: 35,
+              }}
+            >
+              {title}
+            </Text>
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontFamily: fonts.bodyMedium,
+                fontSize: 10,
+                letterSpacing: 1.4,
+                textTransform: 'uppercase',
+              }}
+            >
+              Your private photo circle
+            </Text>
+          </View>
           {mode === 'register' ? (
-            <TextInput label="Your name" value={displayName} onChangeText={setDisplayName} disabled={busy} />
+            <TextInput
+              label="Your name"
+              value={displayName}
+              onChangeText={setDisplayName}
+              disabled={busy}
+              style={{ backgroundColor: colors.surface }}
+            />
           ) : null}
           <TextInput
             label="Email"
@@ -82,9 +119,17 @@ export default function AuthScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             disabled={busy}
+            style={{ backgroundColor: colors.surface }}
           />
           {mode !== 'reset' ? (
-            <TextInput label="Password" value={password} onChangeText={setPassword} secureTextEntry disabled={busy} />
+            <TextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              disabled={busy}
+              style={{ backgroundColor: colors.surface }}
+            />
           ) : null}
 
           {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
@@ -101,6 +146,21 @@ export default function AuthScreen() {
             <Button mode="text" onPress={() => setMode(mode === 'reset' ? 'login' : 'reset')}>
               {mode === 'reset' ? 'Back to sign in' : 'Forgot password'}
             </Button>
+          </View>
+
+          <View style={{ alignItems: 'center', gap: 9, marginTop: 1 }}>
+            <FilmStripe width={62} height={3} />
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontFamily: fonts.bodyMedium,
+                fontSize: 9,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+              }}
+            >
+              Keep the moment, skip the noise
+            </Text>
           </View>
         </View>
       </Screen>

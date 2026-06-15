@@ -13,8 +13,9 @@ import type { Moment, MomentBack, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
-import { formatMemoryDate, formatMomentTime } from '../utils/dates';
+import { formatMemoryDate } from '../utils/dates';
 import DateStamp from './DateStamp';
+import FilmStripe from './FilmStripe';
 
 type Props = {
   moment: Moment;
@@ -78,7 +79,6 @@ export default function MomentCard({
   const canLeaveNote = mode !== 'wander';
   const canShowBack = canFlipBack;
   const isBackVisible = canFlipBack && showBack;
-  const memoryTime = formatMomentTime(moment.createdAt);
   const cardWidth = Math.min(Math.max(windowWidth - 32, 288), 560);
   const stackActions = cardWidth < 340 || (canShowBack && Boolean(onDelete));
 
@@ -123,22 +123,24 @@ export default function MomentCard({
       style={{
         width: cardWidth,
         alignSelf: 'center',
-        marginBottom: 24,
-        borderRadius: 8,
+        marginBottom: 28,
         shadowColor: '#2A211B',
-        shadowOpacity: 0.07,
-        shadowRadius: 16,
+        shadowOpacity: 0.16,
+        shadowRadius: 11,
         shadowOffset: { width: 0, height: 7 },
-        elevation: 3,
+        elevation: 4,
       }}
     >
       <View
+        testID="moment-frame"
         style={{
           backgroundColor: colors.paper,
-          borderColor: colors.border,
+          borderColor: '#C9BBA7',
           borderWidth: 1,
-          borderRadius: 8,
+          borderRadius: 1,
           overflow: 'hidden',
+          paddingTop: 12,
+          paddingHorizontal: 12,
         }}
       >
         <Pressable
@@ -170,7 +172,14 @@ export default function MomentCard({
               </Text>
             </View>
           ) : (
-            <View>
+            <View
+              testID="moment-photo-mat"
+              style={{
+                borderColor: '#D8CDBD',
+                borderWidth: 1,
+                backgroundColor: colors.surfaceWarm,
+              }}
+            >
               <Image
                 source={{ uri: moment.imageUrl }}
                 resizeMode="cover"
@@ -181,11 +190,11 @@ export default function MomentCard({
                 <View
                   style={{
                     position: 'absolute',
-                    left: 18,
-                    top: 16,
+                    left: 10,
+                    top: 10,
                   }}
                 >
-                  <DateStamp value={memoryDate} secondaryValue={memoryTime} />
+                  <DateStamp value={memoryDate} />
                 </View>
               ) : null}
             </View>
@@ -195,8 +204,8 @@ export default function MomentCard({
         <View
           style={{
             paddingHorizontal: 18,
-            paddingTop: 16,
-            paddingBottom: 14,
+            paddingTop: 19,
+            paddingBottom: 21,
             flexDirection: stackActions ? 'column' : 'row',
             alignItems: 'flex-start',
             gap: 10,
@@ -212,8 +221,8 @@ export default function MomentCard({
               style={{
                 color: colors.textPrimary,
                 fontFamily: fonts.displayMedium,
-                fontSize: 27,
-                lineHeight: 31,
+                fontSize: 28,
+                lineHeight: 32,
                 paddingTop: 1,
                 paddingBottom: 2,
                 flexShrink: 1,
@@ -225,9 +234,10 @@ export default function MomentCard({
               style={{
                 color: colors.textSecondary,
                 fontFamily: fonts.bodyRegular,
-                fontSize: 14,
-                lineHeight: 20,
-                marginTop: 1,
+                fontSize: 12,
+                lineHeight: 18,
+                letterSpacing: 0.25,
+                marginTop: 3,
               }}
             >
               From {authorName}
@@ -332,6 +342,10 @@ export default function MomentCard({
               />
             ) : null}
           </View>
+        </View>
+
+        <View style={{ marginLeft: 18, marginBottom: 13 }}>
+          <FilmStripe width={46} height={3} />
         </View>
 
         {listenerError ? (

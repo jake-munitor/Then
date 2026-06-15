@@ -7,16 +7,16 @@ import { fonts } from '../theme/fonts';
 
 type Props = {
   value: string;
-  secondaryValue?: string;
 };
 
-export default function DateStamp({ value, secondaryValue }: Props) {
+export default function DateStamp({ value }: Props) {
   return (
     <View
       testID="date-stamp"
       style={{
-        paddingHorizontal: 2,
-        paddingVertical: 2,
+        backgroundColor: 'rgba(35, 31, 26, 0.72)',
+        paddingHorizontal: 8,
+        paddingVertical: 5,
         gap: 2,
       }}
     >
@@ -25,8 +25,9 @@ export default function DateStamp({ value, secondaryValue }: Props) {
         style={{
           color: colors.white,
           fontFamily: fonts.bodyMedium,
-          fontSize: 15,
-          lineHeight: 20,
+          fontSize: 12,
+          lineHeight: 15,
+          letterSpacing: 0.7,
           fontVariant: ['tabular-nums'],
           textShadowColor: 'rgba(0, 0, 0, 0.3)',
           textShadowOffset: { width: 0, height: 1 },
@@ -35,22 +36,6 @@ export default function DateStamp({ value, secondaryValue }: Props) {
       >
         {value}
       </Text>
-      {secondaryValue ? (
-        <Text
-          style={{
-            color: colors.white,
-            fontFamily: fonts.bodyRegular,
-            fontSize: 14,
-            lineHeight: 18,
-            fontVariant: ['tabular-nums'],
-            textShadowColor: 'rgba(0, 0, 0, 0.3)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 4,
-          }}
-        >
-          {secondaryValue}
-        </Text>
-      ) : null}
     </View>
   );
 }

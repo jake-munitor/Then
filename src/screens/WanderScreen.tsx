@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
+import MomentSortControl from '../components/MomentSortControl';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -18,6 +19,8 @@ import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import type { MomentSort } from '../utils/momentSorting';
+import { sortMomentsForDisplay } from '../utils/momentSorting';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,6 +28,7 @@ export default function WanderScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<Nav>();
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [sort, setSort] = useState<MomentSort>('posted');
   const [following, setFollowing] = useState<string[]>([]);
   const [pendingRequests, setPendingRequests] = useState<string[]>([]);
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
@@ -60,6 +64,7 @@ export default function WanderScreen() {
   }, [refreshKey, user?.uid]);
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
+  const visibleMoments = useMemo(() => sortMomentsForDisplay(moments, sort), [moments, sort]);
   useEffect(
     () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
     [authorUids.join('|')],
@@ -97,17 +102,34 @@ export default function WanderScreen() {
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
 
       <FlatList
-        data={moments}
+        data={visibleMoments}
         refreshing={refreshing}
         onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 36, alignItems: 'center' }}
+        ListHeaderComponentStyle={{ width: '100%', maxWidth: 560, alignSelf: 'center' }}
         ListHeaderComponent={
-          moments.length ? (
-            <View style={{ width: '100%', maxWidth: 560, marginBottom: 14 }}>
-              <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayMedium, fontSize: 30 }}>
-                Discover
+          visibleMoments.length ? (
+            <View
+              style={{
+                width: '100%',
+                marginBottom: 16,
+                paddingHorizontal: 28,
+                alignItems: 'flex-start',
+                gap: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.textPrimary,
+                  fontFamily: fonts.displayMedium,
+                  fontSize: 29,
+                  lineHeight: 34,
+                }}
+              >
+                {sort === 'picture' ? 'Chronological' : 'Recent'}
               </Text>
+              <MomentSortControl value={sort} onChange={setSort} />
             </View>
           ) : null
         }

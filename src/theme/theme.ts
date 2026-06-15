@@ -5,7 +5,7 @@ import { fonts } from './fonts';
 
 export const appTheme = {
   ...MD3LightTheme,
-  roundness: 6,
+  roundness: 3,
   colors: {
     ...MD3LightTheme.colors,
     primary: colors.primary,

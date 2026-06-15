@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
+import FilmStripe from '../components/FilmStripe';
 import { createMoment } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
@@ -131,11 +132,29 @@ export default function NewMomentScreen() {
           </View>
 
           {uri ? (
-            <Image
-              source={{ uri }}
-              style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 8, backgroundColor: colors.surfaceWarm }}
-              resizeMode="cover"
-            />
+            <View
+              style={{
+                backgroundColor: colors.paper,
+                borderColor: colors.borderStrong,
+                borderWidth: 1,
+                padding: 10,
+                paddingBottom: 28,
+                shadowColor: '#2A211B',
+                shadowOpacity: 0.12,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 7 },
+                elevation: 3,
+              }}
+            >
+              <Image
+                source={{ uri }}
+                style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.surfaceWarm }}
+                resizeMode="cover"
+              />
+              <View style={{ position: 'absolute', left: 18, bottom: 12 }}>
+                <FilmStripe width={48} height={3} />
+              </View>
+            </View>
           ) : (
             <View
               style={{
@@ -144,9 +163,9 @@ export default function NewMomentScreen() {
                 justifyContent: 'center',
                 borderWidth: 1,
                 borderStyle: 'dashed',
-                borderColor: colors.border,
-                borderRadius: 8,
-                backgroundColor: colors.surface,
+                borderColor: colors.borderStrong,
+                borderRadius: 2,
+                backgroundColor: colors.paper,
               }}
             >
               <Text style={{ color: colors.textSecondary }}>Choose a photo</Text>

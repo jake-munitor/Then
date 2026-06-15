@@ -4,6 +4,7 @@ import { Text } from 'react-native-paper';
 
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import FilmStripe from './FilmStripe';
 import HandwrittenText from './HandwrittenText';
 
 type Props = {
@@ -30,15 +31,21 @@ export default function PageHeader({
         maxWidth: 560,
         alignSelf: 'center',
         paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 18,
-        gap: 8,
+        paddingTop: 20,
+        paddingBottom: 20,
+        gap: 7,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <HandwrittenText size={title === 'Then' ? 58 : 44} style={{ flex: 1 }}>
-          {title}
-        </HandwrittenText>
+        <View style={{ flex: 1, alignItems: 'flex-start' }}>
+          {title === 'Then' ? <FilmStripe width={74} height={4} /> : null}
+          <HandwrittenText
+            size={title === 'Then' ? 60 : 43}
+            style={{ marginTop: title === 'Then' ? 5 : 0 }}
+          >
+            {title}
+          </HandwrittenText>
+        </View>
         {right}
         {avatarUrl || onAvatarPress ? (
           <Pressable
@@ -77,8 +84,9 @@ export default function PageHeader({
           style={{
             color: colors.textSecondary,
             fontFamily: fonts.bodyRegular,
-            fontSize: 15,
-            lineHeight: 22,
+            fontSize: 14,
+            lineHeight: 20,
+            letterSpacing: 0.15,
           }}
         >
           {subtitle}

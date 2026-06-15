@@ -9,6 +9,7 @@ import type { Moment } from '../../src/services/types';
 import { AuthContext } from '../../src/store/AuthContext';
 import { fonts } from '../../src/theme/fonts';
 import { appTheme } from '../../src/theme/theme';
+import { colors } from '../../src/theme/colors';
 
 jest.mock('../../src/services/moments', () => ({
   subscribeMomentBack: jest.fn((_momentId, onChange) => {
@@ -147,5 +148,17 @@ describe('MomentCard', () => {
     expect(photoStyle.aspectRatio).toBe(4 / 3);
     expect(captionStyle.fontFamily).toBe(fonts.displayMedium);
     expect(screen.getByText('From Maisie K')).toBeTruthy();
+  });
+
+  it('frames the photo with a warm Polaroid-style paper mat', () => {
+    renderCard();
+
+    const frameStyle = StyleSheet.flatten(screen.getByTestId('moment-frame').props.style);
+    const photoMatStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-mat').props.style);
+
+    expect(frameStyle.backgroundColor).toBe(colors.paper);
+    expect(frameStyle.paddingTop).toBeGreaterThan(10);
+    expect(frameStyle.paddingHorizontal).toBeGreaterThan(10);
+    expect(photoMatStyle.borderWidth).toBe(1);
   });
 });

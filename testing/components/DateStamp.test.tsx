@@ -6,8 +6,8 @@ import DateStamp from '../../src/components/DateStamp';
 import { fonts } from '../../src/theme/fonts';
 
 describe('DateStamp', () => {
-  it('renders an elegant over-photo date and optional time', () => {
-    render(<DateStamp value="Jun 9, 2026" secondaryValue="7:42 PM" />);
+  it('renders an elegant over-photo date without a time', () => {
+    render(<DateStamp value="Jun 9, 2026" />);
 
     const date = screen.getByText('Jun 9, 2026');
     const style = StyleSheet.flatten(date.props.style);
@@ -15,7 +15,7 @@ describe('DateStamp', () => {
     expect(style.fontFamily).toBe(fonts.bodyMedium);
     expect(style.fontVariant).toContain('tabular-nums');
     expect(style.color).toBeDefined();
-    expect(screen.getByText('7:42 PM')).toBeTruthy();
+    expect(screen.queryByText('7:42 PM')).toBeNull();
     expect(screen.getByTestId('date-stamp')).toBeTruthy();
   });
 });
