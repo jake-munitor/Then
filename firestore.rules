@@ -9,51 +9,179 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function verifyFields(required, optional) {
+      let allowed = required.concat(optional);
+      return request.resource.data.keys().hasAll(required) &&
+        request.resource.data.keys().hasOnly(allowed);
+    }
+
+    function shortString(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function optionalString(value, max) {
+      return value == null || (value is string && value.size() <= max);
+    }
+
+    function validNotificationPreferences(value) {
+      return value is map &&
+        value.keys().hasAll(['notes', 'followRequests', 'friendApprovals', 'wander']) &&
+        value.keys().hasOnly(['notes', 'followRequests', 'friendApprovals', 'wander']) &&
+        value.notes is bool &&
+        value.followRequests is bool &&
+        value.friendApprovals is bool &&
+        value.wander is bool;
+    }
+
+    function isBlocked(leftUid, rightUid) {
+      return exists(/databases/$(database)/documents/users/$(leftUid)/blocks/$(rightUid)) ||
+        exists(/databases/$(database)/documents/users/$(rightUid)/blocks/$(leftUid));
+    }
+
     function isApprovedFollower(authorUid) {
       return signedIn() &&
+        !isBlocked(authorUid, request.auth.uid) &&
         exists(/databases/$(database)/documents/users/$(authorUid)/followers/$(request.auth.uid));
     }
 
+    function canSeeProfile(uid) {
+      return signedIn() &&
+        (
+          isSelf(uid) ||
+          resource.data.profileVisibility == 'public' ||
+          resource.data.appearInWander == true ||
+          isApprovedFollower(uid)
+        );
+    }
+
     function canSeeMoment(authorUid) {
-      return signedIn() && (request.auth.uid == authorUid || isApprovedFollower(authorUid));
+      return signedIn() &&
+        !isBlocked(authorUid, request.auth.uid) &&
+        (request.auth.uid == authorUid || isApprovedFollower(authorUid));
+    }
+
+    function validProfileCreate(uid) {
+      return isSelf(uid) &&
+        verifyFields(
+          ['displayName', 'handle', 'avatarUrl', 'profileVisibility', 'appearInWander', 'createdAt', 'updatedAt'],
+          ['email', 'onboardingCompleted']
+        ) &&
+        shortString(request.resource.data.displayName, 80) &&
+        request.resource.data.handle.matches('^[a-z0-9_]{3,24}$') &&
+        optionalString(request.resource.data.avatarUrl, 2048) &&
+        request.resource.data.profileVisibility in ['private', 'public'] &&
+        request.resource.data.appearInWander is bool;
+    }
+
+    function validSelfUserUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'displayName',
+        'avatarUrl',
+        'profileVisibility',
+        'appearInWander',
+        'notificationPreferences',
+        'onboardingCompleted',
+        'updatedAt'
+      ]) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['displayName']) ||
+        shortString(request.resource.data.displayName, 80)) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['avatarUrl']) ||
+        optionalString(request.resource.data.avatarUrl, 2048)) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileVisibility']) ||
+        request.resource.data.profileVisibility in ['private', 'public']) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['appearInWander']) ||
+        request.resource.data.appearInWander is bool) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['notificationPreferences']) ||
+        validNotificationPreferences(request.resource.data.notificationPreferences)) &&
+      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['onboardingCompleted']) ||
+        request.resource.data.onboardingCompleted is bool);
+    }
+
+    function validPublicUserUpdate() {
+      return validSelfUserUpdate() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['notificationPreferences']);
+    }
+
+    function validMomentCreate() {
+      return signedIn() &&
+        request.auth.uid == request.resource.data.authorUid &&
+        verifyFields(
+          ['authorUid', 'imageUrl', 'frontText', 'memoryDate', 'keptCount', 'noteCount', 'appearInWander', 'createdAt'],
+          []
+        ) &&
+        shortString(request.resource.data.imageUrl, 2048) &&
+        shortString(request.resource.data.frontText, 50) &&
+        request.resource.data.memoryDate.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        request.resource.data.keptCount == 0 &&
+        request.resource.data.noteCount == 0 &&
+        request.resource.data.appearInWander is bool;
+    }
+
+    match /handles/{handle} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if false;
     }
 
     match /users/{uid} {
-      allow read, write: if isSelf(uid);
+      allow read: if isSelf(uid);
+      allow create: if validProfileCreate(uid);
+      allow update: if isSelf(uid) && validSelfUserUpdate();
+      allow delete: if false;
 
       match /following/{targetUid} {
         allow read: if isSelf(uid);
-        allow create, update, delete: if isSelf(uid) || isSelf(targetUid);
+        allow write: if false;
       }
 
       match /followers/{followerUid} {
         allow read: if isSelf(uid) || isSelf(followerUid);
-        allow create, update: if isSelf(uid);
-        allow delete: if isSelf(uid) || isSelf(followerUid);
+        allow write: if false;
       }
 
       match /followRequests/{requesterUid} {
         allow read: if isSelf(uid) || isSelf(requesterUid);
-        allow create: if isSelf(requesterUid);
-        allow update, delete: if isSelf(uid) || isSelf(requesterUid);
+        allow create: if isSelf(requesterUid) &&
+          !isBlocked(uid, requesterUid) &&
+          verifyFields(['requesterUid', 'displayName', 'context', 'createdAt'], []) &&
+          request.resource.data.requesterUid == requesterUid &&
+          shortString(request.resource.data.displayName, 80) &&
+          shortString(request.resource.data.context, 500);
+        allow update: if false;
+        allow delete: if isSelf(uid) || isSelf(requesterUid);
       }
 
       match /outgoingFollowRequests/{targetUid} {
-        allow read, create, update: if isSelf(uid);
+        allow read: if isSelf(uid);
+        allow create: if isSelf(uid) &&
+          !isBlocked(uid, targetUid) &&
+          verifyFields(['targetUid', 'createdAt'], []) &&
+          request.resource.data.targetUid == targetUid;
+        allow update: if false;
         allow delete: if isSelf(uid) || isSelf(targetUid);
       }
 
       match /notifications/{notificationId} {
         allow read, update, delete: if isSelf(uid);
-        allow create: if signedIn() &&
-          request.auth.uid == request.resource.data.actorUid &&
-          get(/databases/$(database)/documents/moments/$(request.resource.data.momentId)).data.authorUid == uid &&
-          existsAfter(/databases/$(database)/documents/moments/$(request.resource.data.momentId)/notes/$(notificationId)) &&
-          getAfter(/databases/$(database)/documents/moments/$(request.resource.data.momentId)/notes/$(notificationId)).data.authorUid == request.auth.uid;
+        allow create: if false;
       }
 
       match /pushTokens/{tokenId} {
-        allow read, write: if isSelf(uid);
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+
+      match /blocks/{targetUid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+
+      match /blockedBy/{blockerUid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
       }
 
       match /kept/{momentId} {
@@ -61,66 +189,55 @@ service cloud.firestore {
       }
 
       match /saved/{momentId} {
-        allow read, write: if isSelf(uid);
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid) &&
+          verifyFields(['momentId', 'authorUid', 'savedAt'], []) &&
+          request.resource.data.momentId == momentId &&
+          (
+            canSeeMoment(request.resource.data.authorUid) ||
+            (
+              get(/databases/$(database)/documents/moments/$(momentId)).data.appearInWander == true &&
+              !isBlocked(request.resource.data.authorUid, request.auth.uid)
+            )
+          );
+        allow delete: if isSelf(uid);
       }
     }
 
     match /publicUsers/{uid} {
-      allow read: if signedIn();
-      allow write: if isSelf(uid);
+      allow read: if canSeeProfile(uid);
+      allow create: if validProfileCreate(uid);
+      allow update: if isSelf(uid) && validPublicUserUpdate();
+      allow delete: if false;
     }
 
     match /moments/{momentId} {
       allow read: if canSeeMoment(resource.data.authorUid) ||
         (signedIn() && resource.data.appearInWander == true);
-      allow create: if signedIn() && request.auth.uid == request.resource.data.authorUid;
-      allow update: if signedIn() && (
-        (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['keptCount']) &&
-          request.resource.data.keptCount >= 0 &&
-          (
-            request.resource.data.keptCount == resource.data.keptCount + 1 ||
-            request.resource.data.keptCount == resource.data.keptCount - 1
-          )
-        ) ||
-        (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['noteCount']) &&
-          request.resource.data.noteCount == resource.data.noteCount + 1
-        )
-      );
-      allow delete: if signedIn() && request.auth.uid == resource.data.authorUid;
+      allow create: if validMomentCreate();
+      allow update: if false;
+      allow delete: if false;
 
       match /back/{detailId} {
         allow read: if signedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
-        allow create: if signedIn() &&
-          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
-        allow update: if signedIn() &&
-          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
+        allow create, update: if signedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid &&
+          verifyFields(['text'], ['createdAt', 'updatedAt']) &&
+          shortString(request.resource.data.text, 5000);
         allow delete: if signedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid;
       }
 
       match /keeps/{uid} {
-        allow read: if signedIn();
-        allow create: if signedIn() && request.auth.uid == uid;
-        allow delete: if signedIn() && (
-          request.auth.uid == uid ||
-          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid
-        );
-        allow update: if false;
+        allow read: if signedIn() &&
+          canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid);
+        allow write: if false;
       }
 
       match /notes/{noteId} {
         allow read: if canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid);
-        allow create: if signedIn() &&
-          canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid) &&
-          request.auth.uid == request.resource.data.authorUid;
-        allow update: if signedIn() && request.auth.uid == resource.data.authorUid;
-        allow delete: if signedIn() && (
-          request.auth.uid == resource.data.authorUid ||
-          request.auth.uid == get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid
-        );
+        allow create, update, delete: if false;
       }
     }
   }

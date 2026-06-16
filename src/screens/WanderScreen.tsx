@@ -12,8 +12,15 @@ import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
-import { requestFollow, subscribeFollowing, subscribeOutgoingFollowRequestIds } from '../services/follows';
-import { subscribeWanderMoments } from '../services/moments';
+import {
+  blockUser,
+  reportUser,
+  requestFollow,
+  subscribeBlockedUserIds,
+  subscribeFollowing,
+  subscribeOutgoingFollowRequestIds,
+} from '../services/follows';
+import { fetchWanderMomentPage, subscribeWanderMoments, type MomentPageCursor } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
@@ -28,13 +35,20 @@ export default function WanderScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<Nav>();
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [pageCursor, setPageCursor] = useState<MomentPageCursor>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [sort, setSort] = useState<MomentSort>('posted');
   const [following, setFollowing] = useState<string[]>([]);
   const [pendingRequests, setPendingRequests] = useState<string[]>([]);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
   const [requesting, setRequesting] = useState<Moment | null>(null);
+  const [blocking, setBlocking] = useState<Moment | null>(null);
+  const [reporting, setReporting] = useState<Moment | null>(null);
   const [context, setContext] = useState('');
+  const [reportContext, setReportContext] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
@@ -47,6 +61,9 @@ export default function WanderScreen() {
       }, () => {
         setListenerError('Wander moments could not be loaded.');
         finishRefresh();
+      }, (cursor) => {
+        setPageCursor(cursor);
+        setHasMore(Boolean(cursor));
       }),
     [finishRefresh, refreshKey],
   );
@@ -62,9 +79,19 @@ export default function WanderScreen() {
       () => setListenerError('Pending friend requests could not be loaded.'),
     );
   }, [refreshKey, user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) {
+      setBlockedIds([]);
+      return;
+    }
+    return subscribeBlockedUserIds(user.uid, setBlockedIds, () => setListenerError('Blocked profiles could not be checked.'));
+  }, [refreshKey, user?.uid]);
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
-  const visibleMoments = useMemo(() => sortMomentsForDisplay(moments, sort), [moments, sort]);
+  const visibleMoments = useMemo(
+    () => sortMomentsForDisplay(moments.filter((moment) => !blockedIds.includes(moment.authorUid)), sort),
+    [blockedIds, moments, sort],
+  );
   useEffect(
     () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
     [authorUids.join('|')],
@@ -93,6 +120,59 @@ export default function WanderScreen() {
       setError(e instanceof Error ? e.message : 'Could not send request.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!reporting) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await reportUser({
+        targetUid: reporting.authorUid,
+        reason: 'moment',
+        context: reportContext || reporting.frontText,
+      });
+      setReporting(null);
+      setReportContext('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send report.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitBlock = async () => {
+    if (!blocking) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await blockUser(blocking.authorUid);
+      setMoments((current) => current.filter((moment) => moment.authorUid !== blocking.authorUid));
+      setBlocking(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not block this person.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!pageCursor || loadingMore) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const page = await fetchWanderMomentPage({ after: pageCursor });
+      setMoments((current) => {
+        const seen = new Set(current.map((moment) => moment.id));
+        return current.concat(page.moments.filter((moment) => !seen.has(moment.id)));
+      });
+      setPageCursor(page.nextCursor);
+      setHasMore(Boolean(page.nextCursor) && page.moments.length > 0);
+    } catch (e) {
+      setListenerError('Older Wander moments could not be loaded.');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -161,8 +241,17 @@ export default function WanderScreen() {
                 ? openRequest
                 : undefined
             }
+            onReport={item.authorUid !== user?.uid ? setReporting : undefined}
+            onBlock={item.authorUid !== user?.uid ? setBlocking : undefined}
           />
         )}
+        ListFooterComponent={
+          visibleMoments.length && hasMore ? (
+            <Button mode="text" onPress={loadMore} loading={loadingMore} disabled={loadingMore}>
+              Load more
+            </Button>
+          ) : null
+        }
       />
 
       <Portal>
@@ -180,6 +269,33 @@ export default function WanderScreen() {
             <Button onPress={submitRequest} loading={busy} disabled={busy || !context.trim()}>
               Send
             </Button>
+          </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={Boolean(reporting)} onDismiss={() => setReporting(null)}>
+          <Dialog.Title>Report moment?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
+              Tell us what feels wrong about this moment.
+            </Text>
+            <TextInput label="context" value={reportContext} onChangeText={setReportContext} multiline disabled={busy} />
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setReporting(null)} disabled={busy}>Cancel</Button>
+            <Button onPress={submitReport} loading={busy} disabled={busy}>Report</Button>
+          </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={Boolean(blocking)} onDismiss={() => setBlocking(null)}>
+          <Dialog.Title>Block this person?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary }}>
+              You will stop seeing their moments, and existing requests or friendships will be removed.
+            </Text>
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setBlocking(null)} disabled={busy}>Keep</Button>
+            <Button onPress={submitBlock} loading={busy} disabled={busy} textColor={colors.error}>Block</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

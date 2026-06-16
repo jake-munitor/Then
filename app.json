@@ -3,6 +3,7 @@
     "name": "Then",
     "slug": "then",
     "owner": "finnman81",
+    "scheme": "then",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,10 +17,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.then.app",
+      "associatedDomains": [
+        "applinks:then.app"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Then needs access to your photos so you can develop and share moments.",
-        "NSCameraUsageDescription": "Then needs camera access so you can take and share new moments."
+        "NSCameraUsageDescription": "Then needs camera access so you can take and share new moments.",
+        "NSUserNotificationUsageDescription": "Then sends quiet notifications when friends leave notes on your moments."
       },
       "buildNumber": "13"
     },
@@ -42,6 +47,7 @@
     },
     "plugins": [
       "expo-font",
+      "expo-notifications",
       [
         "expo-image-picker",
         {
@@ -55,7 +61,8 @@
     },
     "updates": {
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/3175f2f5-905a-44f5-ae35-37406d04f794"
     },
     "extra": {
       "eas": {

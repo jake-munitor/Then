@@ -31,6 +31,7 @@ export default function FeedScreen() {
   const tabNavigation = useNavigation<any>();
   const [following, setFollowing] = useState<string[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [pageSize, setPageSize] = useState(25);
   const [sort, setSort] = useState<MomentSort>('posted');
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
   const [listenerError, setListenerError] = useState<string | null>(null);
@@ -50,14 +51,20 @@ export default function FeedScreen() {
   const homeAuthorUids = useMemo(() => (user?.uid ? [user.uid, ...following] : following), [following, user?.uid]);
   useEffect(
     () =>
-      subscribeMomentsByAuthors(homeAuthorUids, (nextMoments) => {
-        setMoments(nextMoments);
-        finishRefresh();
-      }, () => {
-        setListenerError('Your moments could not be loaded.');
-        finishRefresh();
-      }),
-    [finishRefresh, homeAuthorUids.join('|'), refreshKey],
+      subscribeMomentsByAuthors(
+        homeAuthorUids,
+        (nextMoments) => {
+          setMoments(nextMoments);
+          finishRefresh();
+        },
+        () => {
+          setListenerError('Your moments could not be loaded.');
+          finishRefresh();
+        },
+        undefined,
+        pageSize,
+      ),
+    [finishRefresh, homeAuthorUids.join('|'), pageSize, refreshKey],
   );
 
   const authorUids = useMemo(
@@ -138,9 +145,14 @@ export default function FeedScreen() {
         )}
         ListFooterComponent={
           visibleMoments.length ? (
-            <Button mode="text" onPress={() => tabNavigation.navigate('NewMomentTab' as keyof TabsParamList)}>
-              New moment
-            </Button>
+            <View style={{ alignItems: 'center' }}>
+              <Button mode="text" onPress={() => setPageSize((current) => current + 25)}>
+                Load more
+              </Button>
+              <Button mode="text" onPress={() => tabNavigation.navigate('NewMomentTab' as keyof TabsParamList)}>
+                New moment
+              </Button>
+            </View>
           ) : null
         }
       />

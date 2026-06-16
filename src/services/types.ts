@@ -9,6 +9,14 @@ export type PublicUser = {
   avatarUrl: string | null;
   profileVisibility: ProfileVisibility;
   appearInWander: boolean;
+  onboardingCompleted?: boolean;
+};
+
+export type NotificationPreferences = {
+  notes: boolean;
+  followRequests: boolean;
+  friendApprovals: boolean;
+  wander: boolean;
 };
 
 export type FollowRequest = {

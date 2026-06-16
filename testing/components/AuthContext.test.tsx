@@ -2,10 +2,10 @@ import React, { useContext } from 'react';
 import { Pressable, Text } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import {
-  deleteUser,
   EmailAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
+  signOut,
 } from 'firebase/auth';
 
 import { AuthContext, AuthProvider } from '../../src/store/AuthContext';
@@ -42,7 +42,7 @@ describe('AuthProvider account deletion', () => {
     });
   });
 
-  it('reauthenticates before deleting account data and the Auth user', async () => {
+  it('reauthenticates before asking the backend to delete the account', async () => {
     render(
       <AuthProvider>
         <DeleteAccountHarness />
@@ -52,15 +52,13 @@ describe('AuthProvider account deletion', () => {
     expect(screen.getByText('Jake')).toBeTruthy();
     fireEvent.press(screen.getByText('Delete now'));
 
-    await waitFor(() => expect(deleteUser).toHaveBeenCalledWith(expect.objectContaining({ uid: 'user-1' })));
+    await waitFor(() => expect(deleteAccountData).toHaveBeenCalled());
     expect(EmailAuthProvider.credential).toHaveBeenCalledWith('jake@example.com', 'password');
     expect(reauthenticateWithCredential).toHaveBeenCalledWith(expect.objectContaining({ uid: 'user-1' }), expect.anything());
-    expect(deleteAccountData).toHaveBeenCalledWith('user-1');
+    expect(deleteAccountData).toHaveBeenCalledWith();
+    expect(signOut).toHaveBeenCalled();
     expect((reauthenticateWithCredential as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
       (deleteAccountData as jest.Mock).mock.invocationCallOrder[0],
-    );
-    expect((deleteAccountData as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
-      (deleteUser as jest.Mock).mock.invocationCallOrder[0],
     );
   });
 });

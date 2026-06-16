@@ -9,8 +9,11 @@ import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import {
   cancelFollowRequest,
+  blockUser,
   removeFollow,
+  reportUser,
   requestFollow,
+  subscribeBlockedUserIds,
   subscribeFollowing,
   subscribeOutgoingFollowRequestIds,
 } from '../services/follows';
@@ -27,8 +30,12 @@ export default function FriendsScreen() {
   const [following, setFollowing] = useState<string[]>([]);
   const [requesting, setRequesting] = useState<PublicUser | null>(null);
   const [confirming, setConfirming] = useState<{ person: PublicUser; action: 'cancel' | 'remove' } | null>(null);
+  const [blocking, setBlocking] = useState<PublicUser | null>(null);
+  const [reporting, setReporting] = useState<PublicUser | null>(null);
   const [sentRequests, setSentRequests] = useState<string[]>([]);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [context, setContext] = useState(`I'd like to keep up.`);
+  const [reportContext, setReportContext] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
@@ -60,6 +67,13 @@ export default function FriendsScreen() {
       () => setListenerError('Pending friend requests could not be checked.'),
     );
   }, [refreshKey, user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) {
+      setBlockedIds([]);
+      return;
+    }
+    return subscribeBlockedUserIds(user.uid, setBlockedIds, () => setListenerError('Blocked profiles could not be checked.'));
+  }, [refreshKey, user?.uid]);
 
   const visiblePeople = useMemo(
     () =>
@@ -67,8 +81,8 @@ export default function FriendsScreen() {
         users: people,
         currentUid: user?.uid,
         query,
-      }),
-    [people, query, user?.uid],
+      }).filter((person) => !blockedIds.includes(person.uid)),
+    [blockedIds, people, query, user?.uid],
   );
 
   const openRequest = (person: PublicUser) => {
@@ -112,6 +126,36 @@ export default function FriendsScreen() {
       setConfirming(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update this friendship.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!reporting) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await reportUser({ targetUid: reporting.uid, reason: 'profile', context: reportContext });
+      setReporting(null);
+      setReportContext('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send report.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitBlock = async () => {
+    if (!blocking) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await blockUser(blocking.uid);
+      setPeople((current) => current.filter((person) => person.uid !== blocking.uid));
+      setBlocking(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not block this person.');
     } finally {
       setBusy(false);
     }
@@ -198,6 +242,14 @@ export default function FriendsScreen() {
               >
                 {isFollowing ? 'Remove friend' : requested ? 'Cancel request' : 'Add friend'}
               </Button>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button mode="text" icon="flag-outline" onPress={() => setReporting(item)}>
+                  Report
+                </Button>
+                <Button mode="text" icon="account-cancel-outline" textColor={colors.error} onPress={() => setBlocking(item)}>
+                  Block
+                </Button>
+              </View>
             </View>
           );
         }}
@@ -239,6 +291,33 @@ export default function FriendsScreen() {
             <Button onPress={confirmRelationshipChange} loading={busy} disabled={busy} textColor={colors.error}>
               Confirm
             </Button>
+          </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={Boolean(reporting)} onDismiss={() => setReporting(null)}>
+          <Dialog.Title>Report profile?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
+              Tell us what feels wrong about {reporting?.displayName ?? 'this profile'}.
+            </Text>
+            <TextInput label="context" value={reportContext} onChangeText={setReportContext} multiline disabled={busy} />
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setReporting(null)} disabled={busy}>Cancel</Button>
+            <Button onPress={submitReport} loading={busy} disabled={busy}>Report</Button>
+          </Dialog.Actions>
+        </Dialog>
+        <Dialog visible={Boolean(blocking)} onDismiss={() => setBlocking(null)}>
+          <Dialog.Title>Block this person?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary }}>
+              You will stop seeing them, and existing requests or friendships will be removed.
+            </Text>
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setBlocking(null)} disabled={busy}>Keep</Button>
+            <Button onPress={submitBlock} loading={busy} disabled={busy} textColor={colors.error}>Block</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

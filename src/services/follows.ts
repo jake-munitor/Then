@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
+import { callFunction } from './cloudFunctions';
 import type { FollowRequest, ListenerErrorHandler } from './types';
 
 export function subscribeFollowing(uid: string, onChange: (uids: string[]) => void, onError?: ListenerErrorHandler) {
@@ -82,6 +83,19 @@ export function subscribeOutgoingFollowRequestIds(
   );
 }
 
+export function subscribeBlockedUserIds(uid: string, onChange: (uids: string[]) => void, onError?: ListenerErrorHandler) {
+  if (!db) {
+    onChange([]);
+    return () => {};
+  }
+
+  return onSnapshot(
+    query(collection(db, 'users', uid, 'blocks'), orderBy('createdAt', 'desc')),
+    (snap) => onChange(snap.docs.map((blockedDoc) => blockedDoc.id)),
+    onError,
+  );
+}
+
 export async function requestFollow(params: {
   requesterUid: string;
   targetUid: string;
@@ -117,41 +131,29 @@ export async function getPendingFollowRequestIds(requesterUid: string, targetUid
 }
 
 export async function approveFollow(params: { ownerUid: string; requesterUid: string }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-  const batch = writeBatch(db);
-  batch.set(doc(db, 'users', params.ownerUid, 'followers', params.requesterUid), {
-    uid: params.requesterUid,
-    approvedAt: serverTimestamp(),
-  });
-  batch.set(doc(db, 'users', params.requesterUid, 'following', params.ownerUid), {
-    uid: params.ownerUid,
-    approvedAt: serverTimestamp(),
-  });
-  batch.delete(doc(db, 'users', params.ownerUid, 'followRequests', params.requesterUid));
-  batch.delete(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.ownerUid));
-  await batch.commit();
+  await callFunction('approveFollowRequest', { requesterUid: params.requesterUid });
 }
 
 export async function declineFollow(params: { ownerUid: string; requesterUid: string }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-  const batch = writeBatch(db);
-  batch.delete(doc(db, 'users', params.ownerUid, 'followRequests', params.requesterUid));
-  batch.delete(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.ownerUid));
-  await batch.commit();
+  await callFunction('declineFollowRequest', { requesterUid: params.requesterUid });
 }
 
 export async function cancelFollowRequest(params: { requesterUid: string; targetUid: string }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-  const batch = writeBatch(db);
-  batch.delete(doc(db, 'users', params.targetUid, 'followRequests', params.requesterUid));
-  batch.delete(doc(db, 'users', params.requesterUid, 'outgoingFollowRequests', params.targetUid));
-  await batch.commit();
+  await callFunction('cancelFollowRequest', { targetUid: params.targetUid });
 }
 
 export async function removeFollow(params: { followerUid: string; targetUid: string }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-  const batch = writeBatch(db);
-  batch.delete(doc(db, 'users', params.followerUid, 'following', params.targetUid));
-  batch.delete(doc(db, 'users', params.targetUid, 'followers', params.followerUid));
-  await batch.commit();
+  await callFunction('removeFriend', { targetUid: params.targetUid });
+}
+
+export async function blockUser(targetUid: string) {
+  await callFunction('blockUser', { targetUid });
+}
+
+export async function unblockUser(targetUid: string) {
+  await callFunction('unblockUser', { targetUid });
+}
+
+export async function reportUser(params: { targetUid: string; reason: string; context: string }) {
+  await callFunction('reportUser', params);
 }

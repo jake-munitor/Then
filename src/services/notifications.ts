@@ -1,16 +1,37 @@
 import {
   collection,
+  doc,
   getDocs,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   where,
   writeBatch,
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
-import type { AppNotification, ListenerErrorHandler } from './types';
+import type { AppNotification, ListenerErrorHandler, NotificationPreferences } from './types';
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  notes: true,
+  followRequests: true,
+  friendApprovals: true,
+  wander: false,
+};
+
+function preferencesFromData(data: any): NotificationPreferences {
+  const raw = data?.notificationPreferences ?? {};
+  return {
+    notes: typeof raw.notes === 'boolean' ? raw.notes : DEFAULT_NOTIFICATION_PREFERENCES.notes,
+    followRequests:
+      typeof raw.followRequests === 'boolean' ? raw.followRequests : DEFAULT_NOTIFICATION_PREFERENCES.followRequests,
+    friendApprovals:
+      typeof raw.friendApprovals === 'boolean' ? raw.friendApprovals : DEFAULT_NOTIFICATION_PREFERENCES.friendApprovals,
+    wander: typeof raw.wander === 'boolean' ? raw.wander : DEFAULT_NOTIFICATION_PREFERENCES.wander,
+  };
+}
 
 export function subscribeNotifications(
   uid: string,
@@ -65,4 +86,33 @@ export async function markMomentNotificationsRead(uid: string, momentId: string)
   const batch = writeBatch(db);
   unread.forEach((item) => batch.update(item.ref, { readAt: serverTimestamp() }));
   await batch.commit();
+}
+
+export function subscribeNotificationPreferences(
+  uid: string,
+  onChange: (preferences: NotificationPreferences) => void,
+  onError?: ListenerErrorHandler,
+) {
+  if (!db) {
+    onChange(DEFAULT_NOTIFICATION_PREFERENCES);
+    return () => {};
+  }
+
+  return onSnapshot(
+    doc(db, 'users', uid),
+    (snap) => onChange(preferencesFromData(snap.data())),
+    onError,
+  );
+}
+
+export async function updateNotificationPreferences(uid: string, preferences: NotificationPreferences) {
+  if (!db) throw new Error('Firebase is not initialized.');
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      notificationPreferences: preferences,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }

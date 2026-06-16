@@ -7,7 +7,13 @@ service firebase.storage {
 
     function isApprovedFollower(authorUid) {
       return signedIn() &&
+        !isBlocked(authorUid, request.auth.uid) &&
         firestore.exists(/databases/(default)/documents/users/$(authorUid)/followers/$(request.auth.uid));
+    }
+
+    function isBlocked(leftUid, rightUid) {
+      return firestore.exists(/databases/(default)/documents/users/$(leftUid)/blocks/$(rightUid)) ||
+        firestore.exists(/databases/(default)/documents/users/$(rightUid)/blocks/$(leftUid));
     }
 
     function momentAppearsInWander(momentId) {
@@ -29,7 +35,7 @@ service firebase.storage {
     }
 
     match /users/{uid}/moments/{momentId}/{allPaths=**} {
-      allow read: if signedIn() && (request.auth.uid == uid || isApprovedFollower(uid) || momentAppearsInWander(momentId));
+      allow read: if signedIn() && !isBlocked(uid, request.auth.uid) && (request.auth.uid == uid || isApprovedFollower(uid) || momentAppearsInWander(momentId));
       allow write: if signedIn() &&
         request.auth.uid == uid &&
         (

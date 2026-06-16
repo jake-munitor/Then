@@ -23,6 +23,7 @@ jest.mock('../../src/components/MomentCard', () => {
 });
 
 jest.mock('../../src/services/moments', () => ({
+  fetchWanderMomentPage: jest.fn(async () => ({ moments: [], nextCursor: null })),
   subscribeWanderMoments: jest.fn((onChange) => {
     onChange([
       { id: 'own', authorUid: 'user-1', frontText: 'my post', appearInWander: true },
@@ -34,7 +35,13 @@ jest.mock('../../src/services/moments', () => ({
 }));
 
 jest.mock('../../src/services/follows', () => ({
+  blockUser: jest.fn(async () => {}),
+  reportUser: jest.fn(async () => {}),
   requestFollow: jest.fn(async () => {}),
+  subscribeBlockedUserIds: jest.fn((_uid, onChange) => {
+    onChange([]);
+    return () => {};
+  }),
   subscribeFollowing: jest.fn((_uid, onChange) => {
     onChange(['user-2']);
     return () => {};

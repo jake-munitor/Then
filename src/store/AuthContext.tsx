@@ -2,7 +2,6 @@ import React, { createContext, useEffect, useMemo, useState } from 'react';
 import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
-  deleteUser,
   EmailAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
@@ -11,10 +10,10 @@ import {
   signOut,
   updateProfile,
 } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
-import { auth, db } from '../firebase/firebase';
+import { auth } from '../firebase/firebase';
 import { deleteAccountData } from '../services/account';
+import { callFunction } from '../services/cloudFunctions';
 
 export type AuthUser = {
   uid: string;
@@ -79,53 +78,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await signInWithEmailAndPassword(auth, email.trim(), password);
       },
       register: async (displayName, email, password) => {
-        if (!auth || !db) throw new Error('Firebase is not initialized.');
+        if (!auth) throw new Error('Firebase is not initialized.');
         const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const cleanName = displayName.trim();
         await updateProfile(credential.user, { displayName: cleanName });
-
-        const baseProfile = {
+        await callFunction('createInitialProfile', {
           displayName: cleanName,
           handle: handleFromDisplayName(cleanName, credential.user.email),
-          avatarUrl: null,
-          profileVisibility: 'private',
-          appearInWander: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-
-        await setDoc(doc(db, 'users', credential.user.uid), {
-          ...baseProfile,
-          email: credential.user.email,
         });
-        await setDoc(doc(db, 'publicUsers', credential.user.uid), baseProfile);
       },
       resetPassword: async (email) => {
         if (!auth) throw new Error('Firebase is not initialized.');
         await sendPasswordResetEmail(auth, email.trim());
       },
       updateDisplayName: async (displayName) => {
-        if (!auth?.currentUser || !db) throw new Error('Firebase is not initialized.');
+        if (!auth?.currentUser) throw new Error('Firebase is not initialized.');
         const cleanName = displayName.trim();
         await updateProfile(auth.currentUser, { displayName: cleanName });
-        await setDoc(
-          doc(db, 'users', auth.currentUser.uid),
-          { displayName: cleanName, updatedAt: serverTimestamp() },
-          { merge: true },
-        );
-        await setDoc(
-          doc(db, 'publicUsers', auth.currentUser.uid),
-          { displayName: cleanName, updatedAt: serverTimestamp() },
-          { merge: true },
-        );
       },
       deleteAccount: async (password) => {
         if (!auth?.currentUser || !auth.currentUser.email) throw new Error('Sign in again before deleting your account.');
         const credential = EmailAuthProvider.credential(auth.currentUser.email, password);
         await reauthenticateWithCredential(auth.currentUser, credential);
-        const uid = auth.currentUser.uid;
-        await deleteAccountData(uid);
-        await deleteUser(auth.currentUser);
+        await deleteAccountData();
+        await signOut(auth).catch(() => {});
       },
       logout: async () => {
         if (!auth) throw new Error('Firebase is not initialized.');

@@ -24,7 +24,9 @@ type Props = {
   connectionLine?: string;
   onNotes: (moment: Moment) => void;
   onFollow?: (moment: Moment) => void;
+  onBlock?: (moment: Moment) => void;
   onDelete?: (moment: Moment) => void;
+  onReport?: (moment: Moment) => void;
   onEditBack?: (moment: Moment, currentText: string) => void;
   canFlipBack?: boolean;
 };
@@ -36,7 +38,9 @@ export default function MomentCard({
   connectionLine,
   onNotes,
   onFollow,
+  onBlock,
   onDelete,
+  onReport,
   onEditBack,
   canFlipBack = false,
 }: Props) {
@@ -354,11 +358,25 @@ export default function MomentCard({
           </Text>
         ) : null}
 
-        {mode === 'wander' && onFollow ? (
+        {mode === 'wander' && (onFollow || onReport || onBlock) ? (
           <View style={{ borderTopColor: colors.border, borderTopWidth: 1, padding: 12 }}>
-            <Button mode="text" icon="account-plus-outline" onPress={() => onFollow(moment)}>
-              Ask to keep up
-            </Button>
+            {onFollow ? (
+              <Button mode="text" icon="account-plus-outline" onPress={() => onFollow(moment)}>
+                Ask to keep up
+              </Button>
+            ) : null}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {onReport ? (
+                <Button mode="text" icon="flag-outline" onPress={() => onReport(moment)}>
+                  Report
+                </Button>
+              ) : null}
+              {onBlock ? (
+                <Button mode="text" icon="account-cancel-outline" textColor={colors.error} onPress={() => onBlock(moment)}>
+                  Block
+                </Button>
+              ) : null}
+            </View>
           </View>
         ) : null}
       </View>

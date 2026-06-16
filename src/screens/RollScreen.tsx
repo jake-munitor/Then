@@ -2,31 +2,48 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Image, Share, View } from 'react-native';
 import { Badge, Button, Dialog, IconButton, Portal, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
 import EmptyState from '../components/EmptyState';
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
+import MomentSortControl from '../components/MomentSortControl';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { db } from '../firebase/firebase';
 import { approveFollow, declineFollow, subscribeFollowers, subscribeFollowing, subscribeFollowRequests } from '../services/follows';
 import {
   deleteMoment,
+  fetchMomentsByAuthorPage,
+  fetchSavedMomentIdPage,
   saveMomentBack,
   subscribeMomentsByAuthors,
   subscribeMomentsByIds,
   subscribeSavedMomentIds,
+  type MomentPageCursor,
 } from '../services/moments';
-import { markAllNotificationsRead, subscribeNotifications } from '../services/notifications';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  markAllNotificationsRead,
+  subscribeNotificationPreferences,
+  subscribeNotifications,
+  updateNotificationPreferences,
+} from '../services/notifications';
 import { deleteStoredFile, uploadAvatar } from '../services/photos';
-import type { AppNotification, FollowRequest, Moment, ProfileVisibility, PublicUser } from '../services/types';
+import type {
+  AppNotification,
+  FollowRequest,
+  Moment,
+  NotificationPreferences,
+  ProfileVisibility,
+  PublicUser,
+} from '../services/types';
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { initialsFromName } from '../utils/formatters';
+import type { MomentSort } from '../utils/momentSorting';
+import { sortMomentsForDisplay } from '../utils/momentSorting';
 
 type RollView = 'archive' | 'saved' | 'requests' | 'activity';
 
@@ -37,17 +54,27 @@ export default function RollScreen() {
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>('private');
   const [appearInWander, setAppearInWander] = useState(false);
   const [profileHandle, setProfileHandle] = useState<string | null>(null);
+  const [handle, setHandle] = useState('');
   const [archive, setArchive] = useState<Moment[]>([]);
+  const [archiveCursor, setArchiveCursor] = useState<MomentPageCursor>(null);
+  const [archiveHasMore, setArchiveHasMore] = useState(true);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedCursor, setSavedCursor] = useState<MomentPageCursor>(null);
+  const [savedHasMore, setSavedHasMore] = useState(true);
   const [saved, setSaved] = useState<Moment[]>([]);
   const [requests, setRequests] = useState<FollowRequest[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [followers, setFollowers] = useState<string[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>(
+    DEFAULT_NOTIFICATION_PREFERENCES,
+  );
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [view, setView] = useState<RollView>('archive');
+  const [sort, setSort] = useState<MomentSort>('posted');
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
   const [deletingMoment, setDeletingMoment] = useState<Moment | null>(null);
@@ -62,18 +89,34 @@ export default function RollScreen() {
       finishRefresh();
       return;
     }
-    return subscribeMomentsByAuthors([user.uid], (nextArchive) => {
-      setArchive(nextArchive);
-      finishRefresh();
-    }, () => {
-      setListenerError('Your archive could not be loaded.');
-      finishRefresh();
-    });
+    return subscribeMomentsByAuthors(
+      [user.uid],
+      (nextArchive) => {
+        setArchive(nextArchive);
+        finishRefresh();
+      },
+      () => {
+        setListenerError('Your archive could not be loaded.');
+        finishRefresh();
+      },
+      (cursor) => {
+        setArchiveCursor(cursor);
+        setArchiveHasMore(Boolean(cursor));
+      },
+    );
   }, [finishRefresh, refreshKey, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) return;
-    return subscribeSavedMomentIds(user.uid, setSavedIds, () => setListenerError('Saved moments could not be loaded.'));
+    return subscribeSavedMomentIds(
+      user.uid,
+      setSavedIds,
+      () => setListenerError('Saved moments could not be loaded.'),
+      (cursor) => {
+        setSavedCursor(cursor);
+        setSavedHasMore(Boolean(cursor));
+      },
+    );
   }, [refreshKey, user?.uid]);
 
   useEffect(
@@ -96,6 +139,15 @@ export default function RollScreen() {
 
   useEffect(() => {
     if (!user?.uid) return;
+    return subscribeNotificationPreferences(
+      user.uid,
+      setNotificationPreferences,
+      () => setListenerError('Notification settings could not be loaded.'),
+    );
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
     return subscribeFollowers(user.uid, setFollowers, () => setListenerError('Follower details could not be loaded.'));
   }, [refreshKey, user?.uid]);
 
@@ -113,6 +165,7 @@ export default function RollScreen() {
         if (!profile) return;
         setName(profile.displayName ?? user.displayName ?? '');
         setProfileHandle(profile.handle);
+        setHandle(profile.handle ?? '');
         setAvatarUri(profile.avatarUrl);
         setProfileVisibility(profile.profileVisibility);
         setAppearInWander(profile.appearInWander);
@@ -121,7 +174,10 @@ export default function RollScreen() {
     );
   }, [user?.displayName, user?.uid]);
 
-  const visibleMoments = useMemo(() => (view === 'archive' ? archive : saved), [archive, saved, view]);
+  const visibleMoments = useMemo(
+    () => sortMomentsForDisplay(view === 'archive' ? archive : saved, sort),
+    [archive, saved, sort, view],
+  );
   const authorUids = useMemo(
     () =>
       Array.from(
@@ -140,12 +196,20 @@ export default function RollScreen() {
   );
 
   const saveProfile = async () => {
-    if (!user?.uid || !name.trim()) return;
+    if (!user?.uid || !name.trim() || !handle.trim()) return;
     setBusy(true);
     setError(null);
     try {
       await updateDisplayName(name);
-      await updateThenSettings({ uid: user.uid, displayName: name, profileVisibility, appearInWander });
+      await updateThenSettings({
+        uid: user.uid,
+        displayName: name,
+        handle,
+        profileVisibility,
+        appearInWander,
+        avatarUrl: avatarUri,
+        onboardingCompleted: true,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');
     } finally {
@@ -154,7 +218,7 @@ export default function RollScreen() {
   };
 
   const changeAvatar = async () => {
-    if (!user?.uid || !db) return;
+    if (!user?.uid || !handle.trim()) return;
     setError(null);
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -172,8 +236,15 @@ export default function RollScreen() {
     try {
       const previousAvatar = avatarUri;
       const url = await uploadAvatar({ uid: user.uid, uri: result.assets[0].uri });
-      await setDoc(doc(db, 'users', user.uid), { avatarUrl: url, updatedAt: serverTimestamp() }, { merge: true });
-      await setDoc(doc(db, 'publicUsers', user.uid), { avatarUrl: url, updatedAt: serverTimestamp() }, { merge: true });
+      await updateThenSettings({
+        uid: user.uid,
+        displayName: name || user.displayName || 'Then Friend',
+        handle,
+        profileVisibility,
+        appearInWander,
+        avatarUrl: url,
+        onboardingCompleted: true,
+      });
       setAvatarUri(url);
       await deleteStoredFile(previousAvatar).catch(() => {});
     } catch (e) {
@@ -211,8 +282,21 @@ export default function RollScreen() {
   const shareProfile = async () => {
     const handle = profileHandle ? `@${profileHandle}` : user?.displayName ?? 'me';
     await Share.share({
-      message: `Find ${handle} on Then: https://apps.apple.com/app/id6778068657`,
+      message: `Find ${handle} on Then: then://profile/${profileHandle ?? ''}\n\nIf Then is not installed: https://apps.apple.com/app/id6778068657`,
     });
+  };
+
+  const setNotificationPreference = async (key: keyof NotificationPreferences, value: boolean) => {
+    if (!user?.uid) return;
+    const next = { ...notificationPreferences, [key]: value };
+    setNotificationPreferences(next);
+    try {
+      await updateNotificationPreferences(user.uid, next);
+      setError(null);
+    } catch (e) {
+      setNotificationPreferences(notificationPreferences);
+      setError(e instanceof Error ? e.message : 'Could not update notifications.');
+    }
   };
 
   const openReflectionEditor = (moment: Moment, currentText: string) => {
@@ -279,6 +363,32 @@ export default function RollScreen() {
     }
   };
 
+  const loadMore = async () => {
+    if (!user?.uid || loadingMore) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      if (view === 'archive' && archiveCursor) {
+        const page = await fetchMomentsByAuthorPage({ authorUid: user.uid, after: archiveCursor });
+        setArchive((current) => {
+          const seen = new Set(current.map((moment) => moment.id));
+          return current.concat(page.moments.filter((moment) => !seen.has(moment.id)));
+        });
+        setArchiveCursor(page.nextCursor);
+        setArchiveHasMore(Boolean(page.nextCursor) && page.moments.length > 0);
+      } else if (view === 'saved' && savedCursor) {
+        const page = await fetchSavedMomentIdPage({ uid: user.uid, after: savedCursor });
+        setSavedIds((current) => Array.from(new Set(current.concat(page.momentIds))));
+        setSavedCursor(page.nextCursor);
+        setSavedHasMore(Boolean(page.nextCursor) && page.momentIds.length > 0);
+      }
+    } catch (e) {
+      setListenerError('Older moments could not be loaded.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   return (
     <Screen contentStyle={{ alignItems: 'center' }} refreshing={refreshing} onRefresh={onRefresh}>
       <View style={{ width: '100%', maxWidth: 640, gap: 18 }}>
@@ -329,6 +439,14 @@ export default function RollScreen() {
         </View>
 
         <TextInput label="display name" value={name} onChangeText={setName} disabled={busy} />
+        <TextInput
+          label="handle"
+          value={handle}
+          onChangeText={setHandle}
+          autoCapitalize="none"
+          disabled={busy}
+          left={<TextInput.Affix text="@" />}
+        />
 
         <SegmentedButtons
           value={profileVisibility}
@@ -348,7 +466,7 @@ export default function RollScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Button mode="contained" onPress={saveProfile} disabled={busy || !name.trim()} style={{ flex: 1 }}>
+          <Button mode="contained" onPress={saveProfile} disabled={busy || !name.trim() || !handle.trim()} style={{ flex: 1 }}>
             Save
           </Button>
           <Button mode="outlined" onPress={changeAvatar} disabled={busy} style={{ flex: 1 }}>
@@ -359,6 +477,28 @@ export default function RollScreen() {
           Share my profile
         </Button>
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
+      </View>
+
+      <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 18, gap: 14 }}>
+        <View>
+          <Text variant="titleMedium">Notifications</Text>
+          <Text style={{ color: colors.textSecondary }}>Choose which quiet updates can buzz you.</Text>
+        </View>
+        {[
+          ['notes', 'Notes on your moments'],
+          ['followRequests', 'Friend requests'],
+          ['friendApprovals', 'Friend approvals'],
+          ['wander', 'Wander activity'],
+        ].map(([key, label]) => (
+          <View key={key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text style={{ flex: 1, color: colors.textPrimary }}>{label}</Text>
+            <Switch
+              value={notificationPreferences[key as keyof NotificationPreferences]}
+              onValueChange={(value) => setNotificationPreference(key as keyof NotificationPreferences, value)}
+              disabled={busy}
+            />
+          </View>
+        ))}
       </View>
 
       <SegmentedButtons
@@ -373,6 +513,11 @@ export default function RollScreen() {
           { value: 'requests', label: `Requests ${requests.length ? `(${requests.length})` : ''}` },
         ]}
       />
+      {(view === 'archive' || view === 'saved') && visibleMoments.length ? (
+        <View style={{ width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 12 }}>
+          <MomentSortControl value={sort} onChange={setSort} />
+        </View>
+      ) : null}
 
       {view === 'activity' ? (
         notifications.length === 0 ? (
@@ -420,7 +565,7 @@ export default function RollScreen() {
         />
       ) : (
         <View style={{ gap: 16 }}>
-          {visibleMoments.slice(0, 30).map((moment) => (
+          {visibleMoments.map((moment) => (
             <MomentCard
               key={moment.id}
               moment={moment}
@@ -441,6 +586,11 @@ export default function RollScreen() {
               onNotes={(selectedMoment) => navigation.navigate('Notes', { moment: selectedMoment })}
             />
           ))}
+          {(view === 'archive' ? archiveHasMore : savedHasMore) ? (
+            <Button mode="text" onPress={loadMore} loading={loadingMore} disabled={loadingMore}>
+              Load more
+            </Button>
+          ) : null}
         </View>
       )}
 

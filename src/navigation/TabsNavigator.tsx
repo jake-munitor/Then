@@ -10,6 +10,7 @@ import RollScreen from '../screens/RollScreen';
 import WanderScreen from '../screens/WanderScreen';
 import { subscribeFollowRequests } from '../services/follows';
 import { subscribeNotifications } from '../services/notifications';
+import { registerForPushNotifications } from '../services/pushNotifications';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -29,6 +30,10 @@ export default function TabsNavigator() {
       return;
     }
     return subscribeFollowRequests(user.uid, (requests) => setRequestCount(requests.length));
+  }, [user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) return;
+    registerForPushNotifications().catch(() => {});
   }, [user?.uid]);
   useEffect(() => {
     if (!user?.uid) {

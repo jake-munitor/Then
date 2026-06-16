@@ -4,20 +4,21 @@ import {
   doc,
   getDoc,
   getDocs,
-  increment,
   limit,
   onSnapshot,
   orderBy,
   query,
+  QueryDocumentSnapshot,
+  DocumentData,
   serverTimestamp,
   setDoc,
-  updateDoc,
-  writeBatch,
+  startAfter,
   where,
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
-import { deleteStoredFile, uploadMomentPhoto } from './photos';
+import { callFunction } from './cloudFunctions';
+import { uploadMomentPhoto } from './photos';
 import type { ListenerErrorHandler, Moment, MomentBack, Note } from './types';
 
 function momentFromSnap(id: string, data: any): Moment {
@@ -38,10 +39,88 @@ function sortMoments(moments: Moment[]) {
   return moments.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
 }
 
+export type MomentPageCursor = QueryDocumentSnapshot<DocumentData> | null;
+
+export type MomentPage = {
+  moments: Moment[];
+  nextCursor: MomentPageCursor;
+};
+
+export type SavedMomentIdPage = {
+  momentIds: string[];
+  nextCursor: MomentPageCursor;
+};
+
+export async function fetchMomentsByAuthorPage(params: {
+  authorUid: string;
+  pageSize?: number;
+  after?: MomentPageCursor;
+}): Promise<MomentPage> {
+  if (!db) return { moments: [], nextCursor: null };
+  const constraints = [
+    where('authorUid', '==', params.authorUid),
+    orderBy('createdAt', 'desc'),
+    limit(params.pageSize ?? 20),
+  ];
+  const pageQuery = params.after
+    ? query(collection(db, 'moments'), ...constraints, startAfter(params.after))
+    : query(collection(db, 'moments'), ...constraints);
+  const snap = await getDocs(pageQuery);
+  return {
+    moments: snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
+    nextCursor: snap.docs[snap.docs.length - 1] ?? null,
+  };
+}
+
+export async function fetchWanderMomentPage(params: {
+  pageSize?: number;
+  after?: MomentPageCursor;
+}): Promise<MomentPage> {
+  if (!db) return { moments: [], nextCursor: null };
+  const constraints = [
+    where('appearInWander', '==', true),
+    orderBy('createdAt', 'desc'),
+    limit(params.pageSize ?? 20),
+  ];
+  const pageQuery = params.after
+    ? query(collection(db, 'moments'), ...constraints, startAfter(params.after))
+    : query(collection(db, 'moments'), ...constraints);
+  const snap = await getDocs(pageQuery);
+  return {
+    moments: snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
+    nextCursor: snap.docs[snap.docs.length - 1] ?? null,
+  };
+}
+
+export async function fetchMomentById(momentId: string) {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, 'moments', momentId));
+  return snap.exists() ? momentFromSnap(snap.id, snap.data()) : null;
+}
+
+export async function fetchSavedMomentIdPage(params: {
+  uid: string;
+  pageSize?: number;
+  after?: MomentPageCursor;
+}): Promise<SavedMomentIdPage> {
+  if (!db) return { momentIds: [], nextCursor: null };
+  const constraints = [orderBy('savedAt', 'desc'), limit(params.pageSize ?? 20)];
+  const pageQuery = params.after
+    ? query(collection(db, 'users', params.uid, 'saved'), ...constraints, startAfter(params.after))
+    : query(collection(db, 'users', params.uid, 'saved'), ...constraints);
+  const snap = await getDocs(pageQuery);
+  return {
+    momentIds: snap.docs.map((savedDoc) => savedDoc.id),
+    nextCursor: snap.docs[snap.docs.length - 1] ?? null,
+  };
+}
+
 export function subscribeMomentsByAuthors(
   authorUids: string[],
   onChange: (moments: Moment[]) => void,
   onError?: ListenerErrorHandler,
+  onPageInfo?: (cursor: MomentPageCursor) => void,
+  pageSize = 50,
 ) {
   if (!db || authorUids.length === 0) {
     onChange([]);
@@ -54,15 +133,18 @@ export function subscribeMomentsByAuthors(
     const momentsQuery = query(
       collection(db!, 'moments'),
       where('authorUid', '==', authorUid),
-      limit(50),
+      orderBy('createdAt', 'desc'),
+      limit(pageSize),
     );
     return onSnapshot(
       momentsQuery,
       (snap) => {
+        const docs = snap.docs;
         grouped.set(
           authorUid,
-          snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
+          docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
         );
+        if (unique.length === 1) onPageInfo?.(docs[docs.length - 1] ?? null);
         onChange(sortMoments(Array.from(grouped.values()).flat()));
       },
       onError,
@@ -72,7 +154,11 @@ export function subscribeMomentsByAuthors(
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 }
 
-export function subscribeWanderMoments(onChange: (moments: Moment[]) => void, onError?: ListenerErrorHandler) {
+export function subscribeWanderMoments(
+  onChange: (moments: Moment[]) => void,
+  onError?: ListenerErrorHandler,
+  onPageInfo?: (cursor: MomentPageCursor) => void,
+) {
   if (!db) {
     onChange([]);
     return () => {};
@@ -81,11 +167,15 @@ export function subscribeWanderMoments(onChange: (moments: Moment[]) => void, on
   const momentsQuery = query(
     collection(db, 'moments'),
     where('appearInWander', '==', true),
+    orderBy('createdAt', 'desc'),
     limit(100),
   );
   return onSnapshot(
     momentsQuery,
-    (snap) => onChange(sortMoments(snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())))),
+    (snap) => {
+      onPageInfo?.(snap.docs[snap.docs.length - 1] ?? null);
+      onChange(sortMoments(snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data()))));
+    },
     onError,
   );
 }
@@ -94,6 +184,7 @@ export function subscribeSavedMomentIds(
   uid: string,
   onChange: (momentIds: string[]) => void,
   onError?: ListenerErrorHandler,
+  onPageInfo?: (cursor: MomentPageCursor) => void,
 ) {
   if (!db) {
     onChange([]);
@@ -109,6 +200,7 @@ export function subscribeSavedMomentIds(
     (snap) => {
       savedIds.clear();
       snap.docs.forEach((savedDoc) => savedIds.add(savedDoc.id));
+      onPageInfo?.(snap.docs[snap.docs.length - 1] ?? null);
       emit();
     },
     onError,
@@ -211,29 +303,7 @@ export async function saveMomentBack(params: { momentId: string; uid: string; te
 }
 
 export async function deleteMoment(params: { momentId: string; uid: string }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-
-  const momentRef = doc(db, 'moments', params.momentId);
-  const momentSnap = await getDoc(momentRef);
-  if (!momentSnap.exists()) return;
-  if (String(momentSnap.data().authorUid ?? '') !== params.uid) {
-    throw new Error('Only the person who shared this moment can delete it.');
-  }
-
-  const batch = writeBatch(db);
-  const [backSnap, keepsSnap, notesSnap] = await Promise.all([
-    getDocs(collection(db, 'moments', params.momentId, 'back')),
-    getDocs(collection(db, 'moments', params.momentId, 'keeps')),
-    getDocs(collection(db, 'moments', params.momentId, 'notes')),
-  ]);
-
-  backSnap.docs.forEach((detailDoc) => batch.delete(detailDoc.ref));
-  keepsSnap.docs.forEach((keepDoc) => batch.delete(keepDoc.ref));
-  notesSnap.docs.forEach((noteDoc) => batch.delete(noteDoc.ref));
-  batch.delete(momentRef);
-
-  await batch.commit();
-  await deleteStoredFile(String(momentSnap.data().imageUrl ?? ''));
+  await callFunction('deleteMoment', { momentId: params.momentId });
 }
 
 export function subscribeMomentBack(
@@ -269,20 +339,7 @@ export function subscribeMomentKeep(
 }
 
 export async function toggleKeep(params: { momentId: string; authorUid: string; uid: string; currentlyKept: boolean }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-  const keepRef = doc(db, 'moments', params.momentId, 'keeps', params.uid);
-  const momentRef = doc(db, 'moments', params.momentId);
-
-  if (params.currentlyKept) {
-    await deleteDoc(keepRef);
-    await updateDoc(momentRef, { keptCount: increment(-1) });
-    return;
-  }
-
-  const existing = await getDoc(keepRef);
-  if (existing.exists()) return;
-  await setDoc(keepRef, { uid: params.uid, createdAt: serverTimestamp() });
-  await updateDoc(momentRef, { keptCount: increment(1) });
+  await callFunction('toggleKeep', { momentId: params.momentId });
 }
 
 export function subscribeMomentSaved(
@@ -366,35 +423,7 @@ export function subscribeNotes(momentId: string, onChange: (notes: Note[]) => vo
 }
 
 export async function addNote(params: { momentId: string; uid: string; text: string }) {
-  if (!db) throw new Error('Firebase is not initialized.');
   const text = params.text.trim();
   if (!text) return;
-  const momentRef = doc(db, 'moments', params.momentId);
-  const momentSnap = await getDoc(momentRef);
-  if (!momentSnap.exists()) throw new Error('This moment is no longer available.');
-
-  const ownerUid = String(momentSnap.data().authorUid ?? '');
-  const noteRef = doc(collection(db, 'moments', params.momentId, 'notes'));
-  const batch = writeBatch(db);
-  batch.set(noteRef, {
-    authorUid: params.uid,
-    text,
-    createdAt: serverTimestamp(),
-  });
-  batch.update(momentRef, {
-    noteCount: increment(1),
-  });
-  if (ownerUid && ownerUid !== params.uid) {
-    batch.set(doc(db, 'users', ownerUid, 'notifications', noteRef.id), {
-      type: 'note',
-      actorUid: params.uid,
-      momentId: params.momentId,
-      noteId: noteRef.id,
-      frontText: String(momentSnap.data().frontText ?? ''),
-      text,
-      readAt: null,
-      createdAt: serverTimestamp(),
-    });
-  }
-  await batch.commit();
+  await callFunction('addNote', { momentId: params.momentId, text });
 }

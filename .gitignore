@@ -9,6 +9,7 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+firestore-debug.log
 .DS_Store
 .env
 .env*.local

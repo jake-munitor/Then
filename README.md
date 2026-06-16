@@ -107,3 +107,12 @@ npm run start
 - `moments/{momentId}/back/details`: optional private back reflection, visible only to the author.
 - `moments/{momentId}/keeps/{uid}`: private keep marker.
 - `moments/{momentId}/notes/{noteId}`: quiet notes from approved followers.
+
+See `PRIVACY_SEMANTICS.md` for the enforceable privacy, discovery, moderation, and notification contract.
+
+## Links and Notifications
+
+- Profile links open as `then://profile/<handle>`.
+- Note notifications open as `then://moments/<momentId>/notes`.
+- Shared profile text includes the App Store fallback URL.
+- Universal links for `https://then.app/profile/<handle>` require the Apple App Site Association file described in `DEPLOYMENT.md`.

@@ -49,6 +49,15 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'Images' },
 }));
 
+jest.mock('expo-notifications', () => ({
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: 'ExponentPushToken[test]' })),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  getPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  setNotificationHandler: jest.fn(),
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
@@ -95,6 +104,7 @@ jest.mock('firebase/firestore', () => ({
   where: jest.fn(() => ({})),
   orderBy: jest.fn(() => ({})),
   limit: jest.fn(() => ({})),
+  startAfter: jest.fn(() => ({})),
   increment: jest.fn((n: number) => n),
   serverTimestamp: jest.fn(() => ({ __type: 'serverTimestamp' })),
   writeBatch: jest.fn(() => ({
@@ -115,4 +125,9 @@ jest.mock('firebase/firestore', () => ({
   updateDoc: jest.fn(async () => {}),
   addDoc: jest.fn(async () => ({ id: 'test' })),
   deleteDoc: jest.fn(async () => {}),
+}));
+
+jest.mock('firebase/functions', () => ({
+  getFunctions: jest.fn(() => ({})),
+  httpsCallable: jest.fn(() => jest.fn(async () => ({ data: { ok: true } }))),
 }));

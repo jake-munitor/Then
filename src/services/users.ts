@@ -1,7 +1,20 @@
-import { collection, doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
+import { callFunction } from './cloudFunctions';
 import type { ListenerErrorHandler, ProfileVisibility, PublicUser } from './types';
+
+function profileFromSnap(uid: string, data: Partial<PublicUser> | undefined): PublicUser {
+  return {
+    uid,
+    displayName: data?.displayName ?? null,
+    handle: data?.handle ?? null,
+    avatarUrl: data?.avatarUrl ?? null,
+    profileVisibility: data?.profileVisibility ?? 'private',
+    appearInWander: Boolean(data?.appearInWander),
+    onboardingCompleted: Boolean(data?.onboardingCompleted),
+  };
+}
 
 function normalizeHandle(value: string | null) {
   return (value?.split('@')[0] ?? 'friend').toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -25,14 +38,7 @@ export function subscribePublicUsers(
       doc(firestore, 'publicUsers', uid),
       (snap) => {
         const data = snap.data() as Partial<PublicUser> | undefined;
-        current[uid] = {
-          uid,
-          displayName: data?.displayName ?? null,
-          handle: data?.handle ?? null,
-          avatarUrl: data?.avatarUrl ?? null,
-          profileVisibility: data?.profileVisibility ?? 'private',
-          appearInWander: Boolean(data?.appearInWander),
-        };
+        current[uid] = profileFromSnap(uid, data);
         onChange({ ...current });
       },
       onError,
@@ -58,6 +64,9 @@ export function filterDiscoverableUsers(params: {
       if (!publicUser.uid || publicUser.uid === params.currentUid) {
         return false;
       }
+      if (publicUser.profileVisibility !== 'public' && !publicUser.appearInWander) {
+        return false;
+      }
 
       return !queryText || searchText(publicUser).includes(queryText.replace(/^@/, ''));
     })
@@ -74,20 +83,14 @@ export function subscribeDiscoverableUsers(onChange: (users: PublicUser[]) => vo
     return () => {};
   }
 
+  const publicProfilesQuery = query(collection(db, 'publicUsers'), where('profileVisibility', '==', 'public'));
   return onSnapshot(
-    collection(db, 'publicUsers'),
+    publicProfilesQuery,
     (snap) => {
       onChange(
         snap.docs.map((publicDoc) => {
           const data = publicDoc.data() as Partial<PublicUser>;
-          return {
-            uid: publicDoc.id,
-            displayName: data.displayName ?? null,
-            handle: data.handle ?? null,
-            avatarUrl: data.avatarUrl ?? null,
-            profileVisibility: data.profileVisibility ?? 'private',
-            appearInWander: Boolean(data.appearInWander),
-          };
+          return profileFromSnap(publicDoc.id, data);
         }),
       );
     },
@@ -112,19 +115,35 @@ export async function ensurePublicUser(uid: string, fallback: { displayName: str
   });
 }
 
+export async function fetchPublicUser(uid: string) {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, 'publicUsers', uid));
+  return snap.exists() ? profileFromSnap(snap.id, snap.data() as Partial<PublicUser>) : null;
+}
+
+export async function fetchPublicUserByHandle(rawHandle: string) {
+  if (!db) return null;
+  const handle = normalizeHandle(rawHandle);
+  const handleSnap = await getDoc(doc(db, 'handles', handle));
+  const uid = String(handleSnap.data()?.uid ?? '');
+  return uid ? fetchPublicUser(uid) : null;
+}
+
 export async function updateThenSettings(params: {
   uid: string;
   displayName: string;
+  handle: string;
   profileVisibility: ProfileVisibility;
   appearInWander: boolean;
+  avatarUrl?: string | null;
+  onboardingCompleted?: boolean;
 }) {
-  if (!db) throw new Error('Firebase is not initialized.');
-  const payload = {
+  await callFunction('updateProfile', {
     displayName: params.displayName.trim(),
+    handle: params.handle.trim(),
     profileVisibility: params.profileVisibility,
     appearInWander: params.appearInWander,
-    updatedAt: serverTimestamp(),
-  };
-  await setDoc(doc(db, 'users', params.uid), payload, { merge: true });
-  await setDoc(doc(db, 'publicUsers', params.uid), payload, { merge: true });
+    avatarUrl: params.avatarUrl ?? undefined,
+    onboardingCompleted: Boolean(params.onboardingCompleted),
+  });
 }

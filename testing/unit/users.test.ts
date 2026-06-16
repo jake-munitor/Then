@@ -37,17 +37,17 @@ const users: PublicUser[] = [
 ];
 
 describe('friend discovery', () => {
-  it('lists every other profile, including private accounts and existing friends', () => {
+  it('lists public and Wander-discoverable profiles, excluding private accounts', () => {
     const result = filterDiscoverableUsers({
       users,
       currentUid: 'current-user',
       query: '',
     });
 
-    expect(result.map((user) => user.uid)).toEqual(['public-user', 'private-user', 'wander-user']);
+    expect(result.map((user) => user.uid)).toEqual(['public-user', 'wander-user']);
   });
 
-  it('finds private profiles by partial handle or display name', () => {
+  it('does not find fully private profiles by partial handle or display name', () => {
     const byHandle = filterDiscoverableUsers({
       users,
       currentUid: 'current-user',
@@ -59,7 +59,7 @@ describe('friend discovery', () => {
       query: 'Maisie',
     });
 
-    expect(byHandle.map((user) => user.uid)).toEqual(['private-user']);
-    expect(byDisplayName.map((user) => user.uid)).toEqual(['private-user']);
+    expect(byHandle.map((user) => user.uid)).toEqual([]);
+    expect(byDisplayName.map((user) => user.uid)).toEqual([]);
   });
 });
