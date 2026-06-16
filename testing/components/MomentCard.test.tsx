@@ -138,27 +138,28 @@ describe('MomentCard', () => {
     expect(mergedStyle.paddingBottom).toBeGreaterThan(0);
   });
 
-  it('uses the editorial 4:3 photo and serif caption treatment', () => {
+  it('uses the square photo and quiet attribution treatment', () => {
     renderCard();
 
     const photo = screen.UNSAFE_getAllByType(Image)[0];
     const photoStyle = StyleSheet.flatten(photo.props.style);
     const captionStyle = StyleSheet.flatten(screen.getByTestId('moment-caption').props.style);
 
-    expect(photoStyle.aspectRatio).toBe(4 / 3);
+    expect(photoStyle.aspectRatio).toBe(1);
     expect(captionStyle.fontFamily).toBe(fonts.displayMedium);
-    expect(screen.getByText('From Maisie K')).toBeTruthy();
+    expect(screen.getByText('from Maisie K')).toHaveStyle({ fontFamily: fonts.displayRegular, fontStyle: 'italic' });
   });
 
-  it('frames the photo with a warm Polaroid-style paper mat', () => {
+  it('frames the square photo with a thin rounded paper mat', () => {
     renderCard();
 
     const frameStyle = StyleSheet.flatten(screen.getByTestId('moment-frame').props.style);
     const photoMatStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-mat').props.style);
 
     expect(frameStyle.backgroundColor).toBe(colors.paper);
-    expect(frameStyle.paddingTop).toBeGreaterThan(10);
-    expect(frameStyle.paddingHorizontal).toBeGreaterThan(10);
+    expect(frameStyle.borderRadius).toBe(6);
+    expect(frameStyle.padding).toBe(9);
     expect(photoMatStyle.borderWidth).toBe(1);
+    expect(photoMatStyle.borderRadius).toBe(6);
   });
 });

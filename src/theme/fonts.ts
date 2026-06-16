@@ -4,4 +4,5 @@ export const fonts = {
   bodySemiBold: 'Inter_600SemiBold',
   displayRegular: 'CormorantGaramond_400Regular',
   displayMedium: 'CormorantGaramond_500Medium',
+  script: 'BadScript_400Regular',
 } as const;

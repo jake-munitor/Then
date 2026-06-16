@@ -23,9 +23,9 @@ export default function MomentSortControl({ value, onChange }: Props) {
   return (
     <View
       style={{
-        width: 152,
+        width: 164,
         alignItems: 'stretch',
-        gap: 3,
+        gap: 5,
       }}
     >
       <Text
@@ -33,7 +33,7 @@ export default function MomentSortControl({ value, onChange }: Props) {
           color: colors.textMuted,
           fontFamily: fonts.bodyMedium,
           fontSize: 9,
-          letterSpacing: 1.2,
+          letterSpacing: 1.1,
           textTransform: 'uppercase',
         }}
       >
@@ -42,7 +42,7 @@ export default function MomentSortControl({ value, onChange }: Props) {
       <Menu
         visible={open}
         onDismiss={() => setOpen(false)}
-        contentStyle={{ backgroundColor: colors.paper, borderRadius: 2 }}
+        contentStyle={{ backgroundColor: colors.paper, borderRadius: 8 }}
         anchor={
           <Pressable
             accessibilityRole="button"
@@ -51,12 +51,12 @@ export default function MomentSortControl({ value, onChange }: Props) {
             onPress={() => setOpen(true)}
             style={({ pressed }) => ({
               width: '100%',
-              minHeight: 36,
-              paddingHorizontal: 10,
-              borderColor: colors.borderStrong,
+              minHeight: 38,
+              paddingHorizontal: 12,
+              borderColor: pressed ? 'rgba(181, 167, 146, 0.55)' : 'rgba(181, 167, 146, 0.35)',
               borderWidth: 1,
-              borderRadius: 2,
-              backgroundColor: pressed ? colors.surfaceWarm : colors.paper,
+              borderRadius: 999,
+              backgroundColor: pressed ? 'rgba(221, 209, 191, 0.38)' : 'rgba(255, 253, 247, 0.74)',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',

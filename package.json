@@ -17,6 +17,7 @@
     "build:ios:preview": "eas build --platform ios --profile preview"
   },
   "dependencies": {
+    "@expo-google-fonts/bad-script": "^0.4.1",
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",

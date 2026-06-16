@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { BadScript_400Regular } from '@expo-google-fonts/bad-script';
 import {
   CormorantGaramond_400Regular,
   CormorantGaramond_500Medium,
@@ -21,6 +22,7 @@ export default function App() {
     Inter_600SemiBold,
     CormorantGaramond_400Regular,
     CormorantGaramond_500Medium,
+    BadScript_400Regular,
   });
 
   if (!loaded) {

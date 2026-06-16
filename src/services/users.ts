@@ -83,19 +83,29 @@ export function subscribeDiscoverableUsers(onChange: (users: PublicUser[]) => vo
     return () => {};
   }
 
+  const publicProfiles = new Map<string, PublicUser>();
+  const wanderProfiles = new Map<string, PublicUser>();
+  const emitProfiles = () => {
+    onChange(Array.from(new Map([...publicProfiles, ...wanderProfiles]).values()));
+  };
+  const updateProfiles = (profiles: Map<string, PublicUser>, snap: { docs: Array<{ id: string; data: () => unknown }> }) => {
+    profiles.clear();
+    snap.docs.forEach((publicDoc) => {
+      const data = publicDoc.data() as Partial<PublicUser>;
+      profiles.set(publicDoc.id, profileFromSnap(publicDoc.id, data));
+    });
+    emitProfiles();
+  };
+
   const publicProfilesQuery = query(collection(db, 'publicUsers'), where('profileVisibility', '==', 'public'));
-  return onSnapshot(
-    publicProfilesQuery,
-    (snap) => {
-      onChange(
-        snap.docs.map((publicDoc) => {
-          const data = publicDoc.data() as Partial<PublicUser>;
-          return profileFromSnap(publicDoc.id, data);
-        }),
-      );
-    },
-    onError,
-  );
+  const wanderProfilesQuery = query(collection(db, 'publicUsers'), where('appearInWander', '==', true));
+  const unsubscribePublic = onSnapshot(publicProfilesQuery, (snap) => updateProfiles(publicProfiles, snap), onError);
+  const unsubscribeWander = onSnapshot(wanderProfilesQuery, (snap) => updateProfiles(wanderProfiles, snap), onError);
+
+  return () => {
+    unsubscribePublic();
+    unsubscribeWander();
+  };
 }
 
 export async function ensurePublicUser(uid: string, fallback: { displayName: string | null; email: string | null }) {

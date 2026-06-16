@@ -14,6 +14,7 @@ describe('DateStamp', () => {
 
     expect(style.fontFamily).toBe(fonts.bodyMedium);
     expect(style.fontVariant).toContain('tabular-nums');
+    expect(style.textTransform).toBe('uppercase');
     expect(style.color).toBeDefined();
     expect(screen.queryByText('7:42 PM')).toBeNull();
     expect(screen.getByTestId('date-stamp')).toBeTruthy();

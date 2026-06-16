@@ -64,7 +64,9 @@ export default function AppNavigator() {
     return onSnapshot(
       doc(db, 'publicUsers', user.uid),
       (snap) => {
-        setOnboardingCompleted(Boolean(snap.data()?.onboardingCompleted));
+        const profile = snap.data();
+        const hasExistingProfileBasics = Boolean(profile?.displayName && profile?.handle);
+        setOnboardingCompleted(profile?.onboardingCompleted !== false && (Boolean(profile?.onboardingCompleted) || hasExistingProfileBasics));
         setProfileLoading(false);
       },
       () => {

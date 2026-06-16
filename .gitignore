@@ -1,6 +1,7 @@
 node_modules/
 .expo/
 .expo-web.*.log
+expo-web-*.log
 .playwright-mcp/
 dist/
 web-build/

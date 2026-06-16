@@ -133,7 +133,6 @@ export function subscribeMomentsByAuthors(
     const momentsQuery = query(
       collection(db!, 'moments'),
       where('authorUid', '==', authorUid),
-      orderBy('createdAt', 'desc'),
       limit(pageSize),
     );
     return onSnapshot(
@@ -167,7 +166,6 @@ export function subscribeWanderMoments(
   const momentsQuery = query(
     collection(db, 'moments'),
     where('appearInWander', '==', true),
-    orderBy('createdAt', 'desc'),
     limit(100),
   );
   return onSnapshot(

@@ -15,7 +15,6 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { formatMemoryDate } from '../utils/dates';
 import DateStamp from './DateStamp';
-import FilmStripe from './FilmStripe';
 
 type Props = {
   moment: Moment;
@@ -83,8 +82,8 @@ export default function MomentCard({
   const canLeaveNote = mode !== 'wander';
   const canShowBack = canFlipBack;
   const isBackVisible = canFlipBack && showBack;
-  const cardWidth = Math.min(Math.max(windowWidth - 32, 288), 560);
-  const stackActions = cardWidth < 340 || (canShowBack && Boolean(onDelete));
+  const cardWidth = Math.min(Math.max(windowWidth - 32, 288), 430);
+  const stackActions = cardWidth < 350 || (canShowBack && Boolean(onDelete));
 
   const handleKeep = async () => {
     if (!user?.uid || busyAction) return;
@@ -129,22 +128,21 @@ export default function MomentCard({
         alignSelf: 'center',
         marginBottom: 28,
         shadowColor: '#2A211B',
-        shadowOpacity: 0.16,
-        shadowRadius: 11,
-        shadowOffset: { width: 0, height: 7 },
-        elevation: 4,
+        shadowOpacity: 0.08,
+        shadowRadius: 9,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 1,
       }}
     >
       <View
         testID="moment-frame"
         style={{
           backgroundColor: colors.paper,
-          borderColor: '#C9BBA7',
+          borderColor: 'rgba(181, 167, 146, 0.22)',
           borderWidth: 1,
-          borderRadius: 1,
+          borderRadius: 6,
           overflow: 'hidden',
-          paddingTop: 12,
-          paddingHorizontal: 12,
+          padding: 9,
         }}
       >
         <Pressable
@@ -156,11 +154,14 @@ export default function MomentCard({
             <View
               style={{
                 width: '100%',
-                aspectRatio: 4 / 3,
+                aspectRatio: 1,
                 backgroundColor: colors.surface,
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: 32,
+                borderColor: 'rgba(181, 167, 146, 0.34)',
+                borderRadius: 6,
+                borderWidth: 1,
               }}
             >
               <Text
@@ -179,23 +180,25 @@ export default function MomentCard({
             <View
               testID="moment-photo-mat"
               style={{
-                borderColor: '#D8CDBD',
+                borderColor: 'rgba(181, 167, 146, 0.4)',
                 borderWidth: 1,
+                borderRadius: 6,
                 backgroundColor: colors.surfaceWarm,
+                overflow: 'hidden',
               }}
             >
               <Image
                 source={{ uri: moment.imageUrl }}
                 resizeMode="cover"
-                style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.surfaceWarm }}
+                style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.surfaceWarm }}
                 accessibilityLabel={moment.frontText || 'Then moment'}
               />
               {memoryDate ? (
                 <View
                   style={{
                     position: 'absolute',
-                    left: 10,
-                    top: 10,
+                    left: 16,
+                    top: 16,
                   }}
                 >
                   <DateStamp value={memoryDate} />
@@ -207,12 +210,12 @@ export default function MomentCard({
 
         <View
           style={{
-            paddingHorizontal: 18,
-            paddingTop: 19,
-            paddingBottom: 21,
+            paddingHorizontal: 9,
+            paddingTop: 18,
+            paddingBottom: 11,
             flexDirection: stackActions ? 'column' : 'row',
             alignItems: 'flex-start',
-            gap: 10,
+            gap: 12,
           }}
         >
           <Pressable
@@ -225,8 +228,8 @@ export default function MomentCard({
               style={{
                 color: colors.textPrimary,
                 fontFamily: fonts.displayMedium,
-                fontSize: 28,
-                lineHeight: 32,
+                fontSize: 27,
+                lineHeight: 31,
                 paddingTop: 1,
                 paddingBottom: 2,
                 flexShrink: 1,
@@ -237,14 +240,14 @@ export default function MomentCard({
             <Text
               style={{
                 color: colors.textSecondary,
-                fontFamily: fonts.bodyRegular,
-                fontSize: 12,
-                lineHeight: 18,
-                letterSpacing: 0.25,
-                marginTop: 3,
+                fontFamily: fonts.displayRegular,
+                fontSize: 17,
+                lineHeight: 21,
+                marginTop: 0,
+                fontStyle: 'italic',
               }}
             >
-              From {authorName}
+              from {authorName}
             </Text>
             {connectionLine ? (
               <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12, marginTop: 3 }}>
@@ -257,7 +260,7 @@ export default function MomentCard({
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              paddingTop: stackActions ? 0 : 7,
+              paddingTop: stackActions ? 0 : 10,
               alignSelf: stackActions ? 'flex-end' : 'auto',
             }}
           >
@@ -348,12 +351,8 @@ export default function MomentCard({
           </View>
         </View>
 
-        <View style={{ marginLeft: 18, marginBottom: 13 }}>
-          <FilmStripe width={46} height={3} />
-        </View>
-
         {listenerError ? (
-          <Text variant="bodySmall" style={{ color: colors.error, paddingHorizontal: 18, paddingBottom: 12 }}>
+          <Text variant="bodySmall" style={{ color: colors.error, paddingHorizontal: 10, paddingBottom: 12 }}>
             {listenerError}
           </Text>
         ) : null}

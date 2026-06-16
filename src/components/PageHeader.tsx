@@ -41,7 +41,10 @@ export default function PageHeader({
           {title === 'Then' ? <FilmStripe width={74} height={4} /> : null}
           <HandwrittenText
             size={title === 'Then' ? 60 : 43}
-            style={{ marginTop: title === 'Then' ? 5 : 0 }}
+            style={{
+              marginTop: title === 'Then' ? 5 : 0,
+              fontFamily: title === 'Then' ? fonts.script : fonts.displayRegular,
+            }}
           >
             {title}
           </HandwrittenText>
