@@ -33,6 +33,7 @@ const moment: Moment = {
   authorUid: 'user-2',
   imageUrl: 'https://example.com/photo.jpg',
   frontText: 'golden hour.',
+  photoFilter: 'normal',
   memoryDate: '2026-05-09',
   keptCount: 47,
   noteCount: 0,
@@ -148,6 +149,17 @@ describe('MomentCard', () => {
     expect(photoStyle.aspectRatio).toBe(1);
     expect(captionStyle.fontFamily).toBe(fonts.displayMedium);
     expect(screen.getByText('from Maisie K')).toHaveStyle({ fontFamily: fonts.displayRegular, fontStyle: 'italic' });
+  });
+
+  it('renders the saved photo tone over the image', () => {
+    renderCard({
+      moment: {
+        ...moment,
+        photoFilter: 'sunfade',
+      },
+    });
+
+    expect(screen.getByTestId('moment-photo-image-filter-sunfade-peach-wash')).toBeTruthy();
   });
 
   it('frames the square photo with a thin rounded paper mat', () => {

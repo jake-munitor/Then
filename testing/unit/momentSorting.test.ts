@@ -7,6 +7,7 @@ function moment(id: string, memoryDate: string, postedAt: number): Moment {
     authorUid: 'user-1',
     imageUrl: `https://example.com/${id}.jpg`,
     frontText: id,
+    photoFilter: 'normal',
     memoryDate,
     keptCount: 0,
     noteCount: 0,

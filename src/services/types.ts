@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { PhotoFilter } from '../utils/photoFilters';
 
 export type ProfileVisibility = 'public' | 'private';
 
@@ -31,6 +32,7 @@ export type Moment = {
   authorUid: string;
   imageUrl: string;
   frontText: string;
+  photoFilter: PhotoFilter;
   memoryDate: string;
   keptCount: number;
   noteCount: number;

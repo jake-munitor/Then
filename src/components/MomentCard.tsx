@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Image, Pressable, useWindowDimensions, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import { Button, IconButton, Text } from 'react-native-paper';
 
 import {
@@ -15,6 +15,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { formatMemoryDate } from '../utils/dates';
 import DateStamp from './DateStamp';
+import FilteredMomentImage from './FilteredMomentImage';
 
 type Props = {
   moment: Moment;
@@ -187,11 +188,14 @@ export default function MomentCard({
                 overflow: 'hidden',
               }}
             >
-              <Image
-                source={{ uri: moment.imageUrl }}
+              <FilteredMomentImage
+                uri={moment.imageUrl}
+                filter={moment.photoFilter}
+                aspectRatio={1}
                 resizeMode="cover"
                 style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.surfaceWarm }}
                 accessibilityLabel={moment.frontText || 'Then moment'}
+                testID="moment-photo-image"
               />
               {memoryDate ? (
                 <View

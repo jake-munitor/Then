@@ -1,17 +1,20 @@
 import React, { useContext, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Button, Switch, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
+import FilteredMomentImage from '../components/FilteredMomentImage';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
 import FilmStripe from '../components/FilmStripe';
+import PhotoFilterPicker from '../components/PhotoFilterPicker';
 import { createMoment } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { dateFromImagePickerAsset, isValidYYYYMMDD, todayYYYYMMDD } from '../utils/dates';
+import type { PhotoFilter } from '../utils/photoFilters';
 
 const FRONT_LIMIT = 50;
 
@@ -19,6 +22,7 @@ export default function NewMomentScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<any>();
   const [uri, setUri] = useState<string | null>(null);
+  const [photoFilter, setPhotoFilter] = useState<PhotoFilter>('normal');
   const [frontText, setFrontText] = useState('');
   const [backText, setBackText] = useState('');
   const [memoryDate, setMemoryDate] = useState(todayYYYYMMDD());
@@ -98,12 +102,14 @@ export default function NewMomentScreen() {
       await createMoment({
         uid: user.uid,
         uri,
+        photoFilter,
         frontText,
         backText,
         memoryDate: memoryDate.trim(),
         appearInWander,
       });
       setUri(null);
+      setPhotoFilter('normal');
       setFrontText('');
       setBackText('');
       setMemoryDate(todayYYYYMMDD());
@@ -146,10 +152,13 @@ export default function NewMomentScreen() {
                 elevation: 3,
               }}
             >
-              <Image
-                source={{ uri }}
-                style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.surfaceWarm }}
-                resizeMode="cover"
+              <FilteredMomentImage
+                uri={uri}
+                filter={photoFilter}
+                aspectRatio={4 / 3}
+                style={{ backgroundColor: colors.surfaceWarm }}
+                accessibilityLabel={frontText || 'Selected moment photo'}
+                testID="new-moment-photo-preview"
               />
               <View style={{ position: 'absolute', left: 18, bottom: 12 }}>
                 <FilmStripe width={48} height={3} />
@@ -171,6 +180,8 @@ export default function NewMomentScreen() {
               <Text style={{ color: colors.textSecondary }}>Choose a photo</Text>
             </View>
           )}
+
+          {uri ? <PhotoFilterPicker value={photoFilter} onChange={setPhotoFilter} disabled={busy} /> : null}
 
           <TextInput
             label="on the front"

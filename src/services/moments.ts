@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebase';
+import { normalizePhotoFilter, type PhotoFilter } from '../utils/photoFilters';
 import { callFunction } from './cloudFunctions';
 import { uploadMomentPhoto } from './photos';
 import type { ListenerErrorHandler, Moment, MomentBack, Note } from './types';
@@ -27,6 +28,7 @@ function momentFromSnap(id: string, data: any): Moment {
     authorUid: String(data?.authorUid ?? ''),
     imageUrl: String(data?.imageUrl ?? ''),
     frontText: String(data?.frontText ?? ''),
+    photoFilter: normalizePhotoFilter(data?.photoFilter),
     memoryDate: String(data?.memoryDate ?? ''),
     keptCount: Number(data?.keptCount ?? 0),
     noteCount: Number(data?.noteCount ?? 0),
@@ -249,6 +251,7 @@ export async function createMoment(params: {
   uid: string;
   uri: string;
   frontText: string;
+  photoFilter: PhotoFilter;
   backText: string;
   memoryDate: string;
   appearInWander: boolean;
@@ -260,6 +263,7 @@ export async function createMoment(params: {
     authorUid: params.uid,
     imageUrl,
     frontText: params.frontText.trim(),
+    photoFilter: normalizePhotoFilter(params.photoFilter),
     memoryDate: params.memoryDate,
     keptCount: 0,
     noteCount: 0,
