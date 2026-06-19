@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci",
-    "test:rules": "firebase emulators:exec --only firestore,storage \"jest --config testing/rules/jest.config.js --runInBand\"",
+    "test:rules": "node scripts/run-rules-tests.js",
     "typecheck": "tsc --noEmit",
     "eas:configure": "eas build:configure",
     "build:android:preview": "eas build --platform android --profile preview",
