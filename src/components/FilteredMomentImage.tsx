@@ -21,13 +21,14 @@ const FILTER_LOOKS: Record<PhotoFilter, FilterLook> = {
     imageOpacity: 1,
     overlays: [],
   },
-  classic: {
-    backgroundColor: '#E2C894',
-    imageOpacity: 0.94,
+  film: {
+    backgroundColor: '#E8C88C',
+    imageOpacity: 0.91,
     overlays: [
-      { id: 'amber-wash', style: { backgroundColor: '#D69A45', bottom: 0, opacity: 0.18, right: 0 } },
-      { id: 'cream-lift', style: { backgroundColor: '#FFF2C8', bottom: 0, opacity: 0.11, right: 0 } },
-      { id: 'soft-edge', style: { borderColor: '#2A211B', borderWidth: 10, bottom: 0, opacity: 0.09, right: 0 } },
+      { id: 'amber-wash', style: { backgroundColor: '#D58A3A', bottom: 0, opacity: 0.2, right: 0 } },
+      { id: 'cream-lift', style: { backgroundColor: '#FFF2CE', bottom: 0, opacity: 0.15, right: 0 } },
+      { id: 'matte-fade', style: { backgroundColor: '#2A211B', bottom: 0, opacity: 0.04, right: 0 } },
+      { id: 'soft-edge', style: { borderColor: '#2A211B', borderWidth: 10, bottom: 0, opacity: 0.08, right: 0 } },
     ],
   },
   sunfade: {

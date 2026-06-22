@@ -112,7 +112,7 @@ service cloud.firestore {
         shortString(request.resource.data.imageUrl, 2048) &&
         shortString(request.resource.data.frontText, 50) &&
         (!request.resource.data.keys().hasAny(['photoFilter']) ||
-          request.resource.data.photoFilter in ['normal', 'classic', 'sunfade', 'coolFlash']) &&
+          request.resource.data.photoFilter in ['normal', 'film', 'classic', 'sunfade', 'coolFlash']) &&
         request.resource.data.memoryDate.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
         request.resource.data.keptCount == 0 &&
         request.resource.data.noteCount == 0 &&

@@ -100,6 +100,23 @@ export async function fetchMomentById(momentId: string) {
   return snap.exists() ? momentFromSnap(snap.id, snap.data()) : null;
 }
 
+export function subscribeMoment(
+  momentId: string,
+  onChange: (moment: Moment | null) => void,
+  onError?: ListenerErrorHandler,
+) {
+  if (!db || !momentId) {
+    onChange(null);
+    return () => {};
+  }
+
+  return onSnapshot(
+    doc(db, 'moments', momentId),
+    (snap) => onChange(snap.exists() ? momentFromSnap(snap.id, snap.data()) : null),
+    onError,
+  );
+}
+
 export async function fetchSavedMomentIdPage(params: {
   uid: string;
   pageSize?: number;

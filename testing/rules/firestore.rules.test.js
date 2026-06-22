@@ -87,7 +87,7 @@ maybeDescribe('firestore security rules', () => {
       authorUid: 'author',
       imageUrl: 'https://example.com/photo.jpg',
       frontText: 'front',
-      photoFilter: 'classic',
+      photoFilter: 'film',
       memoryDate: '2026-06-15',
       keptCount: 0,
       noteCount: 0,

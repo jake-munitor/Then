@@ -1,4 +1,4 @@
-export const PHOTO_FILTER_VALUES = ['normal', 'classic', 'sunfade', 'coolFlash'] as const;
+export const PHOTO_FILTER_VALUES = ['normal', 'film', 'sunfade', 'coolFlash'] as const;
 
 export type PhotoFilter = (typeof PHOTO_FILTER_VALUES)[number];
 
@@ -23,12 +23,12 @@ export const PHOTO_FILTER_OPTIONS: PhotoFilterOption[] = [
     },
   },
   {
-    value: 'classic',
-    label: 'Classic',
+    value: 'film',
+    label: 'Film',
     swatch: {
-      backgroundColor: '#E7C98E',
-      accentColor: '#A14F38',
-      borderColor: '#CDA565',
+      backgroundColor: '#EBCB93',
+      accentColor: '#A95B36',
+      borderColor: '#CFAD72',
     },
   },
   {
@@ -53,5 +53,6 @@ export const PHOTO_FILTER_OPTIONS: PhotoFilterOption[] = [
 
 export function normalizePhotoFilter(value: unknown): PhotoFilter {
   if (typeof value !== 'string') return 'normal';
+  if (value === 'classic') return 'film';
   return PHOTO_FILTER_VALUES.includes(value as PhotoFilter) ? (value as PhotoFilter) : 'normal';
 }

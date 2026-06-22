@@ -4,6 +4,9 @@ export type RootStackParamList = {
   Auth: undefined;
   Onboarding: undefined;
   MainTabs: undefined;
+  MomentDetail: { momentId: string; moment?: Moment; canNote?: boolean };
+  RollSettings: undefined;
+  YourYear: { year?: number } | undefined;
   Notes: { moment: Moment };
   LinkedMoment: { momentId: string };
   Profile: { handle?: string; uid?: string };

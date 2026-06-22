@@ -53,21 +53,26 @@ export default function TabsNavigator() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: colors.paper,
-          borderTopColor: colors.borderStrong,
+          backgroundColor: colors.navBar,
+          borderTopColor: colors.borderInset,
           borderTopWidth: 1,
-          height: 78,
-          paddingTop: 10,
-          paddingBottom: 12,
+          height: 84,
+          paddingTop: 9,
+          paddingBottom: 14,
+          shadowColor: '#2A2622',
+          shadowOpacity: 0.06,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 8,
         },
         tabBarItemStyle: {
-          height: 58,
+          height: 60,
           justifyContent: 'center',
         },
         tabBarLabelStyle: {
           fontFamily: fonts.bodyMedium,
           fontSize: 9,
-          letterSpacing: 0.35,
+          letterSpacing: 0.54,
           textTransform: 'uppercase',
         },
         tabBarIconStyle: {
@@ -112,22 +117,22 @@ export default function TabsNavigator() {
                 props.style,
                 {
                   marginTop: -16,
-                  width: 56,
-                  height: 56,
-                  borderRadius: 4,
+                  width: 54,
+                  height: 54,
+                  borderRadius: 27,
                   alignItems: 'center',
                   justifyContent: 'center',
                   alignSelf: 'center',
                   backgroundColor: theme.colors.primary,
-                  shadowColor: '#3B2F25',
-                  shadowOpacity: 0.18,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 5 },
-                  elevation: 3,
+                  shadowColor: colors.primary,
+                  shadowOpacity: 0.4,
+                  shadowRadius: 18,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 6,
                 },
               ]}
             >
-              <Icon source="camera-outline" color={theme.colors.onPrimary} size={28} />
+              <Icon source="camera-outline" color={theme.colors.onPrimary} size={25} />
             </TouchableOpacity>
           ),
         }}

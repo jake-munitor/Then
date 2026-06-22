@@ -4,7 +4,6 @@ import { PaperProvider } from 'react-native-paper';
 import { Image, StyleSheet } from 'react-native';
 
 import MomentCard from '../../src/components/MomentCard';
-import { subscribeMomentBack } from '../../src/services/moments';
 import type { Moment } from '../../src/services/types';
 import { AuthContext } from '../../src/store/AuthContext';
 import { fonts } from '../../src/theme/fonts';
@@ -12,10 +11,6 @@ import { appTheme } from '../../src/theme/theme';
 import { colors } from '../../src/theme/colors';
 
 jest.mock('../../src/services/moments', () => ({
-  subscribeMomentBack: jest.fn((_momentId, onChange) => {
-    onChange({ text: "the field behind gran's." });
-    return () => {};
-  }),
   subscribeMomentKeep: jest.fn((_params, onChange) => {
     onChange(false);
     return () => {};
@@ -75,27 +70,10 @@ describe('MomentCard', () => {
     expect(screen.queryByText("the field behind gran's.")).toBeNull();
   });
 
-  it('reveals the private back only when the owner roll card flips', () => {
+  it('keeps the private back out of roll cards because detail owns flipping', () => {
     renderCard({ mode: 'roll', canFlipBack: true });
 
     expect(screen.queryByText("the field behind gran's.")).toBeNull();
-    fireEvent.press(screen.getByLabelText('Flip moment'));
-    expect(screen.getByText("the field behind gran's.")).toBeTruthy();
-    expect(screen.getByLabelText('Show photo front')).toBeTruthy();
-  });
-
-  it('allows an owner to add a reflection after posting without one', () => {
-    (subscribeMomentBack as jest.Mock).mockImplementationOnce((_momentId, onChange) => {
-      onChange(null);
-      return () => {};
-    });
-    const onEditBack = jest.fn();
-    renderCard({ mode: 'roll', canFlipBack: true, onEditBack });
-
-    fireEvent.press(screen.getByLabelText('Flip moment'));
-    expect(screen.getByText('No private reflection yet.')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Add private reflection'));
-    expect(onEditBack).toHaveBeenCalledWith(moment, '');
   });
 
   it('does not expose the private back in wander mode', () => {
@@ -108,7 +86,7 @@ describe('MomentCard', () => {
   it('renders only the normal heart, note, and save actions', () => {
     renderCard();
 
-    expect(screen.getByLabelText('Like this')).toBeTruthy();
+    expect(screen.getByLabelText('Keep this')).toBeTruthy();
     expect(screen.getByLabelText('Open notes')).toBeTruthy();
     expect(screen.getByLabelText('Save for later')).toBeTruthy();
     expect(screen.queryByLabelText('Delete moment')).toBeNull();
@@ -135,20 +113,18 @@ describe('MomentCard', () => {
 
     expect(caption.props.numberOfLines).toBeUndefined();
     expect(mergedStyle.lineHeight).toBeGreaterThan(mergedStyle.fontSize);
-    expect(mergedStyle.paddingTop).toBeGreaterThan(0);
-    expect(mergedStyle.paddingBottom).toBeGreaterThan(0);
   });
 
-  it('uses the square photo and quiet attribution treatment', () => {
+  it('uses the feed photo ratio and editorial caption treatment', () => {
     renderCard();
 
     const photo = screen.UNSAFE_getAllByType(Image)[0];
     const photoStyle = StyleSheet.flatten(photo.props.style);
     const captionStyle = StyleSheet.flatten(screen.getByTestId('moment-caption').props.style);
 
-    expect(photoStyle.aspectRatio).toBe(1);
-    expect(captionStyle.fontFamily).toBe(fonts.displayMedium);
-    expect(screen.getByText('from Maisie K')).toHaveStyle({ fontFamily: fonts.displayRegular, fontStyle: 'italic' });
+    expect(photoStyle.aspectRatio).toBe(4 / 5);
+    expect(captionStyle.fontFamily).toBe(fonts.displayItalic);
+    expect(screen.getByText('Maisie K')).toHaveStyle({ fontFamily: fonts.bodyMedium });
   });
 
   it('renders the saved photo tone over the image', () => {
@@ -162,16 +138,15 @@ describe('MomentCard', () => {
     expect(screen.getByTestId('moment-photo-image-filter-sunfade-peach-wash')).toBeTruthy();
   });
 
-  it('frames the square photo with a thin rounded paper mat', () => {
+  it('frames the 4:5 photo in a rounded card', () => {
     renderCard();
 
     const frameStyle = StyleSheet.flatten(screen.getByTestId('moment-frame').props.style);
     const photoMatStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-mat').props.style);
 
     expect(frameStyle.backgroundColor).toBe(colors.paper);
-    expect(frameStyle.borderRadius).toBe(6);
+    expect(frameStyle.borderRadius).toBe(16);
     expect(frameStyle.padding).toBe(9);
-    expect(photoMatStyle.borderWidth).toBe(1);
-    expect(photoMatStyle.borderRadius).toBe(6);
+    expect(photoMatStyle.borderRadius).toBe(9);
   });
 });

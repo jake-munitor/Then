@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, StyleProp, View, ViewStyle } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
 import PaperBackground from './PaperBackground';
 
 type Props = {
@@ -18,7 +19,7 @@ export default function Screen({ children, scroll = true, contentStyle, refreshi
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <PaperBackground>
-          <View style={[{ flex: 1, padding: 16 }, contentStyle]}>{children}</View>
+          <View style={[{ flex: 1, paddingHorizontal: 0, paddingTop: 0 }, contentStyle]}>{children}</View>
         </PaperBackground>
       </SafeAreaView>
     );
@@ -30,7 +31,10 @@ export default function Screen({ children, scroll = true, contentStyle, refreshi
         <ScrollView
           keyboardShouldPersistTaps="handled"
           style={{ backgroundColor: 'transparent' }}
-          contentContainerStyle={[{ padding: 16, paddingBottom: 32 }, contentStyle]}
+          contentContainerStyle={[
+            { paddingHorizontal: spacing.screenX, paddingTop: 12, paddingBottom: 40 },
+            contentStyle,
+          ]}
           refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} /> : undefined}
         >
           {children}

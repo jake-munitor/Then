@@ -14,23 +14,22 @@ export default function DateStamp({ value }: Props) {
     <View
       testID="date-stamp"
       style={{
-        paddingHorizontal: 4,
-        paddingVertical: 2,
+        paddingHorizontal: 9,
+        paddingVertical: 5,
+        borderRadius: 7,
+        backgroundColor: colors.overlayChip,
       }}
     >
       <Text
         maxFontSizeMultiplier={1.1}
         style={{
           color: colors.white,
-          fontFamily: fonts.bodyMedium,
-          fontSize: 12,
-          lineHeight: 15,
-          letterSpacing: 1.3,
+          fontFamily: fonts.bodySemiBold,
+          fontSize: 10,
+          lineHeight: 12,
+          letterSpacing: 1,
           fontVariant: ['tabular-nums'],
           textTransform: 'uppercase',
-          textShadowColor: 'rgba(0, 0, 0, 0.48)',
-          textShadowOffset: { width: 0, height: 1 },
-          textShadowRadius: 5,
         }}
       >
         {value}

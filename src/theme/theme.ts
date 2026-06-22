@@ -5,18 +5,18 @@ import { fonts } from './fonts';
 
 export const appTheme = {
   ...MD3LightTheme,
-  roundness: 3,
+  roundness: 12,
   colors: {
     ...MD3LightTheme.colors,
     primary: colors.primary,
     secondary: colors.ink,
     background: colors.background,
     surface: colors.surface,
-    surfaceVariant: colors.surfaceWarm,
+    surfaceVariant: colors.surfaceInset,
     outline: colors.border,
-    outlineVariant: colors.border,
+    outlineVariant: colors.borderInset,
     error: colors.error,
-    onPrimary: colors.paper,
+    onPrimary: colors.white,
     onBackground: colors.textPrimary,
     onSurface: colors.textPrimary,
     onSurfaceVariant: colors.textSecondary,

@@ -14,7 +14,10 @@ import NotesScreen from '../screens/NotesScreen';
 import FirebaseConfigScreen from '../screens/FirebaseConfigScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import LinkedMomentScreen from '../screens/LinkedMomentScreen';
+import MomentDetailScreen from '../screens/MomentDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import RollSettingsScreen from '../screens/RollSettingsScreen';
+import YourYearScreen from '../screens/YourYearScreen';
 import { getLastNotificationURL, subscribeNotificationURLs } from '../services/pushNotifications';
 import TabsNavigator from './TabsNavigator';
 import type { RootStackParamList } from './types';
@@ -119,6 +122,9 @@ export default function AppNavigator() {
         ) : (
           <>
             <Stack.Screen name="MainTabs" component={TabsNavigator} options={{ headerShown: false }} />
+            <Stack.Screen name="MomentDetail" component={MomentDetailScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="RollSettings" component={RollSettingsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="YourYear" component={YourYearScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="LinkedMoment" component={LinkedMomentScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Notes" component={NotesScreen} options={{ headerShown: false, presentation: 'modal' }} />

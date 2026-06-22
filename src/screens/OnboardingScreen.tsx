@@ -1,15 +1,17 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { Image, View } from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
+import { Icon, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
-import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
+import { Avatar, PillButton, Wordmark } from '../components/DesignPrimitives';
 import { uploadAvatar } from '../services/photos';
 import { updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
+import { radius } from '../theme/radius';
 
 function handleFromName(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
@@ -18,6 +20,7 @@ function handleFromName(value: string) {
 export default function OnboardingScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<any>();
+  const [step, setStep] = useState<'principles' | 'profile'>('principles');
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [handle, setHandle] = useState(handleFromName(user?.displayName ?? ''));
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -69,70 +72,112 @@ export default function OnboardingScreen() {
     }
   };
 
-  return (
-    <Screen contentStyle={{ alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
-      <View style={{ width: '100%', maxWidth: 520, gap: 16 }}>
-        <PageHeader title="Set your roll" subtitle="Start private. Invite deliberately. Share one good moment." />
+  if (step === 'principles') {
+    return (
+      <Screen contentStyle={{ flexGrow: 1, paddingHorizontal: 26, paddingTop: 42, paddingBottom: 34 }}>
+        <View style={{ gap: 7, marginBottom: 30 }}>
+          <Wordmark size={38}>A slower kind of sharing</Wordmark>
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
+            Four things that make Then, Then.
+          </Text>
+        </View>
+        <View style={{ gap: 24, flex: 1 }}>
+          <Principle icon="camera-outline" title="One photo, one moment" body="No video, reels, or stories. Just the picture and who was there." />
+          <Principle icon="flip-horizontal" title="A front and a back" body="A short caption everyone sees, and a private note only you can read." />
+          <Principle icon="heart-off-outline" title="Nothing to chase" body="No likes shown, no counts, no algorithm deciding what you see." />
+          <Principle icon="lock-outline" title="Following needs a yes" body="Every follow is approved. Your moments stay with your people." />
+        </View>
+        <PillButton onPress={() => setStep('profile')}>Continue</PillButton>
+        <View style={{ marginTop: 18, flexDirection: 'row', gap: 6, justifyContent: 'center' }}>
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#CFC4B2' }} />
+          <View style={{ width: 22, height: 7, borderRadius: 4, backgroundColor: colors.primary }} />
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#CFC4B2' }} />
+        </View>
+      </Screen>
+    );
+  }
 
-        <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 18, gap: 14 }}>
+  return (
+    <Screen contentStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+      <View style={{ gap: 16 }}>
+        <View style={{ alignItems: 'center', gap: 8 }}>
+          <Wordmark size={44}>Set your roll</Wordmark>
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13.5, textAlign: 'center' }}>
+            Start private. Invite deliberately. Share one good moment.
+          </Text>
+        </View>
+
+        <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 18, gap: 14 }}>
           <View style={{ alignItems: 'center', gap: 10 }}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={{ width: 88, height: 88, borderRadius: 44 }} />
             ) : (
-              <View
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 44,
-                  backgroundColor: colors.surfaceWarm,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text variant="headlineSmall">{(displayName || '?').slice(0, 1).toUpperCase()}</Text>
-              </View>
+              <Avatar name={displayName} size={88} />
             )}
-            <Button mode="outlined" icon="image-outline" onPress={chooseAvatar} disabled={Boolean(busyTarget)}>
-              Avatar
-            </Button>
+            <PillButton variant="secondary" icon="image-outline" onPress={chooseAvatar} disabled={Boolean(busyTarget)} style={{ minHeight: 42 }}>
+              Change photo
+            </PillButton>
           </View>
 
-          <TextInput label="display name" value={displayName} onChangeText={setDisplayName} disabled={Boolean(busyTarget)} />
+          <TextInput label="Display name" value={displayName} onChangeText={setDisplayName} disabled={Boolean(busyTarget)} style={{ backgroundColor: colors.surfaceInset }} />
           <TextInput
-            label="handle"
+            label="Handle"
             value={handle}
             onChangeText={setHandle}
             autoCapitalize="none"
             disabled={Boolean(busyTarget)}
             left={<TextInput.Affix text="@" />}
+            style={{ backgroundColor: colors.surfaceInset }}
           />
-          <Text style={{ color: colors.textSecondary }}>then://profile/{previewHandle || 'handle'}</Text>
+          <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12 }}>then://profile/{previewHandle || 'handle'}</Text>
           {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Button
-              mode="outlined"
+            <PillButton
+              variant="secondary"
               icon="account-plus-outline"
               onPress={() => finish('friends')}
-              loading={busyTarget === 'friends'}
               disabled={Boolean(busyTarget) || !displayName.trim()}
               style={{ flex: 1 }}
             >
-              Find friends
-            </Button>
-            <Button
-              mode="contained"
+              Friends
+            </PillButton>
+            <PillButton
               icon="camera-outline"
               onPress={() => finish('moment')}
-              loading={busyTarget === 'moment'}
               disabled={Boolean(busyTarget) || !displayName.trim()}
               style={{ flex: 1 }}
             >
               First moment
-            </Button>
+            </PillButton>
           </View>
         </View>
       </View>
     </Screen>
+  );
+}
+
+function Principle({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 14 }}>
+      <View
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: radius.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.surfaceInset,
+          borderColor: colors.borderInset,
+          borderWidth: 1,
+        }}
+      >
+        <Icon source={icon} color={colors.textSecondary} size={21} />
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{title}</Text>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 19.5 }}>{body}</Text>
+      </View>
+    </View>
   );
 }

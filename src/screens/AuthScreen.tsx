@@ -1,13 +1,13 @@
 import React, { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
+import { Text, TextInput } from 'react-native-paper';
 
-import FilmStripe from '../components/FilmStripe';
-import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
+import { PillButton, Wordmark } from '../components/DesignPrimitives';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { radius } from '../theme/radius';
 
 type Mode = 'login' | 'register' | 'reset';
 
@@ -53,117 +53,120 @@ export default function AuthScreen() {
     }
   };
 
-  const title = mode === 'register' ? 'Create account' : mode === 'reset' ? 'Reset password' : 'Sign in';
-
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Screen contentStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-        <PageHeader title="Then" subtitle="Photos from people you choose." />
-
-        <View
-          style={{
-            width: '100%',
-            maxWidth: 440,
-            alignSelf: 'center',
-            backgroundColor: colors.paper,
-            borderColor: colors.borderStrong,
-            borderWidth: 1,
-            borderRadius: 2,
-            paddingHorizontal: 22,
-            paddingTop: 24,
-            paddingBottom: 20,
-            gap: 13,
-            shadowColor: '#332A21',
-            shadowOpacity: 0.1,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 3,
-          }}
-        >
-          <View style={{ gap: 5, marginBottom: 3 }}>
-            <Text
-              style={{
-                color: colors.textPrimary,
-                fontFamily: fonts.displayMedium,
-                fontSize: 31,
-                lineHeight: 35,
-              }}
-            >
-              {title}
-            </Text>
-            <Text
-              style={{
-                color: colors.textMuted,
-                fontFamily: fonts.bodyMedium,
-                fontSize: 10,
-                letterSpacing: 1.4,
-                textTransform: 'uppercase',
-              }}
-            >
-              Your private photo circle
-            </Text>
-          </View>
-          {mode === 'register' ? (
-            <TextInput
-              label="Your name"
-              value={displayName}
-              onChangeText={setDisplayName}
-              disabled={busy}
-              style={{ backgroundColor: colors.surface }}
+      <Screen contentStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 26, paddingTop: 42, paddingBottom: 36 }}>
+        <View style={{ alignItems: 'center', minHeight: 220, justifyContent: 'center' }}>
+          <View style={{ width: 246, height: 162 }}>
+            <MiniPolaroid
+              caption="the long way home"
+              rotate="-8deg"
+              left={8}
+              top={18}
+              color="#D1DEE4"
             />
-          ) : null}
-          <TextInput
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            disabled={busy}
-            style={{ backgroundColor: colors.surface }}
-          />
-          {mode !== 'reset' ? (
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              disabled={busy}
-              style={{ backgroundColor: colors.surface }}
+            <MiniPolaroid
+              caption="first light, no plans"
+              rotate="6deg"
+              left={106}
+              top={0}
+              color="#E2D2B4"
             />
-          ) : null}
+          </View>
+          <Wordmark size={60}>then</Wordmark>
+          <Text style={{ marginTop: 6, color: colors.textSecondary, fontFamily: fonts.displayItalic, fontSize: 19, textAlign: 'center' }}>
+            see your people, not the algorithm.
+          </Text>
+        </View>
 
-          {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
-          {message ? <Text style={{ color: colors.primary }}>{message}</Text> : null}
-
-          <Button mode="contained" onPress={submit} loading={busy} disabled={busy || !email.trim() || (mode !== 'reset' && !password)}>
-            {mode === 'register' ? 'Create account' : mode === 'reset' ? 'Send reset email' : 'Sign in'}
-          </Button>
-
-          <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 6 }}>
-            <Button mode="text" onPress={() => setMode(mode === 'register' ? 'login' : 'register')}>
-              {mode === 'register' ? 'I have an account' : 'Create account'}
-            </Button>
-            <Button mode="text" onPress={() => setMode(mode === 'reset' ? 'login' : 'reset')}>
-              {mode === 'reset' ? 'Back to sign in' : 'Forgot password'}
-            </Button>
+        <View style={{ gap: 12 }}>
+          <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 18, gap: 12 }}>
+            {mode === 'register' ? (
+              <TextInput label="Your name" value={displayName} onChangeText={setDisplayName} disabled={busy} style={{ backgroundColor: colors.surfaceInset }} />
+            ) : null}
+            <TextInput
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              disabled={busy}
+              style={{ backgroundColor: colors.surfaceInset }}
+            />
+            {mode !== 'reset' ? (
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                disabled={busy}
+                style={{ backgroundColor: colors.surfaceInset }}
+              />
+            ) : null}
+            {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
+            {message ? <Text style={{ color: colors.primary }}>{message}</Text> : null}
+            <PillButton onPress={submit} disabled={busy || !email.trim() || (mode !== 'reset' && !password)}>
+              {mode === 'register' ? 'Create your roll' : mode === 'reset' ? 'Send reset email' : 'Sign in'}
+            </PillButton>
           </View>
 
-          <View style={{ alignItems: 'center', gap: 9, marginTop: 1 }}>
-            <FilmStripe width={62} height={3} />
+          <Text style={{ color: colors.textMuted, textAlign: 'center', fontFamily: fonts.bodyRegular, fontSize: 13 }}>
+            {mode === 'register' ? 'Already keep up here? ' : 'New here? '}
             <Text
-              style={{
-                color: colors.textMuted,
-                fontFamily: fonts.bodyMedium,
-                fontSize: 9,
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-              }}
+              onPress={() => setMode(mode === 'register' ? 'login' : 'register')}
+              style={{ color: colors.primary, fontFamily: fonts.bodySemiBold }}
             >
-              Keep the moment, skip the noise
+              {mode === 'register' ? 'Sign in' : 'Create your roll'}
             </Text>
-          </View>
+          </Text>
+          <Text
+            onPress={() => setMode(mode === 'reset' ? 'login' : 'reset')}
+            style={{ color: colors.textFaint, textAlign: 'center', fontFamily: fonts.bodyRegular, fontSize: 12.5 }}
+          >
+            {mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}
+          </Text>
         </View>
       </Screen>
     </KeyboardAvoidingView>
+  );
+}
+
+function MiniPolaroid({
+  caption,
+  rotate,
+  left,
+  top,
+  color,
+}: {
+  caption: string;
+  rotate: string;
+  left: number;
+  top: number;
+  color: string;
+}) {
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: 136,
+        padding: 8,
+        paddingBottom: 19,
+        borderRadius: radius.print,
+        backgroundColor: colors.polaroid,
+        shadowColor: '#2A2622',
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+        elevation: 4,
+        transform: [{ rotate }],
+      }}
+    >
+      <View style={{ height: 104, backgroundColor: color }} />
+      <Text style={{ marginTop: 7, color: colors.textSecondary, fontFamily: fonts.scriptMedium, fontSize: 16 }}>
+        {caption}
+      </Text>
+    </View>
   );
 }

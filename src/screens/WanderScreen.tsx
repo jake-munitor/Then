@@ -4,12 +4,10 @@ import { Button, Dialog, Portal, Text, TextInput } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 
-import EmptyState from '../components/EmptyState';
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
-import MomentSortControl from '../components/MomentSortControl';
-import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
+import { PillButton, ScreenHeader, SectionRow } from '../components/DesignPrimitives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { RootStackParamList } from '../navigation/types';
 import {
@@ -25,9 +23,6 @@ import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
-import { fonts } from '../theme/fonts';
-import type { MomentSort } from '../utils/momentSorting';
-import { sortMomentsForDisplay } from '../utils/momentSorting';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -37,7 +32,6 @@ export default function WanderScreen() {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [pageCursor, setPageCursor] = useState<MomentPageCursor>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [sort, setSort] = useState<MomentSort>('posted');
   const [following, setFollowing] = useState<string[]>([]);
   const [pendingRequests, setPendingRequests] = useState<string[]>([]);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
@@ -89,8 +83,8 @@ export default function WanderScreen() {
 
   const authorUids = useMemo(() => moments.map((moment) => moment.authorUid), [moments]);
   const visibleMoments = useMemo(
-    () => sortMomentsForDisplay(moments.filter((moment) => !blockedIds.includes(moment.authorUid)), sort),
-    [blockedIds, moments, sort],
+    () => moments.filter((moment) => !blockedIds.includes(moment.authorUid)),
+    [blockedIds, moments],
   );
   useEffect(
     () => subscribePublicUsers(authorUids, setPublicUsers, () => setListenerError('Some profile details could not be loaded.')),
@@ -169,7 +163,7 @@ export default function WanderScreen() {
       });
       setPageCursor(page.nextCursor);
       setHasMore(Boolean(page.nextCursor) && page.moments.length > 0);
-    } catch (e) {
+    } catch {
       setListenerError('Older Wander moments could not be loaded.');
     } finally {
       setLoadingMore(false);
@@ -178,46 +172,29 @@ export default function WanderScreen() {
 
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
-      <PageHeader title="Wander" subtitle="A window into moments shared beyond your circle." />
-      <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
-
+      <ScreenHeader
+        title="Wander"
+        titleKind="script"
+        subtitle="A window into moments shared beyond your circle."
+      />
+      <View style={{ paddingHorizontal: 18 }}>
+        <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
+      </View>
       <FlatList
         data={visibleMoments}
         refreshing={refreshing}
         onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 36, alignItems: 'center' }}
-        ListHeaderComponentStyle={{ width: '100%', maxWidth: 560, alignSelf: 'center' }}
-        ListHeaderComponent={
-          visibleMoments.length ? (
-            <View
-              style={{
-                width: '100%',
-                marginBottom: 16,
-                paddingHorizontal: 28,
-                alignItems: 'flex-start',
-                gap: 6,
-              }}
-            >
-              <Text
-                style={{
-                  color: colors.textPrimary,
-                  fontFamily: fonts.displayMedium,
-                  fontSize: 29,
-                  lineHeight: 34,
-                }}
-              >
-                {sort === 'picture' ? 'Chronological' : 'Recent'}
-              </Text>
-              <MomentSortControl value={sort} onChange={setSort} />
-            </View>
-          ) : null
-        }
+        contentContainerStyle={{ paddingTop: visibleMoments.length ? 12 : 40, paddingBottom: 36, alignItems: 'center' }}
+        ListHeaderComponent={visibleMoments.length ? <SectionRow label="Recent" note="newest first · never sorted" /> : null}
+        ListHeaderComponentStyle={{ width: '100%', marginBottom: 14 }}
         ListEmptyComponent={
-          <EmptyState
-            title={moments.length ? 'Nothing new' : 'Nothing here yet'}
-            message={moments.length ? 'You already follow or own everything here.' : 'Public moments will show here.'}
-          />
+          <View style={{ alignItems: 'center', paddingHorizontal: 30, paddingTop: 72 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 21 }}>Nothing here yet</Text>
+            <Text style={{ marginTop: 8, color: colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
+              Public moments appear here chronologically when people choose to appear in Wander.
+            </Text>
+          </View>
         }
         renderItem={({ item }) => (
           <MomentCard
@@ -233,7 +210,13 @@ export default function WanderScreen() {
                     ? 'request pending'
                     : 'wander'
             }
-            onNotes={(moment) => navigation.navigate('Notes', { moment })}
+            onPress={(moment) =>
+              navigation.navigate('MomentDetail', {
+                momentId: moment.id,
+                moment,
+                canNote: moment.authorUid === user?.uid || following.includes(moment.authorUid),
+              })
+            }
             onFollow={
               item.authorUid !== user?.uid &&
               !following.includes(item.authorUid) &&
@@ -247,16 +230,16 @@ export default function WanderScreen() {
         )}
         ListFooterComponent={
           visibleMoments.length && hasMore ? (
-            <Button mode="text" onPress={loadMore} loading={loadingMore} disabled={loadingMore}>
+            <PillButton variant="secondary" onPress={loadMore} disabled={loadingMore}>
               Load more
-            </Button>
+            </PillButton>
           ) : null
         }
       />
 
       <Portal>
         <Dialog visible={Boolean(requesting)} onDismiss={() => setRequesting(null)}>
-          <Dialog.Title>Request access</Dialog.Title>
+          <Dialog.Title>Ask to keep up</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
               Send a short note to {requesting ? publicUsers[requesting.authorUid]?.displayName ?? 'this person' : 'this person'}.

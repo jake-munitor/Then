@@ -12,7 +12,7 @@ describe('DateStamp', () => {
     const date = screen.getByText('Jun 9, 2026');
     const style = StyleSheet.flatten(date.props.style);
 
-    expect(style.fontFamily).toBe(fonts.bodyMedium);
+    expect(style.fontFamily).toBe(fonts.bodySemiBold);
     expect(style.fontVariant).toContain('tabular-nums');
     expect(style.textTransform).toBe('uppercase');
     expect(style.color).toBeDefined();
