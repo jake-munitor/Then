@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
 import FilteredMomentImage from '../components/FilteredMomentImage';
+import PhotoFilterPicker from '../components/PhotoFilterPicker';
 import Screen from '../components/Screen';
 import { PillButton, SectionLabel, Toggle } from '../components/DesignPrimitives';
 import { createMoment } from '../services/moments';
@@ -17,12 +18,13 @@ import { dateFromImagePickerAsset, isValidYYYYMMDD, todayYYYYMMDD } from '../uti
 import type { PhotoFilter } from '../utils/photoFilters';
 
 const FRONT_LIMIT = 50;
+const DEFAULT_PHOTO_FILTER: PhotoFilter = 'film';
 
 export default function NewMomentScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<any>();
   const [uri, setUri] = useState<string | null>(null);
-  const [photoFilter, setPhotoFilter] = useState<PhotoFilter>('normal');
+  const [photoFilter, setPhotoFilter] = useState<PhotoFilter>(DEFAULT_PHOTO_FILTER);
   const [frontText, setFrontText] = useState('');
   const [backText, setBackText] = useState('');
   const [memoryDate, setMemoryDate] = useState(todayYYYYMMDD());
@@ -60,7 +62,7 @@ export default function NewMomentScreen() {
     if (!result.canceled) {
       setUri(result.assets[0].uri);
       setMemoryDate(dateFromImagePickerAsset(result.assets[0]));
-      setPhotoFilter('normal');
+      setPhotoFilter(DEFAULT_PHOTO_FILTER);
     }
   };
 
@@ -79,7 +81,7 @@ export default function NewMomentScreen() {
     if (!result.canceled) {
       setUri(result.assets[0].uri);
       setMemoryDate(dateFromImagePickerAsset(result.assets[0]));
-      setPhotoFilter('normal');
+      setPhotoFilter(DEFAULT_PHOTO_FILTER);
     }
   };
 
@@ -111,7 +113,7 @@ export default function NewMomentScreen() {
         appearInWander,
       });
       setUri(null);
-      setPhotoFilter('normal');
+      setPhotoFilter(DEFAULT_PHOTO_FILTER);
       setFrontText('');
       setBackText('');
       setMemoryDate(todayYYYYMMDD());
@@ -213,6 +215,7 @@ export default function NewMomentScreen() {
             <Text style={{ textAlign: 'right', color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
               {frontText.length} / {FRONT_LIMIT}
             </Text>
+            {uri ? <PhotoFilterPicker value={photoFilter} onChange={setPhotoFilter} disabled={busy} /> : null}
             <TextInput
               label="date stamp"
               value={memoryDate}
@@ -282,7 +285,7 @@ export default function NewMomentScreen() {
           Develop & share
         </PillButton>
         <Text style={{ color: colors.textFaint, textAlign: 'center', fontFamily: fonts.bodyRegular, fontSize: 11.5, lineHeight: 17 }}>
-          Once shared, a moment can be deleted — but never revised. Like a polaroid.
+          Once shared, a moment can be deleted - but never revised. Like a polaroid.
         </Text>
       </Screen>
     </KeyboardAvoidingView>

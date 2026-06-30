@@ -27,6 +27,7 @@ import {
   subscribeSavedMomentIds,
   type MomentPageCursor,
 } from '../services/moments';
+import { subscribeNotifications } from '../services/notifications';
 import type { FollowRequest, Moment, ProfileVisibility, PublicUser } from '../services/types';
 import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
@@ -60,6 +61,7 @@ export default function RollScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
+  const [notificationCount, setNotificationCount] = useState(0);
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
 
   useEffect(() => {
@@ -114,6 +116,14 @@ export default function RollScreen() {
     if (!user?.uid) return;
     return subscribeFollowing(user.uid, setFollowing, () => setListenerError('Your friend list could not be loaded.'));
   }, [refreshKey, user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeNotifications(
+      user.uid,
+      (items) => setNotificationCount(items.filter((item) => !item.readAt).length),
+      () => setListenerError('Notifications could not be loaded.'),
+    );
+  }, [user?.uid]);
   useEffect(() => {
     if (!user?.uid) return;
     return subscribePublicUsers(
@@ -190,7 +200,17 @@ export default function RollScreen() {
         title="Your roll"
         titleKind="script"
         subtitle="Everything you've kept and shared, in one place."
-        right={<IconCircleButton icon="cog-outline" onPress={() => navigation.navigate('RollSettings')} accessibilityLabel="Open settings" />}
+        right={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <HeaderIconWithBadge
+              icon="bell-outline"
+              count={notificationCount}
+              onPress={() => navigation.navigate('Notifications')}
+              accessibilityLabel="Open notifications"
+            />
+            <IconCircleButton icon="cog-outline" onPress={() => navigation.navigate('RollSettings')} accessibilityLabel="Open settings" />
+          </View>
+        }
       />
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
       {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
@@ -250,7 +270,7 @@ export default function RollScreen() {
           ]}
           style={{ flex: 1 }}
         />
-        <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>Recent⌄</Text>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>Recent</Text>
       </View>
 
       <PillButton variant="secondary" icon="book-open-page-variant-outline" onPress={() => navigation.navigate('YourYear')}>
@@ -317,5 +337,60 @@ export default function RollScreen() {
         </PillButton>
       ) : null}
     </Screen>
+  );
+}
+
+function HeaderIconWithBadge({
+  icon,
+  count,
+  onPress,
+  accessibilityLabel,
+}: {
+  icon: string;
+  count: number;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => ({
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderWidth: 1,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Icon source={icon} color={colors.textMuted} size={21} />
+      {count ? (
+        <View
+          style={{
+            position: 'absolute',
+            right: -2,
+            top: -2,
+            minWidth: 18,
+            height: 18,
+            borderRadius: 9,
+            paddingHorizontal: 4,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primary,
+            borderColor: colors.surface,
+            borderWidth: 1,
+          }}
+        >
+          <Text style={{ color: colors.white, fontFamily: fonts.bodySemiBold, fontSize: 10 }}>
+            {count > 9 ? '9+' : count}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }

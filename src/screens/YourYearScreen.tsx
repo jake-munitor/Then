@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import FilteredMomentImage from '../components/FilteredMomentImage';
 import Screen from '../components/Screen';
 import { PillButton, SectionLabel } from '../components/DesignPrimitives';
 import type { RootStackParamList } from '../navigation/types';
@@ -100,7 +101,13 @@ export default function YourYearScreen({ route, navigation }: Props) {
                   zIndex: index === 1 ? 2 : 1,
                 }}
               >
-                <Image source={{ uri: moment.imageUrl }} style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.photoBg }} />
+                <FilteredMomentImage
+                  uri={moment.imageUrl}
+                  filter={moment.photoFilter}
+                  aspectRatio={1}
+                  style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.photoBg }}
+                  accessibilityLabel={moment.frontText || 'Then moment'}
+                />
               </View>
             ))
           ) : (
@@ -111,7 +118,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
         </View>
 
         <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13, textAlign: 'center' }}>
-          {yearMoments.length} {yearMoments.length === 1 ? 'moment' : 'moments'} · across {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
+          {yearMoments.length} {yearMoments.length === 1 ? 'moment' : 'moments'} - across {monthCount || 0} {monthCount === 1 ? 'month' : 'months'}
         </Text>
       </View>
 
@@ -135,7 +142,13 @@ export default function YourYearScreen({ route, navigation }: Props) {
               })}
             >
               <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: '#2A2622', shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } }}>
-                <Image source={{ uri: moment.imageUrl }} style={{ flex: 1, borderRadius: 3, backgroundColor: colors.photoBg }} />
+                <FilteredMomentImage
+                  uri={moment.imageUrl}
+                  filter={moment.photoFilter}
+                  aspectRatio={1}
+                  style={{ flex: 1, borderRadius: 3, backgroundColor: colors.photoBg }}
+                  accessibilityLabel={moment.frontText || 'Then moment'}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <SectionLabel>{month}</SectionLabel>
@@ -156,9 +169,21 @@ export default function YourYearScreen({ route, navigation }: Props) {
         <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12.5, lineHeight: 18, textAlign: 'center' }}>
           Made only from your own photos, captions, and private notes. Never shared, never ranked.
         </Text>
-        <PillButton icon="book-open-page-variant-outline" onPress={() => {}}>
-          Open your preview
-        </PillButton>
+        {yearMoments.length ? (
+          <PillButton
+            icon="book-open-page-variant-outline"
+            onPress={() => {
+              const firstMoment = yearMoments[0];
+              navigation.navigate('MomentDetail', { momentId: firstMoment.id, moment: firstMoment, canNote: true });
+            }}
+          >
+            Open first memory
+          </PillButton>
+        ) : (
+          <PillButton variant="secondary" icon="filmstrip" onPress={() => navigation.goBack()}>
+            Back to your roll
+          </PillButton>
+        )}
         <Text style={{ color: colors.textFaintest, fontFamily: fonts.bodyRegular, fontSize: 11.5, textAlign: 'center' }}>
           Free, always. A printed edition, someday.
         </Text>

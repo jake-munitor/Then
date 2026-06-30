@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 
 import {
@@ -113,25 +113,35 @@ export default function MomentCard({
       style={{
         width: cardWidth,
         alignSelf: 'center',
-        marginBottom: 18,
+        marginBottom: 22,
+        borderRadius: radius.print,
         shadowColor: '#2A2622',
-        shadowOpacity: 0.06,
-        shadowRadius: 26,
-        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 7 },
         elevation: 3,
       }}
     >
       <View
         testID="moment-frame"
         style={{
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          borderWidth: 1,
-          borderRadius: radius.lg,
+          backgroundColor: colors.polaroid,
+          borderColor: 'rgba(203, 184, 166, 0.45)',
+          borderWidth: 0.75,
+          borderRadius: radius.print,
           overflow: 'hidden',
-          padding: 9,
+          paddingTop: 22,
+          paddingHorizontal: 22,
+          paddingBottom: 16,
         }}
       >
+        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+          <Image
+            source={require('../../assets/paper-texture.png')}
+            resizeMode="cover"
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.32 }]}
+          />
+        </View>
         <Pressable
           onPress={() => onPress?.(moment)}
           disabled={!onPress}
@@ -141,56 +151,63 @@ export default function MomentCard({
           <View
             testID="moment-photo-mat"
             style={{
-              borderRadius: 9,
+              borderRadius: 8,
               backgroundColor: colors.photoBg,
               overflow: 'hidden',
+              borderColor: 'rgba(243, 237, 228, 0.75)',
+              borderWidth: 1,
             }}
           >
             <FilteredMomentImage
               uri={moment.imageUrl}
               filter={moment.photoFilter}
-              aspectRatio={4 / 5}
+              aspectRatio={1}
               resizeMode="cover"
-              style={{ width: '100%', aspectRatio: 4 / 5, backgroundColor: colors.photoBg }}
+              style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.photoBg }}
               accessibilityLabel={moment.frontText || 'Then moment'}
               testID="moment-photo-image"
             />
             {memoryDate ? (
-              <View style={{ position: 'absolute', left: 11, top: 11 }}>
-                <DateStamp value={memoryDate} />
+              <View style={{ position: 'absolute', right: 12, bottom: 11 }}>
+                <DateStamp value={memoryDate} tone="amber" />
               </View>
             ) : null}
           </View>
 
-          <View style={{ paddingHorizontal: 8, paddingTop: 15, gap: 10 }}>
+          <View style={{ paddingTop: 18, gap: 4 }}>
             <Text
               testID="moment-caption"
               maxFontSizeMultiplier={1.2}
               style={{
                 color: colors.textPrimary,
-                fontFamily: fonts.displayItalic,
-                fontSize: 18,
-                lineHeight: 25,
+                fontFamily: fonts.captionSerif,
+                fontSize: 16,
+                lineHeight: 23,
               }}
             >
               {moment.frontText || 'Untitled'}
             </Text>
+            <Text
+              testID="moment-author-signature"
+              maxFontSizeMultiplier={1.1}
+              style={{
+                color: colors.textSecondary,
+                fontFamily: fonts.signature,
+                fontSize: 22,
+                lineHeight: 34,
+                paddingTop: 5,
+                paddingBottom: 2,
+              }}
+            >
+              {authorName.toLowerCase()}
+            </Text>
           </View>
         </Pressable>
 
-        <View style={{ paddingHorizontal: 8, paddingTop: 10, paddingBottom: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <Pressable onPress={() => onPress?.(moment)} disabled={!onPress} style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              numberOfLines={1}
-              style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12.5 }}
-            >
-              from{' '}
-              <Text style={{ color: colors.textSecondary, fontFamily: fonts.bodyMedium, fontSize: 12.5 }}>
-                {authorName}
-              </Text>
-            </Text>
             {connectionLine ? (
-              <Text numberOfLines={1} style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 11.5, marginTop: 2 }}>
+              <Text numberOfLines={1} style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 11.5 }}>
                 {connectionLine}
               </Text>
             ) : null}

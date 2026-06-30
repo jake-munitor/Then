@@ -98,8 +98,8 @@ export default function FeedScreen() {
         onRefresh={onRefresh}
         keyExtractor={(moment) => moment.id}
         contentContainerStyle={{
-          paddingTop: visibleMoments.length ? 12 : 0,
-          paddingBottom: 36,
+          paddingTop: visibleMoments.length ? 4 : 0,
+          paddingBottom: 132,
           alignItems: 'center',
         }}
         ListHeaderComponent={
@@ -112,7 +112,7 @@ export default function FeedScreen() {
             </View>
           ) : null
         }
-        ListHeaderComponentStyle={{ width: '100%', marginBottom: 14 }}
+        ListHeaderComponentStyle={{ width: '100%', marginBottom: 8 }}
         ListEmptyComponent={
           <EmptyFeed
             onShare={() => tabNavigation.navigate('NewMomentTab' as keyof TabsParamList)}

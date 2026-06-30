@@ -1,5 +1,7 @@
 node_modules/
 .expo/
+.claude/
+tmp/
 .expo-web.*.log
 expo-web-*.log
 .playwright-mcp/

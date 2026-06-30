@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
-import { Image, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import MomentCard from '../../src/components/MomentCard';
 import type { Moment } from '../../src/services/types';
@@ -66,7 +66,7 @@ describe('MomentCard', () => {
     renderCard();
 
     expect(screen.getByText('golden hour.')).toBeTruthy();
-    expect(screen.getByText(/Maisie K/i)).toBeTruthy();
+    expect(screen.getByText('maisie k')).toBeTruthy();
     expect(screen.queryByText("the field behind gran's.")).toBeNull();
   });
 
@@ -118,13 +118,16 @@ describe('MomentCard', () => {
   it('uses the feed photo ratio and editorial caption treatment', () => {
     renderCard();
 
-    const photo = screen.UNSAFE_getAllByType(Image)[0];
-    const photoStyle = StyleSheet.flatten(photo.props.style);
+    const photoStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-image').props.style);
     const captionStyle = StyleSheet.flatten(screen.getByTestId('moment-caption').props.style);
+    const signature = screen.getByTestId('moment-author-signature');
+    const signatureStyle = StyleSheet.flatten(signature.props.style);
 
-    expect(photoStyle.aspectRatio).toBe(4 / 5);
-    expect(captionStyle.fontFamily).toBe(fonts.displayItalic);
-    expect(screen.getByText('Maisie K')).toHaveStyle({ fontFamily: fonts.bodyMedium });
+    expect(photoStyle.aspectRatio).toBe(1);
+    expect(captionStyle.fontFamily).toBe(fonts.captionSerif);
+    expect(signature).toHaveStyle({ fontFamily: fonts.signature });
+    expect(signature.props.numberOfLines).toBeUndefined();
+    expect(signatureStyle.lineHeight).toBeGreaterThan(signatureStyle.fontSize * 1.3);
   });
 
   it('renders the saved photo tone over the image', () => {
@@ -138,15 +141,18 @@ describe('MomentCard', () => {
     expect(screen.getByTestId('moment-photo-image-filter-sunfade-peach-wash')).toBeTruthy();
   });
 
-  it('frames the 4:5 photo in a rounded card', () => {
+  it('frames the square photo in a warm polaroid card', () => {
     renderCard();
 
     const frameStyle = StyleSheet.flatten(screen.getByTestId('moment-frame').props.style);
     const photoMatStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-mat').props.style);
 
-    expect(frameStyle.backgroundColor).toBe(colors.paper);
-    expect(frameStyle.borderRadius).toBe(16);
-    expect(frameStyle.padding).toBe(9);
-    expect(photoMatStyle.borderRadius).toBe(9);
+    expect(frameStyle.backgroundColor).toBe(colors.polaroid);
+    expect(frameStyle.borderRadius).toBe(8);
+    expect(frameStyle.paddingTop).toBe(22);
+    expect(frameStyle.paddingHorizontal).toBe(22);
+    expect(photoMatStyle.borderRadius).toBe(8);
+    expect(photoMatStyle.borderWidth).toBe(1);
   });
+
 });

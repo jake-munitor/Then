@@ -15,6 +15,7 @@ import FirebaseConfigScreen from '../screens/FirebaseConfigScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import LinkedMomentScreen from '../screens/LinkedMomentScreen';
 import MomentDetailScreen from '../screens/MomentDetailScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RollSettingsScreen from '../screens/RollSettingsScreen';
 import YourYearScreen from '../screens/YourYearScreen';
@@ -124,6 +125,7 @@ export default function AppNavigator() {
             <Stack.Screen name="MainTabs" component={TabsNavigator} options={{ headerShown: false }} />
             <Stack.Screen name="MomentDetail" component={MomentDetailScreen} options={{ headerShown: false }} />
             <Stack.Screen name="RollSettings" component={RollSettingsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
             <Stack.Screen name="YourYear" component={YourYearScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="LinkedMoment" component={LinkedMomentScreen} options={{ headerShown: false }} />

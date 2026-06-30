@@ -1,5 +1,5 @@
 export const radius = {
-  print: 4,
+  print: 8,
   sm: 8,
   md: 12,
   lg: 16,

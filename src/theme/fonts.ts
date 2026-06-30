@@ -7,7 +7,12 @@ export const fonts = {
   displayItalic: 'Newsreader_400Regular_Italic',
   displayMedium: 'Newsreader_500Medium',
   displayMediumItalic: 'Newsreader_500Medium_Italic',
+  captionSerif: 'PlayfairDisplay_400Regular',
+  captionSerifMedium: 'PlayfairDisplay_500Medium',
   script: 'ThenScript_400Regular',
   scriptMedium: 'ThenScript_500Medium',
   scriptBold: 'ThenScript_700Bold',
+  signature: 'ThenSignature_400Regular',
+  cameraRegular: 'CourierPrime_400Regular',
+  cameraBold: 'CourierPrime_700Bold',
 } as const;

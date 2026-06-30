@@ -6,6 +6,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   MomentDetail: { momentId: string; moment?: Moment; canNote?: boolean };
   RollSettings: undefined;
+  Notifications: undefined;
   YourYear: { year?: number } | undefined;
   Notes: { moment: Moment };
   LinkedMoment: { momentId: string };
