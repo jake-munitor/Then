@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Image, Share, View } from 'react-native';
+import { Image, Linking, Share, View } from 'react-native';
 import { Button, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -130,6 +130,13 @@ export default function RollSettingsScreen({ navigation }: Props) {
     });
   };
 
+  const openPrivacyPolicy = () => {
+    // TODO: point this at the live privacy & data policy page once it is published.
+    Linking.openURL('https://then.app/privacy').catch(() => {
+      setError('Could not open the privacy page.');
+    });
+  };
+
   const setNotificationPreference = async (key: keyof NotificationPreferences, value: boolean) => {
     if (!user?.uid) return;
     const next = { ...notificationPreferences, [key]: value };
@@ -169,7 +176,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
         <Text onPress={() => navigation.goBack()} style={{ flex: 1, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
           ‹ Your roll
         </Text>
-        <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.displayMedium, fontSize: 19 }}>
+        <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}>
           Settings
         </Text>
         <Text onPress={saveProfile} style={{ flex: 1, textAlign: 'right', color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
@@ -275,7 +282,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
 
       <SettingsGroup label="Account">
         <SettingsRow>
-          <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>Privacy & data</Text>
+          <Text onPress={openPrivacyPolicy} style={{ flex: 1, color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>Privacy & data</Text>
           <Icon source="chevron-right" color={colors.textFaintest} size={20} />
         </SettingsRow>
         <View style={{ padding: 16, gap: 10 }}>
@@ -335,8 +342,19 @@ function SettingsGroup({ label, children }: { label: string; children: React.Rea
   return (
     <View style={{ gap: 9 }}>
       <SectionLabel>{label}</SectionLabel>
-      <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderColor: colors.border, borderWidth: 1, overflow: 'hidden' }}>
-        {children}
+      <View
+        style={{
+          borderRadius: radius.lg,
+          shadowColor: '#2A2622',
+          shadowOpacity: 0.05,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 5 },
+          elevation: 2,
+        }}
+      >
+        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderColor: colors.border, borderWidth: 1, overflow: 'hidden' }}>
+          {children}
+        </View>
       </View>
     </View>
   );

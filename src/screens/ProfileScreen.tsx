@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import ListenerError from '../components/ListenerError';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
+import { PillButton } from '../components/DesignPrimitives';
 import type { RootStackParamList } from '../navigation/types';
 import {
   blockUser,
@@ -22,6 +23,8 @@ import type { PublicUser } from '../services/types';
 import { fetchPublicUser, fetchPublicUserByHandle } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
+import { radius } from '../theme/radius';
 import { initialsFromName } from '../utils/formatters';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
@@ -169,10 +172,24 @@ export default function ProfileScreen({ route, navigation }: Props) {
         ) : !profile ? (
           <EmptyState title="Profile unavailable" message="This link may be old, private, or misspelled." />
         ) : (
-          <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 18, gap: 16 }}>
+          <View
+            style={{
+              width: '100%',
+              borderRadius: radius.lg,
+              shadowColor: '#2A2622',
+              shadowOpacity: 0.07,
+              shadowRadius: 18,
+              shadowOffset: { width: 0, height: 7 },
+              elevation: 2,
+            }}
+          >
+          <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 22, gap: 18 }}>
             <View style={{ alignItems: 'center', gap: 12 }}>
               {profile.avatarUrl ? (
-                <Image source={{ uri: profile.avatarUrl }} style={{ width: 96, height: 96, borderRadius: 999 }} />
+                <Image
+                  source={{ uri: profile.avatarUrl }}
+                  style={{ width: 96, height: 96, borderRadius: 999, borderColor: 'rgba(243, 237, 228, 0.9)', borderWidth: 2, backgroundColor: colors.photoBg }}
+                />
               ) : (
                 <View
                   style={{
@@ -184,46 +201,54 @@ export default function ProfileScreen({ route, navigation }: Props) {
                     justifyContent: 'center',
                   }}
                 >
-                  <Text variant="headlineSmall">{initialsFromName(profile.displayName ?? profile.handle)}</Text>
+                  <Text style={{ color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 30 }}>
+                    {initialsFromName(profile.displayName ?? profile.handle)}
+                  </Text>
                 </View>
               )}
-              <View style={{ alignItems: 'center' }}>
-                <Text variant="headlineSmall">{profile.displayName ?? 'Then Friend'}</Text>
-                <Text style={{ color: colors.textSecondary }}>{profile.handle ? `@${profile.handle}` : 'Then profile'}</Text>
+              <View style={{ alignItems: 'center', gap: 2 }}>
+                <Text style={{ color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 23, lineHeight: 29 }}>
+                  {profile.displayName ?? 'Then Friend'}
+                </Text>
+                <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 13 }}>
+                  {profile.handle ? `@${profile.handle}` : 'Then profile'}
+                </Text>
               </View>
             </View>
 
             {isSelf ? (
-              <Button mode="contained" onPress={() => navigation.navigate('MainTabs')}>
+              <PillButton icon="filmstrip" onPress={() => navigation.navigate('MainTabs')}>
                 Open your roll
-              </Button>
+              </PillButton>
             ) : isBlocked ? (
-              <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>You have blocked this profile.</Text>
+              <Text style={{ color: colors.textSecondary, textAlign: 'center', fontFamily: fonts.bodyRegular, fontSize: 13 }}>
+                You have blocked this profile.
+              </Text>
             ) : (
-              <>
-                <Button
-                  mode={isFollowing || isRequested ? 'outlined' : 'contained'}
+              <View style={{ gap: 12 }}>
+                <PillButton
+                  variant={isFollowing || isRequested ? 'secondary' : 'primary'}
                   icon={isFollowing ? 'account-minus-outline' : isRequested ? 'close' : 'account-plus-outline'}
                   onPress={() => {
                     if (isFollowing || isRequested) cancelOrRemove();
                     else setRequesting(true);
                   }}
-                  loading={busy}
                   disabled={busy}
                 >
                   {isFollowing ? 'Remove friend' : isRequested ? 'Cancel request' : 'Add friend'}
-                </Button>
-                <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Button mode="text" icon="flag-outline" onPress={() => setReporting(true)}>
+                </PillButton>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
+                  <Text onPress={() => setReporting(true)} style={{ color: colors.textFaint, fontFamily: fonts.bodyMedium, fontSize: 13 }}>
                     Report
-                  </Button>
-                  <Button mode="text" icon="account-cancel-outline" textColor={colors.error} onPress={() => setBlocking(true)}>
+                  </Text>
+                  <Text onPress={() => setBlocking(true)} style={{ color: colors.danger, fontFamily: fonts.bodyMedium, fontSize: 13 }}>
                     Block
-                  </Button>
+                  </Text>
                 </View>
-              </>
+              </View>
             )}
             {error ? <Text style={{ color: colors.error, textAlign: 'center' }}>{error}</Text> : null}
+          </View>
           </View>
         )}
       </View>
