@@ -263,8 +263,8 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                     borderWidth: 0.75,
                     borderRadius: radius.print,
                     overflow: 'hidden',
-                    paddingTop: 22,
-                    paddingHorizontal: 22,
+                    paddingTop: 14,
+                    paddingHorizontal: 14,
                     paddingBottom: 16,
                   }}
                 >
@@ -277,7 +277,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                   </View>
                   <View
                     style={{
-                      borderRadius: 8,
+                      borderRadius: radius.print,
                       overflow: 'hidden',
                       backgroundColor: colors.photoBg,
                       borderColor: 'rgba(243, 237, 228, 0.75)',
@@ -308,8 +308,8 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                       style={{
                         color: colors.textSecondary,
                         fontFamily: fonts.signature,
-                        fontSize: 22,
-                        lineHeight: 34,
+                        fontSize: 25,
+                        lineHeight: 36,
                         paddingTop: 5,
                         paddingBottom: 2,
                       }}

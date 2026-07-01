@@ -112,7 +112,7 @@ describe('MomentDetailScreen', () => {
     const composerStyle = StyleSheet.flatten(screen.getByTestId('moment-detail-note-composer').props.style);
 
     expect(frameStyle.backgroundColor).toBe(colors.polaroid);
-    expect(frameStyle.paddingHorizontal).toBe(22);
+    expect(frameStyle.paddingHorizontal).toBe(14);
     expect(frameStyle.overflow).toBe('hidden');
     expect(actionsStyle.alignSelf).toBe('center');
     expect(composerStyle.alignSelf).toBe('center');

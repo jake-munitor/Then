@@ -69,7 +69,7 @@ export default function NotificationsScreen({ navigation }: Props) {
         <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ flex: 1 }}>
           <Icon source="chevron-left" color={colors.textPrimary} size={25} />
         </Pressable>
-        <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.displayMedium, fontSize: 21 }}>
+        <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}>
           Notifications
         </Text>
         <View style={{ flex: 1, alignItems: 'flex-end' }}>

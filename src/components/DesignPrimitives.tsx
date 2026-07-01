@@ -135,7 +135,17 @@ export function ScreenHeader({
         {title}
       </Text>
     ) : (
-      <Wordmark size={titleKind === 'wordmark' ? 42 : 38}>{title}</Wordmark>
+      <Text
+        maxFontSizeMultiplier={1.15}
+        style={{
+          color: colors.textPrimary,
+          fontFamily: fonts.captionSerifMedium,
+          fontSize: titleKind === 'wordmark' ? 34 : 30,
+          lineHeight: titleKind === 'wordmark' ? 40 : 36,
+        }}
+      >
+        {title}
+      </Text>
     );
 
   return (

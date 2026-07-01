@@ -148,10 +148,10 @@ describe('MomentCard', () => {
     const photoMatStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-mat').props.style);
 
     expect(frameStyle.backgroundColor).toBe(colors.polaroid);
-    expect(frameStyle.borderRadius).toBe(8);
-    expect(frameStyle.paddingTop).toBe(22);
-    expect(frameStyle.paddingHorizontal).toBe(22);
-    expect(photoMatStyle.borderRadius).toBe(8);
+    expect(frameStyle.borderRadius).toBe(6);
+    expect(frameStyle.paddingTop).toBe(14);
+    expect(frameStyle.paddingHorizontal).toBe(14);
+    expect(photoMatStyle.borderRadius).toBe(6);
     expect(photoMatStyle.borderWidth).toBe(1);
   });
 

@@ -130,8 +130,8 @@ export default function MomentCard({
           borderWidth: 0.75,
           borderRadius: radius.print,
           overflow: 'hidden',
-          paddingTop: 22,
-          paddingHorizontal: 22,
+          paddingTop: 14,
+          paddingHorizontal: 14,
           paddingBottom: 16,
         }}
       >
@@ -151,7 +151,7 @@ export default function MomentCard({
           <View
             testID="moment-photo-mat"
             style={{
-              borderRadius: 8,
+              borderRadius: radius.print,
               backgroundColor: colors.photoBg,
               overflow: 'hidden',
               borderColor: 'rgba(243, 237, 228, 0.75)',
@@ -187,33 +187,31 @@ export default function MomentCard({
             >
               {moment.frontText || 'Untitled'}
             </Text>
+          </View>
+        </Pressable>
+
+        <View style={{ paddingTop: 4, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+          <Pressable onPress={() => onPress?.(moment)} disabled={!onPress} style={{ flex: 1, minWidth: 0 }}>
+            {connectionLine ? (
+              <Text numberOfLines={1} style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 11.5, marginBottom: 2 }}>
+                {connectionLine}
+              </Text>
+            ) : null}
             <Text
               testID="moment-author-signature"
               maxFontSizeMultiplier={1.1}
               style={{
                 color: colors.textSecondary,
                 fontFamily: fonts.signature,
-                fontSize: 22,
-                lineHeight: 34,
-                paddingTop: 5,
-                paddingBottom: 2,
+                fontSize: 25,
+                lineHeight: 36,
               }}
             >
               {authorName.toLowerCase()}
             </Text>
-          </View>
-        </Pressable>
-
-        <View style={{ paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <Pressable onPress={() => onPress?.(moment)} disabled={!onPress} style={{ flex: 1, minWidth: 0 }}>
-            {connectionLine ? (
-              <Text numberOfLines={1} style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 11.5 }}>
-                {connectionLine}
-              </Text>
-            ) : null}
           </Pressable>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 }}>
             <ActionIcon
               icon={kept ? 'heart' : 'heart-outline'}
               active={kept}

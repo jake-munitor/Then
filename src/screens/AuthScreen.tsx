@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
 
 import Screen from '../components/Screen';
-import { PillButton, Wordmark } from '../components/DesignPrimitives';
+import { PillButton } from '../components/DesignPrimitives';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -73,7 +73,16 @@ export default function AuthScreen() {
               color="#E2D2B4"
             />
           </View>
-          <Wordmark size={60}>then</Wordmark>
+          <Text
+            style={{
+              color: colors.textPrimary,
+              fontFamily: fonts.captionSerifMedium,
+              fontSize: 52,
+              lineHeight: 58,
+            }}
+          >
+            then
+          </Text>
           <Text style={{ marginTop: 6, color: colors.textSecondary, fontFamily: fonts.displayItalic, fontSize: 19, textAlign: 'center' }}>
             see your people, not the algorithm.
           </Text>
