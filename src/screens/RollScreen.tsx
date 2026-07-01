@@ -259,19 +259,15 @@ export default function RollScreen() {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <SegmentedControl
-          value={view}
-          onChange={setView}
-          options={[
-            { value: 'archive', label: 'Archive' },
-            { value: 'saved', label: 'Saved' },
-            { value: 'requests', label: 'Requests' },
-          ]}
-          style={{ flex: 1 }}
-        />
-        <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>Recent</Text>
-      </View>
+      <SegmentedControl
+        value={view}
+        onChange={setView}
+        options={[
+          { value: 'archive', label: 'Archive' },
+          { value: 'saved', label: 'Saved' },
+          { value: 'requests', label: 'Requests' },
+        ]}
+      />
 
       <PillButton variant="secondary" icon="book-open-page-variant-outline" onPress={() => navigation.navigate('YourYear')}>
         Your Year

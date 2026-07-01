@@ -222,7 +222,10 @@ export default function NewMomentScreen() {
               onChangeText={setMemoryDate}
               disabled={busy}
               mode="outlined"
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
               style={{ backgroundColor: colors.surfaceInset }}
+              contentStyle={{ fontFamily: fonts.cameraRegular, letterSpacing: 0.6 }}
             />
           </View>
         </View>

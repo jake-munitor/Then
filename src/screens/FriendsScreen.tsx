@@ -222,7 +222,17 @@ export default function FriendsScreen() {
         value={query}
         onChangeText={setQuery}
         elevation={0}
-        style={{ backgroundColor: colors.surfaceInset, borderColor: colors.borderInset, borderWidth: 1, borderRadius: radius.md }}
+        style={{
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderWidth: 1,
+          borderRadius: radius.pill,
+          shadowColor: '#2A2622',
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 1,
+        }}
         inputStyle={{ fontFamily: fonts.bodyRegular, fontSize: 14 }}
       />
       {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
@@ -237,6 +247,16 @@ export default function FriendsScreen() {
           ) : null}
         </View>
         {requests.length ? (
+          <View
+            style={{
+              borderRadius: radius.lg,
+              shadowColor: '#2A2622',
+              shadowOpacity: 0.06,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 2,
+            }}
+          >
           <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderColor: colors.border, borderWidth: 1, overflow: 'hidden' }}>
             {requests.map((request) => {
               const profile = requestUsers[request.requesterUid];
@@ -264,6 +284,7 @@ export default function FriendsScreen() {
                 </View>
               );
             })}
+          </View>
           </View>
         ) : null}
       </View>
@@ -389,6 +410,16 @@ function PeopleList({
     <View style={{ gap: 9 }}>
       <SectionLabel>{title}</SectionLabel>
       {people.length ? (
+        <View
+          style={{
+            borderRadius: radius.lg,
+            shadowColor: '#2A2622',
+            shadowOpacity: 0.06,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 2,
+          }}
+        >
         <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, borderColor: colors.border, borderWidth: 1, overflow: 'hidden' }}>
           {people.map((person, index) => {
             const requested = sentRequests.includes(person.uid);
@@ -406,7 +437,17 @@ function PeopleList({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   {person.avatarUrl ? (
-                    <Image source={{ uri: person.avatarUrl }} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.photoBg }} />
+                    <Image
+                      source={{ uri: person.avatarUrl }}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: colors.photoBg,
+                        borderColor: 'rgba(243, 237, 228, 0.9)',
+                        borderWidth: 1.5,
+                      }}
+                    />
                   ) : (
                     <Avatar name={person.displayName ?? person.handle} size={44} />
                   )}
@@ -447,6 +488,7 @@ function PeopleList({
               </View>
             );
           })}
+        </View>
         </View>
       ) : (
         <EmptyState title={emptyTitle} message={emptyMessage} />

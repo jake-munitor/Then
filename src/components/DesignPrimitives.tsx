@@ -399,13 +399,25 @@ export function Thumb({
   style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={[{ borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.photoBg }, style]}>
+    <View
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: radius.md,
+          overflow: 'hidden',
+          backgroundColor: colors.photoBg,
+          borderColor: 'rgba(243, 237, 228, 0.75)',
+          borderWidth: 1,
+        },
+        style,
+      ]}
+    >
       <Image
         source={{ uri }}
         style={{
-          width: size ?? '100%',
-          height: size ?? undefined,
-          aspectRatio: 1,
+          width: '100%',
+          height: '100%',
           backgroundColor: colors.photoBg,
         }}
         accessibilityLabel={caption ?? 'moment photo'}
