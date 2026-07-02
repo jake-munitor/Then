@@ -2,6 +2,8 @@ import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebas
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
 import { auth, storage } from '../firebase/firebase';
+import { AVATAR_IMAGE_PRESET, MOMENT_IMAGE_PRESET, prepareImageForUpload } from '../utils/imageProcessing';
+import { captureException } from './telemetry';
 
 async function uriToBlob(uri: string) {
   const res = await fetch(uri);
@@ -120,7 +122,8 @@ async function uploadWithExplicitAuthToken(params: {
 
 export async function uploadMomentPhoto(params: { uid: string; momentId: string; uri: string }) {
   if (!storage) throw new Error('Firebase Storage is not initialized.');
-  const blob = await uriToBlob(params.uri);
+  const preparedUri = await prepareImageForUpload(params.uri, MOMENT_IMAGE_PRESET);
+  const blob = await uriToBlob(preparedUri);
   const contentType = validateImage(blob, MAX_MOMENT_IMAGE_BYTES);
   const fullPath = `users/${params.uid}/moments/${params.momentId}/image.jpg`;
   const objectRef = ref(storage, fullPath);
@@ -133,6 +136,7 @@ export async function uploadMomentPhoto(params: { uid: string; momentId: string;
     try {
       return await uploadWithExplicitAuthToken({ idToken, fullPath, blob, contentType });
     } catch (fallbackError) {
+      captureException(fallbackError, { context: 'uploadMomentPhoto.fallback', firstError: storageErrorDetails(error) });
       throw new Error(
         `Could not upload image after refreshing your sign-in. Storage first returned ${storageErrorDetails(error)}. Fallback returned ${storageErrorDetails(fallbackError)}.`,
       );
@@ -142,7 +146,8 @@ export async function uploadMomentPhoto(params: { uid: string; momentId: string;
 
 export async function uploadAvatar(params: { uid: string; uri: string }) {
   if (!storage) throw new Error('Firebase Storage is not initialized.');
-  const blob = await uriToBlob(params.uri);
+  const preparedUri = await prepareImageForUpload(params.uri, AVATAR_IMAGE_PRESET);
+  const blob = await uriToBlob(preparedUri);
   const contentType = validateImage(blob, MAX_AVATAR_IMAGE_BYTES);
   const objectRef = ref(storage, `users/${params.uid}/avatar/${Date.now()}.jpg`);
   await uploadBytes(objectRef, blob, { contentType });

@@ -15,10 +15,11 @@ import {
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/store/AuthContext';
+import { Sentry } from './src/services/telemetry';
 import { colors } from './src/theme/colors';
 import { appTheme } from './src/theme/theme';
 
-export default function App() {
+function App() {
   const [loaded] = useFonts({
     HankenGrotesk_400Regular: require('./assets/fonts/HankenGrotesk_400Regular.ttf'),
     HankenGrotesk_500Medium: require('./assets/fonts/HankenGrotesk_500Medium.ttf'),
@@ -55,3 +56,5 @@ export default function App() {
     </PaperProvider>
   );
 }
+
+export default Sentry.wrap(App);

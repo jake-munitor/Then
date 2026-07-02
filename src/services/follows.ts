@@ -12,6 +12,7 @@ import {
 
 import { db } from '../firebase/firebase';
 import { callFunction } from './cloudFunctions';
+import { track } from './telemetry';
 import type { FollowRequest, ListenerErrorHandler } from './types';
 
 export function subscribeFollowing(uid: string, onChange: (uids: string[]) => void, onError?: ListenerErrorHandler) {
@@ -117,6 +118,7 @@ export async function requestFollow(params: {
     createdAt: serverTimestamp(),
   });
   await batch.commit();
+  track('follow_request_sent');
 }
 
 export async function getPendingFollowRequestIds(requesterUid: string, targetUids: string[]) {
@@ -132,6 +134,7 @@ export async function getPendingFollowRequestIds(requesterUid: string, targetUid
 
 export async function approveFollow(params: { ownerUid: string; requesterUid: string }) {
   await callFunction('approveFollowRequest', { requesterUid: params.requesterUid });
+  track('follow_request_approved');
 }
 
 export async function declineFollow(params: { ownerUid: string; requesterUid: string }) {

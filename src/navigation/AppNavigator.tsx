@@ -26,12 +26,12 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['then://', 'https://then.app'],
+  prefixes: ['then://', 'https://app.munitor.ai'],
   config: {
     screens: {
       MainTabs: '',
-      Profile: 'profile/:handle',
-      LinkedMoment: 'moments/:momentId/notes',
+      Profile: 'then/profile/:handle',
+      LinkedMoment: 'then/moments/:momentId/notes',
     },
   },
   async getInitialURL() {

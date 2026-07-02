@@ -14,6 +14,7 @@ import {
 import { auth } from '../firebase/firebase';
 import { deleteAccountData } from '../services/account';
 import { callFunction } from '../services/cloudFunctions';
+import { identifyUser, resetUser, track } from '../services/telemetry';
 
 export type AuthUser = {
   uid: string;
@@ -61,6 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(loadingFallback);
       setUser(firebaseUser ? toAuthUser(firebaseUser) : null);
       setIsLoading(false);
+      if (firebaseUser) {
+        identifyUser(firebaseUser.uid);
+      } else {
+        resetUser();
+      }
     });
 
     return () => {
@@ -86,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           displayName: cleanName,
           handle: handleFromDisplayName(cleanName, credential.user.email),
         });
+        track('sign_up_completed');
       },
       resetPassword: async (email) => {
         if (!auth) throw new Error('Firebase is not initialized.');

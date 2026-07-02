@@ -115,4 +115,4 @@ See `PRIVACY_SEMANTICS.md` for the enforceable privacy, discovery, moderation, a
 - Profile links open as `then://profile/<handle>`.
 - Note notifications open as `then://moments/<momentId>/notes`.
 - Shared profile text includes the App Store fallback URL.
-- Universal links for `https://then.app/profile/<handle>` require the Apple App Site Association file described in `DEPLOYMENT.md`.
+- Universal links for `https://app.munitor.ai/then/profile/<handle>` require the Apple App Site Association file described in `DEPLOYMENT.md`.

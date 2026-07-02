@@ -49,6 +49,49 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'Images' },
 }));
 
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  wrap: jest.fn((component) => component),
+  captureException: jest.fn(),
+}));
+
+jest.mock('posthog-react-native', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    capture: jest.fn(),
+    identify: jest.fn(),
+    reset: jest.fn(),
+    captureException: jest.fn(),
+  })),
+}));
+
+jest.mock('expo-image-manipulator', () => {
+  const makeImage = (width: number, height: number) => ({
+    width,
+    height,
+    saveAsync: jest.fn(async () => ({ uri: 'file://processed.jpg', width, height })),
+  });
+
+  const makeContext = (width: number, height: number) => {
+    const context: any = {
+      resize: jest.fn(() => context),
+      rotate: jest.fn(() => context),
+      flip: jest.fn(() => context),
+      crop: jest.fn(() => context),
+      extent: jest.fn(() => context),
+      reset: jest.fn(() => context),
+      renderAsync: jest.fn(async () => makeImage(width, height)),
+    };
+    return context;
+  };
+
+  return {
+    ImageManipulator: { manipulate: jest.fn(() => makeContext(1000, 1000)) },
+    SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
+    FlipType: { Vertical: 'vertical', Horizontal: 'horizontal' },
+  };
+});
+
 jest.mock('expo-notifications', () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   getExpoPushTokenAsync: jest.fn(async () => ({ data: 'ExponentPushToken[test]' })),

@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 import { callFunction } from './cloudFunctions';
+import { track } from './telemetry';
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -41,7 +42,10 @@ export async function subscribeNotificationURLs(listener: NotificationURLListene
 
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     const url = notificationDataToURL(response.notification.request.content.data);
-    if (url) listener(url);
+    if (url) {
+      track('notification_opened');
+      listener(url);
+    }
   });
   return () => subscription.remove();
 }

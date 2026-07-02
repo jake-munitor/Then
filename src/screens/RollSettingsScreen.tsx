@@ -131,8 +131,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
   };
 
   const openPrivacyPolicy = () => {
-    // TODO: point this at the live privacy & data policy page once it is published.
-    Linking.openURL('https://then.app/privacy').catch(() => {
+    Linking.openURL('https://app.munitor.ai/then/privacy').catch(() => {
       setError('Could not open the privacy page.');
     });
   };

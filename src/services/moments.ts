@@ -20,6 +20,7 @@ import { db } from '../firebase/firebase';
 import { normalizePhotoFilter, type PhotoFilter } from '../utils/photoFilters';
 import { callFunction } from './cloudFunctions';
 import { uploadMomentPhoto } from './photos';
+import { track } from './telemetry';
 import type { ListenerErrorHandler, Moment, MomentBack, Note } from './types';
 
 function momentFromSnap(id: string, data: any): Moment {
@@ -293,6 +294,7 @@ export async function createMoment(params: {
       createdAt: serverTimestamp(),
     });
   }
+  track('moment_created', { photoFilter: normalizePhotoFilter(params.photoFilter), appearInWander: params.appearInWander });
   return momentRef.id;
 }
 

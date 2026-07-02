@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import Screen from '../components/Screen';
 import { Avatar, PillButton, Wordmark } from '../components/DesignPrimitives';
 import { uploadAvatar } from '../services/photos';
+import { track } from '../services/telemetry';
 import { updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
@@ -64,6 +65,7 @@ export default function OnboardingScreen() {
         avatarUrl,
         onboardingCompleted: true,
       });
+      track('onboarding_completed', { target });
       navigation.replace('MainTabs', { screen: target === 'friends' ? 'FriendsTab' : 'NewMomentTab' });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not finish setup.');
