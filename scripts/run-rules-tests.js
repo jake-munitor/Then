@@ -61,6 +61,23 @@ if (javaHome) {
   console.log(`Using Java ${javaMajor(javaBinary(javaHome))} from ${javaHome}`);
 }
 
+// JDK 16+ backs java.nio Pipes (used by the Firestore emulator's Netty
+// selectors) with unix-domain sockets. On this machine AF_UNIX connects are
+// blocked inside %LOCALAPPDATA%\Temp (likely an AV filter watching Temp),
+// which kills the emulator with "Unable to establish loopback connection".
+// jdk.net.unixdomain.tmpdir is the property the JDK actually consults for
+// those socket files (java.io.tmpdir alone does not move them); point both
+// at a short project-local directory where unix-domain sockets work.
+const emulatorTmp = path.join(__dirname, '..', 'tmp', 'emulator');
+fs.mkdirSync(emulatorTmp, { recursive: true });
+env.JAVA_TOOL_OPTIONS = [
+  `-Djdk.net.unixdomain.tmpdir=${emulatorTmp}`,
+  `-Djava.io.tmpdir=${emulatorTmp}`,
+  env.JAVA_TOOL_OPTIONS,
+]
+  .filter(Boolean)
+  .join(' ');
+
 const firebaseCli = require.resolve('firebase-tools/lib/bin/firebase.js');
 const result = spawnSync(
   process.execPath,
