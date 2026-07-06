@@ -9,8 +9,13 @@ Drop raw screenshots (PNG/JPG, any modern iPhone size, portrait) into
 the app record - if the upload is rejected with a dimensions error naming
 1284x2778, rerun with --size 6.5.
 
-  6.9  ->  1320x2868 (iPhone 16 Pro Max class)
-  6.5  ->  1284x2778 (iPhone Plus / older Pro Max class)
+  6.9     ->  1320x2868 (iPhone 16 Pro Max class)
+  6.5     ->  1284x2778 (iPhone Plus / older Pro Max class)
+  ipad13  ->  2064x2752 (required 13" iPad slot even for iPhone-only apps
+              that declare iPad support; source is letterboxed onto the
+              app's paper background since the aspect ratios don't match -
+              this is the standard, Apple-accepted approach when an app has
+              no dedicated iPad layout)
 
 Sources whose aspect ratio is within 2% of the target are scaled to fill and
 center-cropped (sub-pixel-visible trim). Anything further off is scaled to fit
@@ -26,6 +31,7 @@ from PIL import Image
 SIZES = {
     '6.9': (1320, 2868),
     '6.5': (1284, 2778),
+    'ipad13': (2064, 2752),
 }
 BACKGROUND = (243, 237, 228)  # colors.background #F3EDE4
 ASPECT_TOLERANCE = 0.02
