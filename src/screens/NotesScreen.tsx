@@ -13,6 +13,7 @@ import { subscribePublicUsers } from '../services/users';
 import type { Note, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { goBackOrHome } from '../utils/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notes'>;
 
@@ -79,7 +80,7 @@ export default function NotesScreen({ route, navigation }: Props) {
           right={
             <IconButton
               icon="close"
-              onPress={() => navigation.goBack()}
+              onPress={() => goBackOrHome(navigation)}
               accessibilityLabel="Close notes"
             />
           }
@@ -108,7 +109,7 @@ export default function NotesScreen({ route, navigation }: Props) {
         </View>
 
         <View style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 16, gap: 10 }}>
-          <TextInput label="leave a note" value={text} onChangeText={setText} multiline disabled={busy} />
+          <TextInput label="leave a note" value={text} onChangeText={setText} maxLength={1000} multiline disabled={busy} />
           {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
           <Button mode="contained" onPress={submit} loading={busy} disabled={busy || !text.trim()}>
             Send

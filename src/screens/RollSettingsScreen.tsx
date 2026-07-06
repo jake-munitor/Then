@@ -64,7 +64,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
   }, [user?.uid]);
 
   const saveProfile = async () => {
-    if (!user?.uid || !name.trim() || !handle.trim()) return;
+    if (!user?.uid || busy || !name.trim() || !handle.trim()) return;
     setBusy(true);
     setError(null);
     try {
@@ -200,6 +200,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
             label="Display name"
             value={name}
             onChangeText={setName}
+            maxLength={80}
             disabled={busy}
             mode="flat"
             underlineColor="transparent"

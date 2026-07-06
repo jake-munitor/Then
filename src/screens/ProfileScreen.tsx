@@ -26,6 +26,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { radius } from '../theme/radius';
 import { initialsFromName } from '../utils/formatters';
+import { goBackOrHome } from '../utils/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
@@ -163,7 +164,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
         <PageHeader
           title="Profile"
           subtitle={profile?.handle ? `@${profile.handle}` : 'Shared Then profile'}
-          right={<IconButton icon="close" onPress={() => navigation.goBack()} accessibilityLabel="Close profile" />}
+          right={<IconButton icon="close" onPress={() => goBackOrHome(navigation)} accessibilityLabel="Close profile" />}
         />
         <ListenerError message={listenerError} onRetry={() => setListenerError(null)} />
 
@@ -260,7 +261,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
               Send a short note to {profile?.displayName ?? 'this person'}.
             </Text>
-            <TextInput label="context" value={context} onChangeText={setContext} multiline disabled={busy} />
+            <TextInput label="context" value={context} onChangeText={setContext} maxLength={500} multiline disabled={busy} />
             {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
           </Dialog.Content>
           <Dialog.Actions>
@@ -271,7 +272,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
         <Dialog visible={reporting} onDismiss={() => setReporting(false)}>
           <Dialog.Title>Report profile?</Dialog.Title>
           <Dialog.Content>
-            <TextInput label="context" value={reportContext} onChangeText={setReportContext} multiline disabled={busy} />
+            <TextInput label="context" value={reportContext} onChangeText={setReportContext} maxLength={1000} multiline disabled={busy} />
             {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
           </Dialog.Content>
           <Dialog.Actions>

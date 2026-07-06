@@ -9,6 +9,7 @@ import Screen from '../components/Screen';
 import type { RootStackParamList } from '../navigation/types';
 import { fetchMomentById } from '../services/moments';
 import { colors } from '../theme/colors';
+import { goBackOrHome } from '../utils/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LinkedMoment'>;
 
@@ -37,7 +38,7 @@ export default function LinkedMomentScreen({ route, navigation }: Props) {
         <PageHeader
           title="Opening notes"
           subtitle="Finding this moment."
-          right={<IconButton icon="close" onPress={() => navigation.goBack()} accessibilityLabel="Close" />}
+          right={<IconButton icon="close" onPress={() => goBackOrHome(navigation)} accessibilityLabel="Close" />}
         />
         {failed ? (
           <EmptyState title="Moment unavailable" message="This moment may have been deleted or is no longer visible." />

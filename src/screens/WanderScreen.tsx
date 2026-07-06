@@ -244,7 +244,7 @@ export default function WanderScreen() {
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
               Send a short note to {requesting ? publicUsers[requesting.authorUid]?.displayName ?? 'this person' : 'this person'}.
             </Text>
-            <TextInput label="context" value={context} onChangeText={setContext} multiline disabled={busy} />
+            <TextInput label="context" value={context} onChangeText={setContext} maxLength={500} multiline disabled={busy} />
             {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
           </Dialog.Content>
           <Dialog.Actions>
@@ -260,7 +260,7 @@ export default function WanderScreen() {
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
               Tell us what feels wrong about this moment.
             </Text>
-            <TextInput label="context" value={reportContext} onChangeText={setReportContext} multiline disabled={busy} />
+            <TextInput label="context" value={reportContext} onChangeText={setReportContext} maxLength={1000} multiline disabled={busy} />
             {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
           </Dialog.Content>
           <Dialog.Actions>

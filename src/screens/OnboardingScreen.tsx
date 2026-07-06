@@ -121,7 +121,7 @@ export default function OnboardingScreen() {
             </PillButton>
           </View>
 
-          <TextInput label="Display name" value={displayName} onChangeText={setDisplayName} disabled={Boolean(busyTarget)} style={{ backgroundColor: colors.surfaceInset }} />
+          <TextInput label="Display name" value={displayName} onChangeText={setDisplayName} maxLength={80} disabled={Boolean(busyTarget)} style={{ backgroundColor: colors.surfaceInset }} />
           <TextInput
             label="Handle"
             value={handle}

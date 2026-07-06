@@ -26,12 +26,15 @@ import type { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['then://', 'https://app.munitor.ai'],
+  // The universal-link site lives under /then on app.munitor.ai, so the web
+  // prefix carries that segment; scheme URLs (then://profile/x) have no such
+  // segment. Route paths must therefore stay segment-free so both forms match.
+  prefixes: ['then://', 'https://app.munitor.ai/then'],
   config: {
     screens: {
       MainTabs: '',
-      Profile: 'then/profile/:handle',
-      LinkedMoment: 'then/moments/:momentId/notes',
+      Profile: 'profile/:handle',
+      LinkedMoment: 'moments/:momentId/notes',
     },
   },
   async getInitialURL() {

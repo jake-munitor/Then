@@ -250,6 +250,7 @@ export default function NewMomentScreen() {
           <TextInput
             value={backText}
             onChangeText={setBackText}
+            maxLength={5000}
             disabled={busy}
             multiline
             placeholder="What do you want to remember?"

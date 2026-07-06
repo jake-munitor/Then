@@ -40,17 +40,23 @@ export default function YourYearScreen({ route, navigation }: Props) {
     () =>
       moments
         .filter((moment) => moment.authorUid === user?.uid && moment.memoryDate.startsWith(`${year}-`) && isValidYYYYMMDD(moment.memoryDate))
-        .sort((a, b) => a.memoryDate.localeCompare(b.memoryDate)),
+        .sort(
+          (a, b) =>
+            a.memoryDate.localeCompare(b.memoryDate) ||
+            (a.createdAt?.seconds ?? 0) - (b.createdAt?.seconds ?? 0) ||
+            a.id.localeCompare(b.id),
+        ),
     [moments, user?.uid, year],
   );
   const monthCount = new Set(yearMoments.map((moment) => moment.memoryDate.slice(5, 7))).size;
   const coverMoments = yearMoments.slice(0, 3);
-  const chapters = yearMoments.reduce<Array<{ month: string; moment: Moment }>>((items, moment) => {
+  const chapters = yearMoments.map((moment, index) => {
     const monthIndex = Number(moment.memoryDate.slice(5, 7)) - 1;
     const month = MONTHS[monthIndex] ?? 'Memory';
-    if (!items.some((item) => item.month === month)) items.push({ month, moment });
-    return items;
-  }, []);
+    const previous = yearMoments[index - 1];
+    const previousMonth = previous ? MONTHS[Number(previous.memoryDate.slice(5, 7)) - 1] ?? 'Memory' : null;
+    return { month: month === previousMonth ? null : month, moment };
+  });
 
   return (
     <Screen contentStyle={{ paddingHorizontal: 0, paddingTop: 18, paddingBottom: 36 }}>
@@ -126,37 +132,41 @@ export default function YourYearScreen({ route, navigation }: Props) {
         <SectionLabel>The year, in order</SectionLabel>
         {chapters.length ? (
           chapters.map(({ month, moment }) => (
-            <Pressable
-              key={month}
-              onPress={() => navigation.navigate('MomentDetail', { momentId: moment.id, moment, canNote: true })}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${month} moment`}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.72 : 1,
-                paddingTop: 13,
-                borderTopColor: colors.borderStrong,
-                borderTopWidth: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 13,
-              })}
-            >
-              <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: '#785A46', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
-                <FilteredMomentImage
-                  uri={moment.imageUrl}
-                  filter={moment.photoFilter}
-                  aspectRatio={1}
-                  style={{ flex: 1, borderRadius: 3, backgroundColor: colors.photoBg }}
-                  accessibilityLabel={moment.frontText || 'Then moment'}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <SectionLabel>{month}</SectionLabel>
-                <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 17, lineHeight: 23, marginTop: 2 }}>
-                  {moment.frontText || 'Untitled'}
-                </Text>
-              </View>
-            </Pressable>
+            <View key={moment.id} style={{ gap: 16 }}>
+              {month ? <SectionLabel>{month}</SectionLabel> : null}
+              <Pressable
+                onPress={() => navigation.navigate('MomentDetail', { momentId: moment.id, moment, canNote: true })}
+                accessibilityRole="button"
+                accessibilityLabel={`Open moment from ${moment.memoryDate}`}
+                style={({ pressed }) => ({
+                  opacity: pressed ? 0.72 : 1,
+                  paddingTop: 13,
+                  borderTopColor: colors.borderStrong,
+                  borderTopWidth: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 13,
+                })}
+              >
+                <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: '#785A46', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
+                  <FilteredMomentImage
+                    uri={moment.imageUrl}
+                    filter={moment.photoFilter}
+                    aspectRatio={1}
+                    style={{ flex: 1, borderRadius: 3, backgroundColor: colors.photoBg }}
+                    accessibilityLabel={moment.frontText || 'Then moment'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textFaint, fontFamily: fonts.cameraRegular, fontSize: 11.5, letterSpacing: 0.6 }}>
+                    {moment.memoryDate}
+                  </Text>
+                  <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 17, lineHeight: 23, marginTop: 2 }}>
+                    {moment.frontText || 'Untitled'}
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
           ))
         ) : (
           <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 19 }}>

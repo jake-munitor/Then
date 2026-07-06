@@ -116,10 +116,10 @@ export default function MomentCard({
         marginBottom: 22,
         borderRadius: radius.print,
         shadowColor: '#785A46',
-        shadowOpacity: 0.09,
-        shadowRadius: 28,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 2,
+        shadowOpacity: 0.12,
+        shadowRadius: 30,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 3,
       }}
     >
       <View

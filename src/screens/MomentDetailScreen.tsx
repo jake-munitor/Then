@@ -245,10 +245,10 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             alignSelf: 'center',
             borderRadius: radius.print,
             shadowColor: '#785A46',
-            shadowOpacity: 0.09,
-            shadowRadius: 28,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 2,
+            shadowOpacity: 0.12,
+            shadowRadius: 30,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 3,
           }}
         >
           <Pressable onPress={() => isOwner && !editingBack && setFlipped((current) => !current)} disabled={!isOwner}>
@@ -357,6 +357,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                         <TextInput
                           value={backDraft}
                           onChangeText={setBackDraft}
+                          maxLength={5000}
                           multiline
                           autoFocus
                           placeholder="What do you want to remember?"
@@ -487,6 +488,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             <TextInput
               value={text}
               onChangeText={setText}
+              maxLength={1000}
               placeholder="leave a quiet note..."
               disabled={Boolean(busyAction)}
               mode="flat"

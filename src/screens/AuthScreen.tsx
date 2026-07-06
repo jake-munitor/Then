@@ -91,7 +91,7 @@ export default function AuthScreen() {
         <View style={{ gap: 12 }}>
           <View style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 18, gap: 12 }}>
             {mode === 'register' ? (
-              <TextInput label="Your name" value={displayName} onChangeText={setDisplayName} disabled={busy} style={{ backgroundColor: colors.surfaceInset }} />
+              <TextInput label="Your name" value={displayName} onChangeText={setDisplayName} maxLength={80} disabled={busy} style={{ backgroundColor: colors.surfaceInset }} />
             ) : null}
             <TextInput
               label="Email"

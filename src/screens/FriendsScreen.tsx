@@ -50,6 +50,7 @@ export default function FriendsScreen() {
   const [context, setContext] = useState(`I'd like to keep up.`);
   const [reportContext, setReportContext] = useState('');
   const [busy, setBusy] = useState(false);
+  const [actingOnRequest, setActingOnRequest] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
   const { refreshing, refreshKey, onRefresh, finishRefresh } = usePullToRefresh();
@@ -187,22 +188,28 @@ export default function FriendsScreen() {
   };
 
   const handleApprove = async (requesterUid: string) => {
-    if (!user?.uid) return;
+    if (!user?.uid || actingOnRequest) return;
+    setActingOnRequest(requesterUid);
     setError(null);
     try {
       await approveFollow({ ownerUid: user.uid, requesterUid });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not approve this request.');
+    } finally {
+      setActingOnRequest(null);
     }
   };
 
   const handleDecline = async (requesterUid: string) => {
-    if (!user?.uid) return;
+    if (!user?.uid || actingOnRequest) return;
+    setActingOnRequest(requesterUid);
     setError(null);
     try {
       await declineFollow({ ownerUid: user.uid, requesterUid });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not decline this request.');
+    } finally {
+      setActingOnRequest(null);
     }
   };
 
@@ -274,10 +281,10 @@ export default function FriendsScreen() {
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <PillButton onPress={() => handleApprove(request.requesterUid)} style={{ flex: 1, minHeight: 42 }}>
+                    <PillButton onPress={() => handleApprove(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: 42 }}>
                       Approve
                     </PillButton>
-                    <PillButton variant="secondary" onPress={() => handleDecline(request.requesterUid)} style={{ flex: 1, minHeight: 42 }}>
+                    <PillButton variant="secondary" onPress={() => handleDecline(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: 42 }}>
                       Decline
                     </PillButton>
                   </View>
