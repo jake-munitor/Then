@@ -89,10 +89,10 @@ export default function YourYearScreen({ route, navigation }: Props) {
                   paddingBottom: 20,
                   borderRadius: radius.print,
                   backgroundColor: colors.polaroid,
-                  shadowColor: '#2A2622',
-                  shadowOpacity: 0.18,
+                  shadowColor: '#785A46',
+                  shadowOpacity: 0.12,
                   shadowRadius: 28,
-                  shadowOffset: { width: 0, height: 14 },
+                  shadowOffset: { width: 0, height: 6 },
                   elevation: 4,
                   transform: [
                     { translateX: index === 0 ? -82 : index === 2 ? 82 : 0 },
@@ -141,7 +141,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
                 gap: 13,
               })}
             >
-              <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: '#2A2622', shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } }}>
+              <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: '#785A46', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
                 <FilteredMomentImage
                   uri={moment.imageUrl}
                   filter={moment.photoFilter}

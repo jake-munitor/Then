@@ -115,19 +115,19 @@ export default function MomentCard({
         alignSelf: 'center',
         marginBottom: 22,
         borderRadius: radius.print,
-        shadowColor: '#2A2622',
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 7 },
-        elevation: 3,
+        shadowColor: '#785A46',
+        shadowOpacity: 0.09,
+        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 2,
       }}
     >
       <View
         testID="moment-frame"
         style={{
           backgroundColor: colors.polaroid,
-          borderColor: 'rgba(203, 184, 166, 0.45)',
-          borderWidth: 0.75,
+          borderColor: 'rgba(120, 90, 70, 0.05)',
+          borderWidth: 1,
           borderRadius: radius.print,
           overflow: 'hidden',
           paddingTop: 14,
@@ -139,7 +139,7 @@ export default function MomentCard({
           <Image
             source={require('../../assets/paper-texture.png')}
             resizeMode="cover"
-            style={[StyleSheet.absoluteFillObject, { opacity: 0.32 }]}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.12 }]}
           />
         </View>
         <Pressable
@@ -151,7 +151,7 @@ export default function MomentCard({
           <View
             testID="moment-photo-mat"
             style={{
-              borderRadius: radius.print,
+              borderRadius: radius.printPhoto,
               backgroundColor: colors.photoBg,
               overflow: 'hidden',
               borderColor: 'rgba(243, 237, 228, 0.75)',
@@ -203,8 +203,9 @@ export default function MomentCard({
               style={{
                 color: colors.textSecondary,
                 fontFamily: fonts.signature,
-                fontSize: 25,
-                lineHeight: 36,
+                fontSize: 21,
+                lineHeight: 32,
+                transform: [{ rotate: '-1.2deg' }],
               }}
             >
               {authorName.toLowerCase()}

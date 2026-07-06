@@ -19,6 +19,7 @@
   "dependencies": {
     "@expo-google-fonts/caveat": "^0.4.2",
     "@expo-google-fonts/courier-prime": "^0.4.1",
+    "@expo-google-fonts/dancing-script": "^0.4.2",
     "@expo-google-fonts/hanken-grotesk": "^0.4.3",
     "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo-google-fonts/playfair-display": "^0.4.2",

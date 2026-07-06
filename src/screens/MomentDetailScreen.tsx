@@ -244,10 +244,10 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             width: detailCardWidth,
             alignSelf: 'center',
             borderRadius: radius.print,
-            shadowColor: '#2A2622',
-            shadowOpacity: 0.07,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 5 },
+            shadowColor: '#785A46',
+            shadowOpacity: 0.09,
+            shadowRadius: 28,
+            shadowOffset: { width: 0, height: 4 },
             elevation: 2,
           }}
         >
@@ -259,8 +259,8 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                   style={{
                     minHeight: detailPrintMinHeight,
                     backgroundColor: colors.polaroid,
-                    borderColor: 'rgba(203, 184, 166, 0.45)',
-                    borderWidth: 0.75,
+                    borderColor: 'rgba(120, 90, 70, 0.05)',
+                    borderWidth: 1,
                     borderRadius: radius.print,
                     overflow: 'hidden',
                     paddingTop: 14,
@@ -272,12 +272,12 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                     <Image
                       source={require('../../assets/paper-texture.png')}
                       resizeMode="cover"
-                      style={[StyleSheet.absoluteFillObject, { opacity: 0.32 }]}
+                      style={[StyleSheet.absoluteFillObject, { opacity: 0.12 }]}
                     />
                   </View>
                   <View
                     style={{
-                      borderRadius: radius.print,
+                      borderRadius: radius.printPhoto,
                       overflow: 'hidden',
                       backgroundColor: colors.photoBg,
                       borderColor: 'rgba(243, 237, 228, 0.75)',
@@ -308,10 +308,11 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                       style={{
                         color: colors.textSecondary,
                         fontFamily: fonts.signature,
-                        fontSize: 25,
-                        lineHeight: 36,
+                        fontSize: 21,
+                        lineHeight: 32,
                         paddingTop: 5,
                         paddingBottom: 2,
+                        transform: [{ rotate: '-1.2deg' }],
                       }}
                     >
                       {authorName.toLowerCase()}
@@ -338,7 +339,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                     style={{
                       minHeight: detailPrintMinHeight,
                       backgroundColor: colors.backPaper,
-                      borderColor: colors.borderStrong,
+                      borderColor: 'rgba(120, 90, 70, 0.05)',
                       borderWidth: 1,
                       borderRadius: radius.print,
                       padding: 24,

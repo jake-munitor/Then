@@ -7,7 +7,7 @@ import {
   PlayfairDisplay_400Regular,
   PlayfairDisplay_500Medium,
 } from '@expo-google-fonts/playfair-display';
-import { Sacramento_400Regular } from '@expo-google-fonts/sacramento';
+import { DancingScript_400Regular } from '@expo-google-fonts/dancing-script';
 import {
   CourierPrime_400Regular,
   CourierPrime_700Bold,
@@ -34,7 +34,7 @@ function App() {
     ThenScript_700Bold: require('./assets/fonts/Caveat_700Bold.ttf'),
     PlayfairDisplay_400Regular,
     PlayfairDisplay_500Medium,
-    ThenSignature_400Regular: Sacramento_400Regular,
+    ThenSignature_400Regular: DancingScript_400Regular,
     CourierPrime_400Regular,
     CourierPrime_700Bold,
   });
