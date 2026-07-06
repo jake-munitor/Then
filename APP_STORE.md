@@ -105,15 +105,16 @@ resolves — accept whatever the questionnaire computes.
 
 ## 3. App Review Information
 
-**Demo account** — create it before submitting (reviewer must get past login):
+**Demo account** — CREATED July 6, 2026: `review@munitor.ai`, display name
+"Then Review", handle `@thenreview` (password is not stored in this repo - it
+lives in App Store Connect → App Review Information → Sign-In Information).
 
-1. In the app, register `review@munitor.ai` (or any inbox Jake controls) with a
-   throwaway password; complete onboarding (name "Then Review", any handle).
-2. From Jake's real account, send it a follow request; approve it from the demo
-   account — so the reviewer's feed has real moments in it.
-3. Post 2–3 moments from the demo account (any photos), one with a back note.
-4. Put the email + password in App Store Connect → App Review Information →
-   Sign-In Information.
+Remaining setup:
+
+1. Approve the follow request from "Then Review" in Jake's app (Friends tab) -
+   this puts Jake's real moments in the reviewer's feed.
+2. Optional: post 2-3 moments from the demo account (one with a back note) so
+   its own Roll/Your Year are non-empty.
 
 **Review Notes (paste into the notes field)**
 
