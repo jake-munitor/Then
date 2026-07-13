@@ -59,6 +59,9 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
   );
 
   const isOwner = Boolean(user?.uid && moment?.authorUid === user.uid);
+  // Notes are private to the author's approved circle (PRIVACY_SEMANTICS.md);
+  // wander viewers arrive with canNote=false and must not subscribe to them.
+  const canNote = Boolean(route.params.canNote ?? true);
   useEffect(() => {
     if (!moment?.id || !isOwner) {
       setBack(null);
@@ -75,13 +78,16 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
   }, [back?.text, editingBack]);
 
   useEffect(() => {
-    if (!moment?.id) return;
+    if (!moment?.id || !canNote) {
+      setNotes([]);
+      return;
+    }
     return subscribeNotes(
       moment.id,
       setNotes,
       () => setListenerError('Notes could not be loaded.'),
     );
-  }, [moment?.id]);
+  }, [moment?.id, canNote]);
 
   useEffect(() => {
     if (user?.uid && moment?.authorUid === user.uid) {
@@ -131,7 +137,6 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
   const author = publicUsers[moment.authorUid];
   const authorName = author?.displayName ?? 'Then Friend';
   const memoryDate = formatMemoryDate(moment.memoryDate);
-  const canNote = Boolean(route.params.canNote ?? true);
   const detailCardWidth = Math.min(Math.max(windowWidth - 36, 286), 430);
   const detailPrintMinHeight = detailCardWidth + 92;
 
@@ -418,8 +423,12 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                 {moment.keptCount} kept
               </Text>
             </Pressable>
-            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>-</Text>
-            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>{notes.length} notes</Text>
+            {canNote ? (
+              <>
+                <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>-</Text>
+                <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>{notes.length} notes</Text>
+              </>
+            ) : null}
             <Pressable onPress={handleSave} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}>
               <Icon source={saved ? 'bookmark' : 'bookmark-outline'} color={saved ? colors.primary : colors.textFaint} size={18} />
             </Pressable>
@@ -443,6 +452,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
           ) : null}
         </View>
 
+        {canNote ? (
         <View testID="moment-detail-notes" style={{ width: detailCardWidth, alignSelf: 'center', gap: 13 }}>
           <SectionLabel>Notes</SectionLabel>
           {notes.length ? (
@@ -466,6 +476,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13 }}>No notes yet.</Text>
           )}
         </View>
+        ) : null}
 
         {canNote ? (
           <View

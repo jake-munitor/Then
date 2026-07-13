@@ -232,8 +232,19 @@ service cloud.firestore {
       }
 
       match /keeps/{uid} {
+        // Mirrors the toggleKeep cloud function: approved circle OR a
+        // wander-visible moment. Without the wander branch the heart's
+        // state listener dies with permission-denied for wander viewers
+        // even though the keep write itself succeeds (App Review rejection,
+        // July 13 2026: "heart-shaped like button is not working").
         allow read: if signedIn() &&
-          canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid);
+          (
+            canSeeMoment(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid) ||
+            (
+              get(/databases/$(database)/documents/moments/$(momentId)).data.appearInWander == true &&
+              !isBlocked(get(/databases/$(database)/documents/moments/$(momentId)).data.authorUid, request.auth.uid)
+            )
+          );
         allow write: if false;
       }
 

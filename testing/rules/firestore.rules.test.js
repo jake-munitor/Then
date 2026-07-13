@@ -107,6 +107,44 @@ maybeDescribe('firestore security rules', () => {
     }));
   });
 
+  it('lets wander viewers read keep markers but never notes', async () => {
+    await seed(['moments', 'wander-moment'], {
+      authorUid: 'author',
+      imageUrl: 'https://example.com/photo.jpg',
+      frontText: 'open air',
+      memoryDate: '2026-07-01',
+      keptCount: 1,
+      noteCount: 1,
+      appearInWander: true,
+      createdAt: new Date(),
+    });
+    await seed(['moments', 'wander-moment', 'keeps', 'stranger'], { uid: 'stranger', createdAt: new Date() });
+    await seed(['moments', 'wander-moment', 'notes', 'note-1'], { authorUid: 'friend', text: 'lovely', createdAt: new Date() });
+
+    const stranger = testEnv.authenticatedContext('stranger').firestore();
+    // The heart's state listener must work on wander moments (App Review
+    // rejection July 13 2026: heart appeared dead because this read failed).
+    await assertSucceeds(getDoc(doc(stranger, 'moments', 'wander-moment', 'keeps', 'stranger')));
+    // Notes stay private to the approved circle even on wander moments.
+    await assertFails(getDoc(doc(stranger, 'moments', 'wander-moment', 'notes', 'note-1')));
+  });
+
+  it('keeps keep markers private on non-wander moments', async () => {
+    await seed(['moments', 'circle-moment'], {
+      authorUid: 'author',
+      imageUrl: 'https://example.com/photo.jpg',
+      frontText: 'just us',
+      memoryDate: '2026-07-01',
+      keptCount: 0,
+      noteCount: 0,
+      appearInWander: false,
+      createdAt: new Date(),
+    });
+
+    const stranger = testEnv.authenticatedContext('stranger').firestore();
+    await assertFails(getDoc(doc(stranger, 'moments', 'circle-moment', 'keeps', 'stranger')));
+  });
+
   it('allows private notification preferences only on the owner user document', async () => {
     await seed(['users', 'owner'], {
       displayName: 'Owner',
