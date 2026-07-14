@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
-import { PaperProvider } from 'react-native-paper';
+import { PaperProvider, Portal } from 'react-native-paper';
 
 import MomentDetailScreen from '../../src/screens/MomentDetailScreen';
 import { AuthContext } from '../../src/store/AuthContext';
@@ -23,6 +23,7 @@ const moment = {
 
 jest.mock('../../src/services/moments', () => ({
   addNote: jest.fn(async () => {}),
+  deleteMoment: jest.fn(async () => {}),
   saveMomentBack: jest.fn(async () => {}),
   subscribeMoment: jest.fn((_momentId, onChange) => {
     onChange(moment);
@@ -52,6 +53,11 @@ jest.mock('../../src/services/notifications', () => ({
   markMomentNotificationsRead: jest.fn(async () => {}),
 }));
 
+jest.mock('../../src/services/follows', () => ({
+  blockUser: jest.fn(async () => {}),
+  reportUser: jest.fn(async () => {}),
+}));
+
 jest.mock('../../src/services/users', () => ({
   subscribePublicUsers: jest.fn((_uids, onChange) => {
     onChange({ owner: { uid: 'owner', displayName: 'Owner', handle: 'owner', avatarUrl: null, profileVisibility: 'private', appearInWander: false } });
@@ -60,6 +66,7 @@ jest.mock('../../src/services/users', () => ({
 }));
 
 function renderDetail(uid: string, canNote = true) {
+  const navigation = { goBack: jest.fn(), navigate: jest.fn(), canGoBack: () => true, replace: jest.fn() };
   render(
     <PaperProvider theme={appTheme}>
       <AuthContext.Provider
@@ -76,11 +83,12 @@ function renderDetail(uid: string, canNote = true) {
       >
         <MomentDetailScreen
           route={{ key: 'detail', name: 'MomentDetail', params: { momentId: moment.id, moment, canNote } } as any}
-          navigation={{ goBack: jest.fn(), navigate: jest.fn() } as any}
+          navigation={navigation as any}
         />
       </AuthContext.Provider>
     </PaperProvider>,
   );
+  return navigation;
 }
 
 describe('MomentDetailScreen', () => {
@@ -128,5 +136,29 @@ describe('MomentDetailScreen', () => {
     expect(signatureStyle.fontFamily).toBe(fonts.signature);
     expect(signatureStyle.lineHeight).toBeGreaterThan(signatureStyle.fontSize * 1.3);
     expect(screen.queryByText('from Owner - Jun 20, 2026')).toBeNull();
+  });
+
+  it('deletes the moment through the "..." menu (regression: menu was previously a dead icon)', async () => {
+    const { deleteMoment } = require('../../src/services/moments');
+    const navigation = renderDetail('owner');
+
+    fireEvent.press(screen.getByTestId('moment-detail-menu-button'));
+    fireEvent.press(await screen.findByText('Delete moment'));
+    fireEvent.press(await screen.findByText('Delete'));
+
+    await waitFor(() => expect(deleteMoment).toHaveBeenCalledWith({ momentId: moment.id, uid: 'owner' }));
+    expect(navigation.goBack).toHaveBeenCalled();
+  });
+
+  it('offers report/block instead of delete to a non-owner viewer', async () => {
+    const { blockUser } = require('../../src/services/follows');
+    renderDetail('friend');
+
+    fireEvent.press(screen.getByTestId('moment-detail-menu-button'));
+    expect(await screen.findByText('Report moment')).toBeTruthy();
+    fireEvent.press(screen.getByText(/^Block /));
+    fireEvent.press(await screen.findByText('Block'));
+
+    await waitFor(() => expect(blockUser).toHaveBeenCalledWith('owner'));
   });
 });

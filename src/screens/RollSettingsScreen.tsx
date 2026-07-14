@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Image, Linking, Share, View } from 'react-native';
+import { Image, Linking, Pressable, Share, View } from 'react-native';
 import { Button, Dialog, Icon, Portal, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -187,13 +187,19 @@ export default function RollSettingsScreen({ navigation }: Props) {
 
       <SettingsGroup label="Profile">
         <SettingsRow>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}>
-            {avatarUri ? <Image source={{ uri: avatarUri }} style={{ width: 46, height: 46, borderRadius: 23 }} /> : <Avatar name={name} size={46} />}
-            <Text onPress={changeAvatar} style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>
-              Change photo
-            </Text>
-          </View>
-          <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          <Pressable
+            onPress={changeAvatar}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: pressed ? 0.6 : 1 })}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}>
+              {avatarUri ? <Image source={{ uri: avatarUri }} style={{ width: 46, height: 46, borderRadius: 23 }} /> : <Avatar name={name} size={46} />}
+              <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>
+                Change photo
+              </Text>
+            </View>
+            <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          </Pressable>
         </SettingsRow>
         <SettingsRow>
           <TextInput
@@ -250,13 +256,19 @@ export default function RollSettingsScreen({ navigation }: Props) {
           <Toggle value={appearInWander} onValueChange={setAppearInWander} disabled={busy} />
         </SettingsRow>
         <SettingsRow isLast>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-            <Icon source="share-variant-outline" color={colors.primary} size={18} />
-            <Text onPress={shareProfile} style={{ color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>
-              Share my profile
-            </Text>
-          </View>
-          <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          <Pressable
+            onPress={shareProfile}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: pressed ? 0.6 : 1 })}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+              <Icon source="share-variant-outline" color={colors.primary} size={18} />
+              <Text style={{ color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>
+                Share my profile
+              </Text>
+            </View>
+            <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          </Pressable>
         </SettingsRow>
       </SettingsGroup>
 
@@ -282,8 +294,14 @@ export default function RollSettingsScreen({ navigation }: Props) {
 
       <SettingsGroup label="Account">
         <SettingsRow>
-          <Text onPress={openPrivacyPolicy} style={{ flex: 1, color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>Privacy & data</Text>
-          <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          <Pressable
+            onPress={openPrivacyPolicy}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>Privacy & data</Text>
+            <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          </Pressable>
         </SettingsRow>
         <View style={{ padding: 16, gap: 10 }}>
           <PillButton variant="danger" onPress={logout}>Sign out</PillButton>

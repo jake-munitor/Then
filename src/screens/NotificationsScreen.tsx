@@ -72,9 +72,7 @@ export default function NotificationsScreen({ navigation }: Props) {
         <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}>
           Notifications
         </Text>
-        <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <Icon source="bell-outline" color={colors.textFaint} size={22} />
-        </View>
+        <View style={{ flex: 1 }} />
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { Button, Dialog, Icon, Portal, Searchbar, Text, TextInput } from 'react-native-paper';
 
@@ -214,6 +214,7 @@ export default function FriendsScreen() {
   };
 
   const followingList = following.map((uid) => followingUsers[uid]).filter(Boolean) as PublicUser[];
+  const searchRef = useRef<React.ComponentRef<typeof Searchbar>>(null);
 
   return (
     <Screen refreshing={refreshing} onRefresh={onRefresh} contentStyle={{ gap: 16, paddingHorizontal: 18, paddingBottom: 104 }}>
@@ -221,10 +222,17 @@ export default function FriendsScreen() {
         title="Friends"
         titleKind="script"
         subtitle="Everyone you keep up with, and who keeps up with you."
-        right={<IconCircleButton icon="account-plus-outline" accessibilityLabel="Find someone" />}
+        right={
+          <IconCircleButton
+            icon="account-plus-outline"
+            onPress={() => searchRef.current?.focus()}
+            accessibilityLabel="Find someone"
+          />
+        }
       />
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
       <Searchbar
+        ref={searchRef}
         placeholder="Find someone by handle"
         value={query}
         onChangeText={setQuery}

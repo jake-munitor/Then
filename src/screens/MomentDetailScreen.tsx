@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Icon, Text, TextInput } from 'react-native-paper';
+import { Button, Dialog, Icon, Menu, Portal, Text, TextInput } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import DateStamp from '../components/DateStamp';
@@ -10,6 +10,7 @@ import { Avatar, PillButton, SectionLabel } from '../components/DesignPrimitives
 import type { RootStackParamList } from '../navigation/types';
 import {
   addNote,
+  deleteMoment,
   saveMomentBack,
   subscribeMoment,
   subscribeMomentBack,
@@ -19,6 +20,7 @@ import {
   toggleKeep,
   toggleSave,
 } from '../services/moments';
+import { blockUser, reportUser } from '../services/follows';
 import { markMomentNotificationsRead } from '../services/notifications';
 import { subscribePublicUsers } from '../services/users';
 import type { Moment, MomentBack, Note, PublicUser } from '../services/types';
@@ -27,6 +29,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { radius } from '../theme/radius';
 import { formatMemoryDate } from '../utils/dates';
+import { goBackOrHome } from '../utils/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MomentDetail'>;
 
@@ -43,6 +46,10 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
   const [editingBack, setEditingBack] = useState(false);
   const [backDraft, setBackDraft] = useState('');
   const [busyAction, setBusyAction] = useState<'keep' | 'save' | 'note' | 'back' | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirming, setConfirming] = useState<'delete' | 'report' | 'block' | null>(null);
+  const [reportContext, setReportContext] = useState('');
+  const [menuBusy, setMenuBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
   const flip = useRef(new Animated.Value(0)).current;
@@ -180,6 +187,54 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const closeMenuThen = (next: 'delete' | 'report' | 'block') => {
+    setMenuOpen(false);
+    setError(null);
+    setConfirming(next);
+  };
+
+  const confirmDelete = async () => {
+    if (!user?.uid || menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await deleteMoment({ momentId: moment.id, uid: user.uid });
+      setConfirming(null);
+      goBackOrHome(navigation);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'This moment could not be deleted.');
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
+  const confirmReport = async () => {
+    if (menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await reportUser({ targetUid: moment.authorUid, reason: 'moment', context: reportContext.trim() });
+      setReportContext('');
+      setConfirming(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'This report could not be sent.');
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
+  const confirmBlock = async () => {
+    if (menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await blockUser(moment.authorUid);
+      setConfirming(null);
+      goBackOrHome(navigation);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'This person could not be blocked.');
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
   const startBackEdit = () => {
     setBackDraft(back?.text ?? '');
     setEditingBack(true);
@@ -238,7 +293,35 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
           </Pressable>
           <SectionLabel style={{ flex: 1, textAlign: 'center' }}>A moment</SectionLabel>
           <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Icon source="dots-horizontal" color={colors.textFaint} size={24} />
+            <Menu
+              visible={menuOpen}
+              onDismiss={() => setMenuOpen(false)}
+              anchor={
+                <Pressable
+                  onPress={() => setMenuOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="More options"
+                  testID="moment-detail-menu-button"
+                  hitSlop={12}
+                  style={({ pressed }) => ({ padding: 6, opacity: pressed ? 0.6 : 1 })}
+                >
+                  <Icon source="dots-horizontal" color={colors.textFaint} size={24} />
+                </Pressable>
+              }
+            >
+              {isOwner ? (
+                <Menu.Item
+                  onPress={() => closeMenuThen('delete')}
+                  leadingIcon="trash-can-outline"
+                  title="Delete moment"
+                />
+              ) : (
+                <>
+                  <Menu.Item onPress={() => closeMenuThen('report')} leadingIcon="flag-outline" title="Report moment" />
+                  <Menu.Item onPress={() => closeMenuThen('block')} leadingIcon="account-cancel-outline" title={`Block ${authorName}`} />
+                </>
+              )}
+            </Menu>
           </View>
         </View>
 
@@ -514,6 +597,59 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
           </View>
         ) : null}
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
+
+        <Portal>
+          <Dialog visible={confirming === 'delete'} onDismiss={() => setConfirming(null)}>
+            <Dialog.Title>Delete this moment?</Dialog.Title>
+            <Dialog.Content>
+              <Text style={{ color: colors.textSecondary }}>
+                The photo, its notes, and your private reflection are removed for good. Like tearing up a polaroid.
+              </Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setConfirming(null)} disabled={menuBusy}>Keep it</Button>
+              <Button onPress={confirmDelete} loading={menuBusy} disabled={menuBusy} textColor={colors.error}>
+                Delete
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+
+          <Dialog visible={confirming === 'report'} onDismiss={() => setConfirming(null)}>
+            <Dialog.Title>Report moment?</Dialog.Title>
+            <Dialog.Content>
+              <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
+                Tell us what feels wrong about this moment.
+              </Text>
+              <TextInput
+                label="context"
+                value={reportContext}
+                onChangeText={setReportContext}
+                maxLength={1000}
+                multiline
+                disabled={menuBusy}
+              />
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setConfirming(null)} disabled={menuBusy}>Cancel</Button>
+              <Button onPress={confirmReport} loading={menuBusy} disabled={menuBusy}>Report</Button>
+            </Dialog.Actions>
+          </Dialog>
+
+          <Dialog visible={confirming === 'block'} onDismiss={() => setConfirming(null)}>
+            <Dialog.Title>Block {authorName}?</Dialog.Title>
+            <Dialog.Content>
+              <Text style={{ color: colors.textSecondary }}>
+                You will not see each other&apos;s moments, and any connection between you is removed.
+              </Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setConfirming(null)} disabled={menuBusy}>Cancel</Button>
+              <Button onPress={confirmBlock} loading={menuBusy} disabled={menuBusy} textColor={colors.error}>
+                Block
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </Screen>
     </KeyboardAvoidingView>
   );
