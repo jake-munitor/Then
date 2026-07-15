@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { AppState, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Icon, useTheme } from 'react-native-paper';
 
@@ -9,8 +9,10 @@ import NewMomentScreen from '../screens/NewMomentScreen';
 import RollScreen from '../screens/RollScreen';
 import WanderScreen from '../screens/WanderScreen';
 import { subscribeFollowRequests } from '../services/follows';
-import { subscribeNotifications } from '../services/notifications';
-import { registerForPushNotifications } from '../services/pushNotifications';
+import { fetchMomentsByAuthorPage } from '../services/moments';
+import { subscribeNotificationPreferences, subscribeNotifications } from '../services/notifications';
+import { rearmPostingReminders } from '../services/postingReminders';
+import { registerForPushNotifications, setAppBadgeCount } from '../services/pushNotifications';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -23,6 +25,7 @@ export default function TabsNavigator() {
   const { user } = useContext(AuthContext);
   const [requestCount, setRequestCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [remindersEnabled, setRemindersEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -38,13 +41,54 @@ export default function TabsNavigator() {
   useEffect(() => {
     if (!user?.uid) {
       setNotificationCount(0);
+      setAppBadgeCount(0).catch(() => {});
       return;
     }
-    return subscribeNotifications(
-      user.uid,
-      (notifications) => setNotificationCount(notifications.filter((item) => !item.readAt).length),
-    );
+    return subscribeNotifications(user.uid, (notifications) => {
+      const unread = notifications.filter((item) => !item.readAt).length;
+      setNotificationCount(unread);
+      // Keep the home-screen icon badge honest: it mirrors unread
+      // notifications and clears the moment they're read (previously a
+      // hardcoded badge: 1 stuck forever).
+      setAppBadgeCount(unread).catch(() => {});
+    });
   }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    return subscribeNotificationPreferences(user.uid, (preferences) => setRemindersEnabled(preferences.reminders));
+  }, [user?.uid]);
+
+  // Arm the daily posting nudges whenever the app comes to the foreground or
+  // the preference changes, skipping the rest of today if a moment was
+  // already shared.
+  useEffect(() => {
+    if (!user?.uid || remindersEnabled === null) return;
+    const uid = user.uid;
+    const enabled = remindersEnabled;
+    let active = true;
+
+    const rearm = async () => {
+      let postedToday = false;
+      try {
+        const { moments } = await fetchMomentsByAuthorPage({ authorUid: uid, pageSize: 1 });
+        const latest = moments[0]?.createdAt;
+        if (latest) postedToday = new Date(latest.seconds * 1000).toDateString() === new Date().toDateString();
+      } catch {
+        // Offline or slow start - arm anyway; posting later re-silences today.
+      }
+      if (active) await rearmPostingReminders({ enabled, postedToday });
+    };
+
+    rearm().catch(() => {});
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') rearm().catch(() => {});
+    });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [user?.uid, remindersEnabled]);
 
   return (
     <Tab.Navigator

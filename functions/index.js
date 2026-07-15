@@ -454,23 +454,28 @@ exports.sendNoteNotification = onDocumentCreated('users/{uid}/notifications/{not
   const recipientUid = event.params.uid;
   if (!notification || notification.type !== 'note') return;
 
-  const [tokensSnap, actorSnap, recipientSnap] = await Promise.all([
+  const [tokensSnap, actorSnap, recipientSnap, unreadSnap] = await Promise.all([
     db.collection('users').doc(recipientUid).collection('pushTokens').get(),
     db.collection('publicUsers').doc(notification.actorUid).get(),
     db.collection('users').doc(recipientUid).get(),
+    // Badge must reflect the real unread count - a hardcoded badge: 1 never
+    // cleared and left a permanent "1" on the app icon. addNote always writes
+    // readAt: null explicitly, so the equality filter is reliable.
+    db.collection('users').doc(recipientUid).collection('notifications').where('readAt', '==', null).count().get(),
   ]);
   if (recipientSnap.data()?.notificationPreferences?.notes === false) return;
 
   const tokens = tokensSnap.docs.map((item) => item.data().token).filter(Boolean);
   if (!tokens.length) return;
 
+  const unreadCount = Math.max(1, unreadSnap.data().count);
   const actorName = actorSnap.data()?.displayName || 'A friend';
   const messages = tokens.map((token) => ({
     to: token,
     sound: 'default',
     title: `${actorName} left a note`,
     body: notification.text,
-    badge: 1,
+    badge: unreadCount,
     data: {
       type: 'note',
       momentId: notification.momentId,

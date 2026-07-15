@@ -24,13 +24,17 @@ service cloud.firestore {
     }
 
     function validNotificationPreferences(value) {
+      // 'reminders' (daily posting nudges) arrived after launch builds
+      // shipped, so it is accepted but not required - older clients still
+      // write only the original four keys.
       return value is map &&
         value.keys().hasAll(['notes', 'followRequests', 'friendApprovals', 'wander']) &&
-        value.keys().hasOnly(['notes', 'followRequests', 'friendApprovals', 'wander']) &&
+        value.keys().hasOnly(['notes', 'followRequests', 'friendApprovals', 'wander', 'reminders']) &&
         value.notes is bool &&
         value.followRequests is bool &&
         value.friendApprovals is bool &&
-        value.wander is bool;
+        value.wander is bool &&
+        (!value.keys().hasAny(['reminders']) || value.reminders is bool);
     }
 
     function isBlocked(leftUid, rightUid) {

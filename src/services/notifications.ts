@@ -19,6 +19,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   followRequests: true,
   friendApprovals: true,
   wander: false,
+  reminders: true,
 };
 
 function preferencesFromData(data: any): NotificationPreferences {
@@ -30,6 +31,7 @@ function preferencesFromData(data: any): NotificationPreferences {
     friendApprovals:
       typeof raw.friendApprovals === 'boolean' ? raw.friendApprovals : DEFAULT_NOTIFICATION_PREFERENCES.friendApprovals,
     wander: typeof raw.wander === 'boolean' ? raw.wander : DEFAULT_NOTIFICATION_PREFERENCES.wander,
+    reminders: typeof raw.reminders === 'boolean' ? raw.reminders : DEFAULT_NOTIFICATION_PREFERENCES.reminders,
   };
 }
 

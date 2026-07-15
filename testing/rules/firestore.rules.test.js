@@ -178,6 +178,15 @@ maybeDescribe('firestore security rules', () => {
       notificationPreferences: preferences,
       updatedAt: new Date(),
     }));
+    // Newer clients add the optional 'reminders' key; older ones omit it.
+    await assertSucceeds(updateDoc(doc(owner, 'users', 'owner'), {
+      notificationPreferences: { ...preferences, reminders: false },
+      updatedAt: new Date(),
+    }));
+    await assertFails(updateDoc(doc(owner, 'users', 'owner'), {
+      notificationPreferences: { ...preferences, reminders: 'yes' },
+      updatedAt: new Date(),
+    }));
     await assertFails(updateDoc(doc(stranger, 'users', 'owner'), {
       notificationPreferences: preferences,
       updatedAt: new Date(),

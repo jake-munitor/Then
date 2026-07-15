@@ -278,6 +278,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
           ['followRequests', 'Friend requests'],
           ['friendApprovals', 'Friend approvals'],
           ['wander', 'Wander activity'],
+          ['reminders', 'Daily posting nudges'],
         ].map(([key, label], index, list) => (
           <SettingsRow key={key} isLast={index === list.length - 1}>
             <Text style={{ flex: 1, color: colors.textPrimary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>

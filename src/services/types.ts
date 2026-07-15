@@ -18,6 +18,7 @@ export type NotificationPreferences = {
   followRequests: boolean;
   friendApprovals: boolean;
   wander: boolean;
+  reminders: boolean;
 };
 
 export type FollowRequest = {

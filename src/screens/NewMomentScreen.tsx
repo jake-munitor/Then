@@ -9,6 +9,7 @@ import PhotoFilterPicker from '../components/PhotoFilterPicker';
 import Screen from '../components/Screen';
 import { PillButton, SectionLabel, Toggle } from '../components/DesignPrimitives';
 import { createMoment } from '../services/moments';
+import { notePostedToday } from '../services/postingReminders';
 import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
@@ -118,6 +119,7 @@ export default function NewMomentScreen() {
       setBackText('');
       setMemoryDate(todayYYYYMMDD());
       setAppearInWander(wanderDefault);
+      notePostedToday().catch(() => {});
       navigation.navigate('FeedTab');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not share.');

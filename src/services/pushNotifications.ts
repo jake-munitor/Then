@@ -50,6 +50,13 @@ export async function subscribeNotificationURLs(listener: NotificationURLListene
   return () => subscription.remove();
 }
 
+export async function setAppBadgeCount(count: number) {
+  if (Platform.OS === 'web') return;
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
+  await Notifications.setBadgeCountAsync(Math.max(0, count)).catch(() => {});
+}
+
 export async function registerForPushNotifications() {
   if (Platform.OS === 'web') return;
 
@@ -60,7 +67,10 @@ export async function registerForPushNotifications() {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldPlaySound: false,
-        shouldSetBadge: true,
+        // While the app is open, the badge is owned by the unread-count sync
+        // (setAppBadgeCount) - letting foreground pushes stamp it too caused
+        // stale values that never cleared.
+        shouldSetBadge: false,
         shouldShowBanner: true,
         shouldShowList: true,
       }),
