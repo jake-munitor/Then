@@ -29,6 +29,19 @@ async function sendExpoPush(messages) {
   }
 }
 
+// Every push carries the recipient's true unread count so the home-screen
+// badge self-corrects. Builds shipped before the badge-sync client update
+// have no other way to clear a stale badge.
+async function unreadBadgeFor(uid) {
+  try {
+    const snap = await db.collection('users').doc(uid).collection('notifications').where('readAt', '==', null).count().get();
+    return snap.data().count;
+  } catch (error) {
+    logger.warn('Unread badge count failed', { uid, error: error.message });
+    return 0;
+  }
+}
+
 async function pushTokensFor(uid) {
   const snap = await db.collection('users').doc(uid).collection('pushTokens').get();
   return snap.docs.map((item) => item.data()).filter((data) => data.token);
@@ -540,11 +553,12 @@ exports.sendMomentNotification = onDocumentCreated('moments/{momentId}', async (
     if (followerUid === authorUid) return;
     const followerUser = await db.collection('users').doc(followerUid).get();
     if (followerUser.data()?.notificationPreferences?.friendMoments === false) return;
-    const tokens = await pushTokensFor(followerUid);
+    const [tokens, badge] = await Promise.all([pushTokensFor(followerUid), unreadBadgeFor(followerUid)]);
     for (const { token } of tokens) {
       messages.push({
         to: token,
         sound: 'default',
+        badge,
         title: `${authorName} developed a moment`,
         body: String(moment.frontText || 'Open Then to see it.'),
         data: { type: 'friendMoment', momentId: event.params.momentId, url: `then://moments/${encodeURIComponent(event.params.momentId)}` },
@@ -564,10 +578,11 @@ exports.sendFollowRequestNotification = onDocumentCreated('users/{uid}/followReq
   if (ownerSnap.data()?.notificationPreferences?.followRequests === false) return;
   const requester = requesterSnap.data() || {};
   const name = requester.displayName || 'Someone';
-  const tokens = await pushTokensFor(ownerUid);
+  const [tokens, badge] = await Promise.all([pushTokensFor(ownerUid), unreadBadgeFor(ownerUid)]);
   await sendExpoPush(tokens.map(({ token }) => ({
     to: token,
     sound: 'default',
+    badge,
     title: `${name} wants to keep up`,
     body: String(event.data?.data()?.context || 'Open Then to approve or decline.'),
     data: { type: 'followRequest', url: requester.handle ? `then://profile/${encodeURIComponent(requester.handle)}` : 'then://' },
@@ -584,10 +599,11 @@ exports.sendApprovalNotification = onDocumentCreated('users/{requesterUid}/follo
   if (requesterSnap.data()?.notificationPreferences?.friendApprovals === false) return;
   const owner = ownerSnap.data() || {};
   const name = owner.displayName || 'Your friend';
-  const tokens = await pushTokensFor(requesterUid);
+  const [tokens, badge] = await Promise.all([pushTokensFor(requesterUid), unreadBadgeFor(requesterUid)]);
   await sendExpoPush(tokens.map(({ token }) => ({
     to: token,
     sound: 'default',
+    badge,
     title: `${name} approved`,
     body: "You're keeping up now - their moments land in your feed.",
     data: { type: 'friendApproval', url: owner.handle ? `then://profile/${encodeURIComponent(owner.handle)}` : 'then://' },
@@ -597,6 +613,7 @@ exports.sendApprovalNotification = onDocumentCreated('users/{requesterUid}/follo
 // --- Server-driven posting nudges --------------------------------------------
 
 const NUDGE_SLOTS = { 11: 'midday', 19: 'evening' };
+const DEFAULT_NUDGE_TIMEZONE = 'America/New_York';
 
 function localClock(timezone, at = new Date()) {
   try {
@@ -639,8 +656,9 @@ exports.sendPostingNudges = onSchedule('0 * * * *', async () => {
 
     const tokens = await pushTokensFor(uid);
     if (!tokens.length) return;
-    const timezone = tokens.map((t) => t.timezone).find(Boolean);
-    if (!timezone) return; // pre-timezone clients keep their local schedules
+    // Builds before the timezone-reporting client update register no
+    // timezone; fall back rather than skipping them forever.
+    const timezone = tokens.map((t) => t.timezone).find(Boolean) || DEFAULT_NUDGE_TIMEZONE;
 
     const clock = localClock(timezone);
     if (!clock) return;
@@ -670,10 +688,12 @@ exports.sendPostingNudges = onSchedule('0 * * * *', async () => {
     }
 
     const copy = nudgeCopy(slot, friendCount);
+    const badge = await unreadBadgeFor(uid);
     await sendExpoPush(tokens.map(({ token }) => ({
-      to: token, sound: 'default', title: copy.title, body: copy.body,
+      to: token, sound: 'default', badge, title: copy.title, body: copy.body,
       data: { type: 'postingNudge', url: 'then://' },
     })));
     await userDoc.ref.set({ lastNudge: { date: clock.date, slot } }, { merge: true });
+    logger.info('Posting nudge sent', { uid, slot, timezone, friendCount, tokens: tokens.length });
   }));
 });
