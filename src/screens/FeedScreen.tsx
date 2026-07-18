@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
+import SkeletonPolaroid from '../components/SkeletonPolaroid';
 import MomentSortControl from '../components/MomentSortControl';
 import Screen from '../components/Screen';
 import { PillButton, ScreenHeader, SectionRow } from '../components/DesignPrimitives';
@@ -31,6 +32,7 @@ export default function FeedScreen() {
   const tabNavigation = useNavigation<any>();
   const [following, setFollowing] = useState<string[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [momentsLoaded, setMomentsLoaded] = useState(false);
   const [pageSize, setPageSize] = useState(25);
   const [sort, setSort] = useState<MomentSort>('posted');
   const [publicUsers, setPublicUsers] = useState<Record<string, PublicUser>>({});
@@ -55,6 +57,9 @@ export default function FeedScreen() {
         homeAuthorUids,
         (nextMoments) => {
           setMoments(nextMoments);
+          // Snapshot-cache replays fire synchronously, so remounts flip this
+          // before first paint; only a true first load shows skeletons.
+          setMomentsLoaded(true);
           finishRefresh();
         },
         () => {
@@ -114,10 +119,17 @@ export default function FeedScreen() {
         }
         ListHeaderComponentStyle={{ width: '100%', marginBottom: 8 }}
         ListEmptyComponent={
-          <EmptyFeed
-            onShare={() => tabNavigation.navigate('NewMomentTab' as keyof TabsParamList)}
-            onFind={() => tabNavigation.navigate('FriendsTab' as keyof TabsParamList)}
-          />
+          momentsLoaded ? (
+            <EmptyFeed
+              onShare={() => tabNavigation.navigate('NewMomentTab' as keyof TabsParamList)}
+              onFind={() => tabNavigation.navigate('FriendsTab' as keyof TabsParamList)}
+            />
+          ) : (
+            <View style={{ paddingTop: 4 }}>
+              <SkeletonPolaroid />
+              <SkeletonPolaroid />
+            </View>
+          )
         }
         renderItem={({ item }) => (
           <MomentCard

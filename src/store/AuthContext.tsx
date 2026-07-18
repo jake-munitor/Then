@@ -14,6 +14,7 @@ import {
 import { auth } from '../firebase/firebase';
 import { deleteAccountData } from '../services/account';
 import { callFunction } from '../services/cloudFunctions';
+import { clearSnapshotCache } from '../services/snapshotCache';
 import { identifyUser, resetUser, track } from '../services/telemetry';
 
 export type AuthUser = {
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         identifyUser(firebaseUser.uid);
       } else {
         resetUser();
+        clearSnapshotCache();
       }
     });
 

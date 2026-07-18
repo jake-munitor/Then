@@ -4,6 +4,7 @@ const { FieldValue, getFirestore } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
 const { logger } = require('firebase-functions');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { HttpsError, onCall } = require('firebase-functions/v2/https');
 
 initializeApp();
@@ -14,6 +15,23 @@ function requireUid(request) {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in first.');
   return uid;
+}
+
+async function sendExpoPush(messages) {
+  if (!messages.length) return;
+  const response = await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(messages),
+  });
+  if (!response.ok) {
+    logger.error('Expo push request failed', { status: response.status, body: await response.text() });
+  }
+}
+
+async function pushTokensFor(uid) {
+  const snap = await db.collection('users').doc(uid).collection('pushTokens').get();
+  return snap.docs.map((item) => item.data()).filter((data) => data.token);
 }
 
 function stringValue(value, field, options = {}) {
@@ -368,10 +386,12 @@ exports.registerPushToken = onCall(async (request) => {
   const uid = requireUid(request);
   const token = stringValue(request.data?.token, 'Push token', { required: true, max: 512 });
   const platform = stringValue(request.data?.platform, 'Platform', { max: 32 }) || 'unknown';
+  const timezone = stringValue(request.data?.timezone, 'Timezone', { max: 64 });
   const tokenId = Buffer.from(token).toString('base64url').slice(0, 120);
   await db.collection('users').doc(uid).collection('pushTokens').doc(tokenId).set({
     token,
     platform,
+    ...(timezone ? { timezone } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   });
   return { ok: true };
@@ -498,4 +518,162 @@ exports.sendNoteNotification = onDocumentCreated('users/{uid}/notifications/{not
       body: await response.text(),
     });
   }
+});
+
+// --- Engagement pushes -------------------------------------------------------
+
+exports.sendMomentNotification = onDocumentCreated('moments/{momentId}', async (event) => {
+  const moment = event.data?.data();
+  if (!moment?.authorUid) return;
+  const authorUid = String(moment.authorUid);
+
+  const [followersSnap, authorSnap] = await Promise.all([
+    db.collection('users').doc(authorUid).collection('followers').get(),
+    db.collection('publicUsers').doc(authorUid).get(),
+  ]);
+  if (followersSnap.empty) return;
+  const authorName = authorSnap.data()?.displayName || 'A friend';
+
+  const messages = [];
+  await Promise.all(followersSnap.docs.map(async (followerDoc) => {
+    const followerUid = followerDoc.id;
+    if (followerUid === authorUid) return;
+    const followerUser = await db.collection('users').doc(followerUid).get();
+    if (followerUser.data()?.notificationPreferences?.friendMoments === false) return;
+    const tokens = await pushTokensFor(followerUid);
+    for (const { token } of tokens) {
+      messages.push({
+        to: token,
+        sound: 'default',
+        title: `${authorName} developed a moment`,
+        body: String(moment.frontText || 'Open Then to see it.'),
+        data: { type: 'friendMoment', momentId: event.params.momentId, url: `then://moments/${encodeURIComponent(event.params.momentId)}` },
+      });
+    }
+  }));
+  await sendExpoPush(messages);
+});
+
+exports.sendFollowRequestNotification = onDocumentCreated('users/{uid}/followRequests/{requesterUid}', async (event) => {
+  const ownerUid = event.params.uid;
+  const requesterUid = event.params.requesterUid;
+  const [ownerSnap, requesterSnap] = await Promise.all([
+    db.collection('users').doc(ownerUid).get(),
+    db.collection('publicUsers').doc(requesterUid).get(),
+  ]);
+  if (ownerSnap.data()?.notificationPreferences?.followRequests === false) return;
+  const requester = requesterSnap.data() || {};
+  const name = requester.displayName || 'Someone';
+  const tokens = await pushTokensFor(ownerUid);
+  await sendExpoPush(tokens.map(({ token }) => ({
+    to: token,
+    sound: 'default',
+    title: `${name} wants to keep up`,
+    body: String(event.data?.data()?.context || 'Open Then to approve or decline.'),
+    data: { type: 'followRequest', url: requester.handle ? `then://profile/${encodeURIComponent(requester.handle)}` : 'then://' },
+  })));
+});
+
+exports.sendApprovalNotification = onDocumentCreated('users/{requesterUid}/following/{ownerUid}', async (event) => {
+  const requesterUid = event.params.requesterUid;
+  const ownerUid = event.params.ownerUid;
+  const [requesterSnap, ownerSnap] = await Promise.all([
+    db.collection('users').doc(requesterUid).get(),
+    db.collection('publicUsers').doc(ownerUid).get(),
+  ]);
+  if (requesterSnap.data()?.notificationPreferences?.friendApprovals === false) return;
+  const owner = ownerSnap.data() || {};
+  const name = owner.displayName || 'Your friend';
+  const tokens = await pushTokensFor(requesterUid);
+  await sendExpoPush(tokens.map(({ token }) => ({
+    to: token,
+    sound: 'default',
+    title: `${name} approved`,
+    body: "You're keeping up now - their moments land in your feed.",
+    data: { type: 'friendApproval', url: owner.handle ? `then://profile/${encodeURIComponent(owner.handle)}` : 'then://' },
+  })));
+});
+
+// --- Server-driven posting nudges --------------------------------------------
+
+const NUDGE_SLOTS = { 11: 'midday', 19: 'evening' };
+
+function localClock(timezone, at = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit',
+    }).formatToParts(at);
+    const get = (type) => parts.find((p) => p.type === type)?.value;
+    return { date: `${get('year')}-${get('month')}-${get('day')}`, hour: Number(get('hour')) % 24 };
+  } catch {
+    return null;
+  }
+}
+
+function nudgeCopy(slot, friendCount) {
+  if (slot === 'midday') {
+    return {
+      title: 'a quiet nudge',
+      body: friendCount > 0
+        ? `Your people developed ${friendCount === 1 ? 'a moment' : `${friendCount} moments`} today. Add one of yours?`
+        : "If today's given you a moment worth keeping, develop it.",
+    };
+  }
+  return {
+    title: 'before today slips away',
+    body: friendCount > 0
+      ? 'Your people shared today. One photo back?'
+      : 'One photo for the people you keep up with.',
+  };
+}
+
+exports.sendPostingNudges = onSchedule('0 * * * *', async () => {
+  const usersSnap = await db.collection('users').get();
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  await Promise.all(usersSnap.docs.map(async (userDoc) => {
+    const uid = userDoc.id;
+    const data = userDoc.data();
+    if (data?.notificationPreferences?.reminders === false) return;
+
+    const tokens = await pushTokensFor(uid);
+    if (!tokens.length) return;
+    const timezone = tokens.map((t) => t.timezone).find(Boolean);
+    if (!timezone) return; // pre-timezone clients keep their local schedules
+
+    const clock = localClock(timezone);
+    if (!clock) return;
+    const slot = NUDGE_SLOTS[clock.hour];
+    if (!slot) return;
+    if (data?.lastNudge?.date === clock.date && data?.lastNudge?.slot === slot) return;
+
+    const latestSnap = await db.collection('moments')
+      .where('authorUid', '==', uid)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+    const latestCreated = latestSnap.docs[0]?.data()?.createdAt?.toDate();
+    if (latestCreated && localClock(timezone, latestCreated)?.date === clock.date) return;
+
+    const followingSnap = await db.collection('users').doc(uid).collection('following').get();
+    let friendCount = 0;
+    const followingIds = followingSnap.docs.map((d) => d.id);
+    for (let i = 0; i < followingIds.length && friendCount < 6; i += 30) {
+      const chunk = followingIds.slice(i, i + 30);
+      const recent = await db.collection('moments')
+        .where('authorUid', 'in', chunk)
+        .where('createdAt', '>=', dayAgo)
+        .limit(6 - friendCount)
+        .get();
+      friendCount += recent.size;
+    }
+
+    const copy = nudgeCopy(slot, friendCount);
+    await sendExpoPush(tokens.map(({ token }) => ({
+      to: token, sound: 'default', title: copy.title, body: copy.body,
+      data: { type: 'postingNudge', url: 'then://' },
+    })));
+    await userDoc.ref.set({ lastNudge: { date: clock.date, slot } }, { merge: true });
+  }));
 });

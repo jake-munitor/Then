@@ -29,12 +29,13 @@ service cloud.firestore {
       // write only the original four keys.
       return value is map &&
         value.keys().hasAll(['notes', 'followRequests', 'friendApprovals', 'wander']) &&
-        value.keys().hasOnly(['notes', 'followRequests', 'friendApprovals', 'wander', 'reminders']) &&
+        value.keys().hasOnly(['notes', 'followRequests', 'friendApprovals', 'wander', 'reminders', 'friendMoments']) &&
         value.notes is bool &&
         value.followRequests is bool &&
         value.friendApprovals is bool &&
         value.wander is bool &&
-        (!value.keys().hasAny(['reminders']) || value.reminders is bool);
+        (!value.keys().hasAny(['reminders']) || value.reminders is bool) &&
+        (!value.keys().hasAny(['friendMoments']) || value.friendMoments is bool);
     }
 
     function isBlocked(leftUid, rightUid) {

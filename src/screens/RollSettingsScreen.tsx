@@ -275,6 +275,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
       <SettingsGroup label="Notifications">
         {[
           ['notes', 'Notes on your moments'],
+          ['friendMoments', 'Moments from your people'],
           ['followRequests', 'Friend requests'],
           ['friendApprovals', 'Friend approvals'],
           ['wander', 'Wander activity'],

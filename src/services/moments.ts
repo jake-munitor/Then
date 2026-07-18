@@ -20,6 +20,7 @@ import { db } from '../firebase/firebase';
 import { normalizePhotoFilter, type PhotoFilter } from '../utils/photoFilters';
 import { callFunction } from './cloudFunctions';
 import { uploadMomentPhoto } from './photos';
+import { withSnapshotCache } from './snapshotCache';
 import { track } from './telemetry';
 import type { ListenerErrorHandler, Moment, MomentBack, Note } from './types';
 
@@ -148,6 +149,7 @@ export function subscribeMomentsByAuthors(
   }
 
   const unique = Array.from(new Set(authorUids));
+  const emit = withSnapshotCache<Moment[]>(`momentsByAuthors:${[...unique].sort().join(',')}:${pageSize}`, onChange);
   const grouped = new Map<string, Moment[]>();
   const unsubscribes = unique.map((authorUid) => {
     const momentsQuery = query(
@@ -164,7 +166,7 @@ export function subscribeMomentsByAuthors(
           docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data())),
         );
         if (unique.length === 1) onPageInfo?.(docs[docs.length - 1] ?? null);
-        onChange(sortMoments(Array.from(grouped.values()).flat()));
+        emit(sortMoments(Array.from(grouped.values()).flat()));
       },
       onError,
     );
@@ -183,6 +185,7 @@ export function subscribeWanderMoments(
     return () => {};
   }
 
+  const emit = withSnapshotCache<Moment[]>('wanderMoments', onChange);
   const momentsQuery = query(
     collection(db, 'moments'),
     where('appearInWander', '==', true),
@@ -192,7 +195,7 @@ export function subscribeWanderMoments(
     momentsQuery,
     (snap) => {
       onPageInfo?.(snap.docs[snap.docs.length - 1] ?? null);
-      onChange(sortMoments(snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data()))));
+      emit(sortMoments(snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data()))));
     },
     onError,
   );

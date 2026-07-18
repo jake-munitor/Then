@@ -9,9 +9,8 @@ import NewMomentScreen from '../screens/NewMomentScreen';
 import RollScreen from '../screens/RollScreen';
 import WanderScreen from '../screens/WanderScreen';
 import { subscribeFollowRequests } from '../services/follows';
-import { fetchMomentsByAuthorPage } from '../services/moments';
-import { subscribeNotificationPreferences, subscribeNotifications } from '../services/notifications';
-import { rearmPostingReminders } from '../services/postingReminders';
+import { subscribeNotifications } from '../services/notifications';
+import { cancelLocalPostingReminders } from '../services/postingReminders';
 import { registerForPushNotifications, setAppBadgeCount } from '../services/pushNotifications';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
@@ -25,7 +24,6 @@ export default function TabsNavigator() {
   const { user } = useContext(AuthContext);
   const [requestCount, setRequestCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [remindersEnabled, setRemindersEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -38,15 +36,18 @@ export default function TabsNavigator() {
     if (!user?.uid) return;
     registerForPushNotifications().catch(() => {});
   }, [user?.uid]);
+  const lastUnreadRef = React.useRef(0);
   useEffect(() => {
     if (!user?.uid) {
       setNotificationCount(0);
+      lastUnreadRef.current = 0;
       setAppBadgeCount(0).catch(() => {});
       return;
     }
     return subscribeNotifications(user.uid, (notifications) => {
       const unread = notifications.filter((item) => !item.readAt).length;
       setNotificationCount(unread);
+      lastUnreadRef.current = unread;
       // Keep the home-screen icon badge honest: it mirrors unread
       // notifications and clears the moment they're read (previously a
       // hardcoded badge: 1 stuck forever).
@@ -54,41 +55,20 @@ export default function TabsNavigator() {
     });
   }, [user?.uid]);
 
+  // Belt and suspenders for the icon badge: re-assert it on every foreground
+  // so a badge stamped by a background push can never outlive its unread count.
   useEffect(() => {
-    if (!user?.uid) return;
-    return subscribeNotificationPreferences(user.uid, (preferences) => setRemindersEnabled(preferences.reminders));
-  }, [user?.uid]);
-
-  // Arm the daily posting nudges whenever the app comes to the foreground or
-  // the preference changes, skipping the rest of today if a moment was
-  // already shared.
-  useEffect(() => {
-    if (!user?.uid || remindersEnabled === null) return;
-    const uid = user.uid;
-    const enabled = remindersEnabled;
-    let active = true;
-
-    const rearm = async () => {
-      let postedToday = false;
-      try {
-        const { moments } = await fetchMomentsByAuthorPage({ authorUid: uid, pageSize: 1 });
-        const latest = moments[0]?.createdAt;
-        if (latest) postedToday = new Date(latest.seconds * 1000).toDateString() === new Date().toDateString();
-      } catch {
-        // Offline or slow start - arm anyway; posting later re-silences today.
-      }
-      if (active) await rearmPostingReminders({ enabled, postedToday });
-    };
-
-    rearm().catch(() => {});
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') rearm().catch(() => {});
+      if (state === 'active') setAppBadgeCount(lastUnreadRef.current).catch(() => {});
     });
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, [user?.uid, remindersEnabled]);
+    return () => subscription.remove();
+  }, []);
+
+  // Nudges are server-driven now - clear any locally scheduled ones left
+  // behind by the previous update.
+  useEffect(() => {
+    cancelLocalPostingReminders().catch(() => {});
+  }, []);
 
   return (
     <Tab.Navigator

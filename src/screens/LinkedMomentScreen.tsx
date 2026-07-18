@@ -21,8 +21,13 @@ export default function LinkedMomentScreen({ route, navigation }: Props) {
     fetchMomentById(route.params.momentId)
       .then((moment) => {
         if (!active) return;
-        if (moment) navigation.replace('Notes', { moment });
-        else setFailed(true);
+        if (!moment) {
+          setFailed(true);
+        } else if (route.params.target === 'notes') {
+          navigation.replace('Notes', { moment });
+        } else {
+          navigation.replace('MomentDetail', { momentId: moment.id, moment, canNote: true });
+        }
       })
       .catch(() => {
         if (active) setFailed(true);
@@ -30,7 +35,7 @@ export default function LinkedMomentScreen({ route, navigation }: Props) {
     return () => {
       active = false;
     };
-  }, [navigation, route.params.momentId]);
+  }, [navigation, route.params.momentId, route.params.target]);
 
   return (
     <Screen contentStyle={{ alignItems: 'center' }}>

@@ -2,7 +2,10 @@ import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, wh
 
 import { db } from '../firebase/firebase';
 import { callFunction } from './cloudFunctions';
+import { getCachedSnapshot, setCachedSnapshot } from './snapshotCache';
 import type { ListenerErrorHandler, ProfileVisibility, PublicUser } from './types';
+
+const PROFILE_CACHE_KEY = 'publicUserProfiles';
 
 function profileFromSnap(uid: string, data: Partial<PublicUser> | undefined): PublicUser {
   return {
@@ -33,12 +36,26 @@ export function subscribePublicUsers(
 
   const firestore = db;
   const current: Record<string, PublicUser> = {};
+  // Serve known profiles instantly so names/avatars/signatures never flash
+  // their "Then Friend" fallbacks on remount; listeners refresh underneath.
+  const known = getCachedSnapshot<Record<string, PublicUser>>(PROFILE_CACHE_KEY) ?? {};
+  const cachedHits: Record<string, PublicUser> = {};
+  for (const uid of unique) {
+    if (known[uid]) {
+      cachedHits[uid] = known[uid];
+      current[uid] = known[uid];
+    }
+  }
+  if (Object.keys(cachedHits).length) onChange({ ...cachedHits });
+
   const unsubscribes = unique.map((uid) =>
     onSnapshot(
       doc(firestore, 'publicUsers', uid),
       (snap) => {
         const data = snap.data() as Partial<PublicUser> | undefined;
         current[uid] = profileFromSnap(uid, data);
+        const store = getCachedSnapshot<Record<string, PublicUser>>(PROFILE_CACHE_KEY) ?? {};
+        setCachedSnapshot(PROFILE_CACHE_KEY, { ...store, [uid]: current[uid] });
         onChange({ ...current });
       },
       onError,

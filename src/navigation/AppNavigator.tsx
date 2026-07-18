@@ -34,7 +34,9 @@ const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       MainTabs: '',
       Profile: 'profile/:handle',
-      LinkedMoment: 'moments/:momentId/notes',
+      // Matches both moments/<id> (friend-posted push -> detail) and
+      // moments/<id>/notes (note notification -> notes thread).
+      LinkedMoment: 'moments/:momentId/:target?',
     },
   },
   async getInitialURL() {

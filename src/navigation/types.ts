@@ -9,7 +9,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   YourYear: { year?: number } | undefined;
   Notes: { moment: Moment };
-  LinkedMoment: { momentId: string };
+  LinkedMoment: { momentId: string; target?: string };
   Profile: { handle?: string; uid?: string };
 };
 

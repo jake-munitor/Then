@@ -20,6 +20,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   friendApprovals: true,
   wander: false,
   reminders: true,
+  friendMoments: true,
 };
 
 function preferencesFromData(data: any): NotificationPreferences {
@@ -32,6 +33,8 @@ function preferencesFromData(data: any): NotificationPreferences {
       typeof raw.friendApprovals === 'boolean' ? raw.friendApprovals : DEFAULT_NOTIFICATION_PREFERENCES.friendApprovals,
     wander: typeof raw.wander === 'boolean' ? raw.wander : DEFAULT_NOTIFICATION_PREFERENCES.wander,
     reminders: typeof raw.reminders === 'boolean' ? raw.reminders : DEFAULT_NOTIFICATION_PREFERENCES.reminders,
+    friendMoments:
+      typeof raw.friendMoments === 'boolean' ? raw.friendMoments : DEFAULT_NOTIFICATION_PREFERENCES.friendMoments,
   };
 }
 

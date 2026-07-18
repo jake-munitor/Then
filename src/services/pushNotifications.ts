@@ -85,5 +85,11 @@ export async function registerForPushNotifications() {
 
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;
   const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)).data;
-  await callFunction('registerPushToken', { token, platform: Platform.OS });
+  let timezone = '';
+  try {
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+  } catch {
+    timezone = '';
+  }
+  await callFunction('registerPushToken', { token, platform: Platform.OS, timezone });
 }

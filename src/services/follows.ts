@@ -12,6 +12,7 @@ import {
 
 import { db } from '../firebase/firebase';
 import { callFunction } from './cloudFunctions';
+import { withSnapshotCache } from './snapshotCache';
 import { track } from './telemetry';
 import type { FollowRequest, ListenerErrorHandler } from './types';
 
@@ -21,9 +22,10 @@ export function subscribeFollowing(uid: string, onChange: (uids: string[]) => vo
     return () => {};
   }
 
+  const emit = withSnapshotCache<string[]>(`following:${uid}`, onChange);
   return onSnapshot(
     query(collection(db, 'users', uid, 'following'), orderBy('approvedAt', 'desc')),
-    (snap) => onChange(snap.docs.map((followingDoc) => followingDoc.id)),
+    (snap) => emit(snap.docs.map((followingDoc) => followingDoc.id)),
     onError,
   );
 }
