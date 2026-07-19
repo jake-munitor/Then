@@ -1,5 +1,32 @@
 # Then Deployment Runbook
 
+> ## ⚠️ Read first: OTA updates and build 23
+>
+> **Builds 21-23 shipped with `channel: None`, so they receive NO over-the-air
+> updates.** `eas.json` never declared a `channel`, and no EAS channel existed, so
+> roughly ten "successfully published" updates sat on the `production` branch with
+> nothing pointing at them and reached zero devices.
+>
+> Fixed going forward (commit `52891b4`): every build profile now declares a channel
+> and a `production` channel is mapped to the `production` branch. **Build 23 cannot be
+> rescued — the channel is compiled into the binary.** The currently-live App Store app
+> is therefore missing every client-side fix made after it was built; they land
+> automatically when build 24 runs.
+>
+> **After any future build, verify delivery is actually wired up:**
+>
+> ```powershell
+> npx eas channel:list                # must list `production`, mapped to the branch
+> npx eas build:list --platform ios --limit 1 --json   # "channel" must NOT be null
+> ```
+>
+> `eas update` printing "Published!" only means the bundle uploaded to a branch. It
+> says nothing about whether any device will receive it — always confirm a
+> user-visible change on a real device before calling a fix shipped.
+>
+> Server-side deploys (Firestore rules, Cloud Functions) reach every binary regardless
+> and were unaffected by this.
+
 ## Current production targets
 
 - Expo project: `@finnman81/then`
@@ -44,6 +71,21 @@ npx eas update --branch production --platform all --message "<release note>" --e
 ```
 
 Use a production EAS build when native config, permissions, Expo modules, entitlements, or App Store metadata changed.
+
+### Build 24 checklist (first build after the OTA-channel fix)
+
+1. Bump `ios.buildNumber` in `app.json` (hand-managed; `autoIncrement` is off).
+2. Confirm `eas.json` still has `"channel": "production"` on the production profile.
+3. Build + submit as usual.
+4. **Verify the channel stuck** (see the warning at the top of this file) — if `channel`
+   comes back null again, no OTA will ever reach that binary either.
+5. Once installed, confirm the queued updates apply: the Settings screen should show the
+   "Moments from your people" and "Daily posting nudges" toggles, and the "..." menu on a
+   moment should open.
+
+Queued native-only work to roll into that same build (Expo build credits are limited —
+see the account-wide hold that resets 2026-07-22): swap `Image` for `expo-image` to get
+real disk caching, the last outstanding de-glitch item.
 
 ## Device QA
 

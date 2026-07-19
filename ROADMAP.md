@@ -5,6 +5,33 @@ with enough design notes to pick up cold.
 
 ---
 
+## Where things actually stand (updated 2026-07-18)
+
+**v1.0 (build 23) is LIVE on the App Store.** Approved Jul 15 after three submissions.
+Items 1-3 below are shipped; item 4 (invite links) is still the next feature.
+
+**Blocking everything client-side: builds 21-23 have no OTA channel**, so roughly a
+dozen finished fixes have never reached a device — including the dead "..." menu fix,
+badge clearing, Your Year ordering, deep links, Lauren's shadow, and the whole
+de-glitch pass. They are committed and queued on the `production` branch and land
+automatically with **build 24**. See the warning at the top of `DEPLOYMENT.md`.
+
+Build 24 is gated until **2026-07-22** by the account-wide Expo build-credit hold.
+Jake is deliberately **not inviting more users until it ships**, since the live binary
+still has those bugs.
+
+Shipped since this plan was written, beyond items 1-3:
+- Notification system rebuild (server side, live now on build 23): pushes for
+  friend-posted moments, follow requests, and approvals; `sendPostingNudges` hourly
+  Cloud Scheduler job sending activity-aware nudges at each user's local 11:00/19:00;
+  every push carries the recipient's true unread count as its badge.
+- De-glitch pass (queued for build 24): `snapshotCache` for instant re-render on
+  remount, loading-vs-empty gating, `SkeletonPolaroid` shimmer.
+- Remaining native-only polish for build 24: swap `Image` → `expo-image` for real
+  disk caching.
+
+---
+
 ## 1. Observability — Sentry + product analytics (~1–2 days)
 
 **Why:** Real users, zero crash reporting, zero funnel visibility. Every other decision
