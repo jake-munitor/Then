@@ -64,6 +64,22 @@ Deploy Firebase only when rules, indexes, or functions changed:
 npx firebase deploy --only firestore:rules,storage,functions --project then-prod-finnman81
 ```
 
+Composite indexes live in `firestore.indexes.json` (wired in via `firebase.json`) and
+deploy separately:
+
+```powershell
+npx firebase deploy --only firestore:indexes --project then-prod-finnman81
+```
+
+Two things to know about that file. It was added in build 24 — before then, indexes
+existed only in the Firebase console and were untracked, so the repo could not tell you
+which queries needed one. It currently declares exactly the two the client needs
+(`authorUid`+`createdAt`, `appearInWander`+`createdAt` on `moments`). **If the console
+holds other hand-made indexes, this deploy will offer to delete them — decline.** Any
+query pairing a `where()` on one field with an `orderBy()` on another needs an entry
+here, or it throws at runtime and the affected screen goes blank rather than merely
+sorting wrong.
+
 Use EAS Update only for JS/assets that are compatible with the currently installed native binary:
 
 ```powershell
@@ -74,18 +90,52 @@ Use a production EAS build when native config, permissions, Expo modules, entitl
 
 ### Build 24 checklist (first build after the OTA-channel fix)
 
-1. Bump `ios.buildNumber` in `app.json` (hand-managed; `autoIncrement` is off).
+1. Bump `ios.buildNumber` in `app.json` (hand-managed; `autoIncrement` is off) — set to
+   `24`.
 2. Confirm `eas.json` still has `"channel": "production"` on the production profile.
-3. Build + submit as usual.
-4. **Verify the channel stuck** (see the warning at the top of this file) — if `channel`
-   comes back null again, no OTA will ever reach that binary either.
-5. Once installed, confirm the queued updates apply: the Settings screen should show the
+3. Deploy Firestore indexes **before** the build reaches a device — build 24 adds
+   `orderBy` to the Feed and Wander listeners, and without the composite indexes those
+   queries throw and the screens render blank. Done 2026-07-21.
+4. Build + submit as usual.
+5. **Verify the channel stuck** (see the warning at the top of this file) — if `channel`
+   comes back null again, no OTA will ever reach that binary either. Check this *before*
+   submitting; it is the whole purpose of this build.
+6. Once installed, confirm the queued updates apply: the Settings screen should show the
    "Moments from your people" and "Daily posting nudges" toggles, and the "..." menu on a
    moment should open.
+7. Spot-check the rest of the backlog. Build 24 carries 13 commits that have never run on
+   a device — the App Review fixes (dead heart on Wander, dead "..." menu and header
+   icons), badge clearing, Your Year ordering, deep links, and Lauren's refined polaroid
+   card spec. This is the first real test of all of it.
 
-Queued native-only work to roll into that same build (Expo build credits are limited —
-see the account-wide hold that resets 2026-07-22): swap `Image` for `expo-image` to get
-real disk caching, the last outstanding de-glitch item.
+### Deferred to build 25: the `expo-image` swap
+
+Swapping React Native's `Image` for `expo-image` (real disk caching — the last
+outstanding de-glitch item) was **deliberately held back from build 24** to keep that
+build focused on proving OTA delivery works.
+
+Why it is safe to defer, and what to know when picking it up:
+
+- It is a native module, so it must be compiled into a binary — it can never ship over
+  OTA. That makes the build itself the decision point.
+- Scope is smaller than it looks. Only *remote* images benefit, so it is really two
+  paths: `FilteredMomentImage` (every moment photo) and the avatar surfaces. Leave the
+  bundled `paper-texture.png` uses in `MomentCard`/`MomentDetailScreen` on RN `Image` —
+  local assets gain nothing.
+- The migration is mechanical: `resizeMode` → `contentFit`, plus the prop type in
+  `FilteredMomentImage.tsx`. The app uses no `Image.getSize`, `resolveAssetSource`,
+  `prefetch`, `onLoad`, `defaultSource`, `tintColor`, or `blurRadius` — the APIs that
+  make these migrations painful.
+- Set `transition={0}` and `cachePolicy="memory-disk"` explicitly rather than trusting
+  defaults, and add an `expo-image` mock to `testing/jest.setup.ts`.
+- **The real risk is visual, and the test suite cannot catch it.** `FilteredMomentImage`
+  builds the polaroid look by layering `opacity: look.imageOpacity` on the image under
+  absolute overlays; expo-image composites through its own native view.
+  `photoFilterContract.test.ts` asserts overlay testIDs, not pixels, so it stays green
+  even if all four filters shift. Check `normal`, `film`, `sunfade`, and `coolFlash` on a
+  real device by eye before submitting.
+- If they do look wrong, reverting that one component to RN `Image` is a JS-only change
+  and ships over OTA — the native module simply sits unused. No new build required.
 
 ## Device QA
 

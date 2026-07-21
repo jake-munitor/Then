@@ -27,8 +27,20 @@ Shipped since this plan was written, beyond items 1-3:
   every push carries the recipient's true unread count as its badge.
 - De-glitch pass (queued for build 24): `snapshotCache` for instant re-render on
   remount, loading-vs-empty gating, `SkeletonPolaroid` shimmer.
-- Remaining native-only polish for build 24: swap `Image` → `expo-image` for real
-  disk caching.
+- **Deferred to build 25:** swap `Image` → `expo-image` for real disk caching, the last
+  de-glitch item. Held back deliberately so build 24 stays focused on proving OTA
+  delivery. It is native-only (can never ship over OTA), and its one real risk is that
+  it may shift the four photo-filter looks in a way the test suite cannot detect. Full
+  pickup notes are in `DEPLOYMENT.md`.
+
+Also landed in build 24, found during the pre-build review:
+- Feed and Wander listeners called `limit()` with **no `orderBy`**, so Firestore returned
+  moments in document-ID order (random auto-IDs) and the client sorted an arbitrary
+  subset — past the page size, an author's newest moments could silently stop appearing.
+- `AuthContext.isLoading` started `false`, flashing the Auth screen for a frame on every
+  cold start.
+- Composite indexes are now tracked in `firestore.indexes.json` instead of existing only
+  in the Firebase console.
 
 ---
 
