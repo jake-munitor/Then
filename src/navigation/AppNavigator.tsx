@@ -1,6 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
-import { DefaultTheme, NavigationContainer, type LinkingOptions } from '@react-navigation/native';
+import {
+  DefaultTheme,
+  NavigationContainer,
+  useNavigationContainerRef,
+  type LinkingOptions,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native-paper';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -20,6 +25,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import RollSettingsScreen from '../screens/RollSettingsScreen';
 import YourYearScreen from '../screens/YourYearScreen';
 import { getLastNotificationURL, subscribeNotificationURLs } from '../services/pushNotifications';
+import { navigationIntegration } from '../services/telemetry';
 import TabsNavigator from './TabsNavigator';
 import type { RootStackParamList } from './types';
 
@@ -60,6 +66,7 @@ const linking: LinkingOptions<RootStackParamList> = {
 
 export default function AppNavigator() {
   const { user, isLoading } = useContext(AuthContext);
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [profileLoading, setProfileLoading] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
@@ -100,6 +107,12 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        // Must happen after the container is ready, or screen transactions
+        // are never attached and perf monitoring silently records nothing.
+        navigationIntegration.registerNavigationContainer(navigationRef);
+      }}
       linking={linking}
       theme={{
         ...DefaultTheme,

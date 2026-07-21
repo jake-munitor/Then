@@ -20,11 +20,27 @@ const POSTHOG_HOST = readConfig('EXPO_PUBLIC_POSTHOG_HOST') ?? 'https://us.i.pos
 export const isSentryConfigured = Boolean(SENTRY_DSN);
 export const isAnalyticsConfigured = Boolean(POSTHOG_API_KEY);
 
+/**
+ * Opens a Sentry transaction per screen navigation and closes it when the
+ * screen renders, which is what turns `tracesSampleRate` into actual
+ * per-screen timing. Without this registered against the NavigationContainer
+ * (see AppNavigator), performance monitoring is enabled but almost nothing
+ * generates a transaction.
+ *
+ * `enableTimeToInitialDisplay` is off by default in the SDK; it is the
+ * measurement we actually care about - dispatch to first rendered frame.
+ */
+export const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: true,
+});
+
 if (isSentryConfigured) {
   Sentry.init({
     dsn: SENTRY_DSN,
     tracesSampleRate: 0.2,
     sendDefaultPii: false,
+    // Merged with the SDK defaults, not a replacement for them.
+    integrations: [navigationIntegration],
   });
 }
 

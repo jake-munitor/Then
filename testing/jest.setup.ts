@@ -53,6 +53,10 @@ jest.mock('@sentry/react-native', () => ({
   init: jest.fn(),
   wrap: jest.fn((component) => component),
   captureException: jest.fn(),
+  reactNavigationIntegration: jest.fn(() => ({
+    name: 'ReactNavigation',
+    registerNavigationContainer: jest.fn(),
+  })),
 }));
 
 jest.mock('posthog-react-native', () => ({
