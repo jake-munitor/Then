@@ -90,8 +90,16 @@ Use a production EAS build when native config, permissions, Expo modules, entitl
 
 ### Build 24 checklist (first build after the OTA-channel fix)
 
-1. Bump `ios.buildNumber` in `app.json` (hand-managed; `autoIncrement` is off) — set to
-   `24`.
+1. Bump **both** version fields in `app.json` (hand-managed; `autoIncrement` is off):
+   - `expo.ios.buildNumber` — `24`.
+   - `expo.version` (`CFBundleShortVersionString`) — `1.0.1`. **Once a version is
+     approved and released, that train is closed forever**; App Store Connect rejects any
+     further upload carrying it with errors `90062` and `90186`. Build 24 was first
+     built as `1.0.0`, which 1.0.0's release on Jul 15 had already closed, and the
+     rejection only surfaces at `eas submit` — after the build credit is spent. Bumping
+     `buildNumber` alone is never sufficient for the first build after a release.
+   - `expo.version` does not affect OTA: `runtimeVersion` is `sdkVersion`
+     (`exposdk:54.0.0`), so updates still reach devices across a version bump.
 2. Confirm `eas.json` still has `"channel": "production"` on the production profile.
 3. Deploy Firestore indexes **before** the build reaches a device — build 24 adds
    `orderBy` to the Feed and Wander listeners, and without the composite indexes those

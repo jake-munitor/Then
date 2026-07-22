@@ -84,6 +84,14 @@ polaroid,photo,sharing,private,friends,film,memories,journal,scrapbook,quiet,no 
 Then's first release. One photo, one moment, shared with the friends you've approved — and nothing else.
 ```
 
+**What's New (version 1.0.1)** — 1.0.0 shipped without OTA updates, so this is the
+first release carrying roughly a dozen fixes made after it was built. In App Store
+Connect this needs a **new 1.0.1 version page**; the 1.0 page is closed.
+
+```
+Fixes throughout: the heart and "..." menu now respond on every moment, the app-icon badge clears properly, Your Year shows your moments in order, and notification links open the right place. Quieter loading, fewer flickers.
+```
+
 ---
 
 ## 2. Age rating questionnaire
@@ -175,7 +183,8 @@ unusual).
 - [ ] Age rating questionnaire completed (section 2)
 - [ ] App Review sign-in info + notes filled (section 3)
 - [ ] Version Release set to Manual
-- [ ] Build **23** (or later) selected on the version page
+- [ ] Build **24** (or later) selected on the **1.0.1** version page (1.0 is released and
+      closed — a new version page is required, not a new build on the old one)
 - [ ] Submit for Review
 
 Typical first-review turnaround: 24–48 hours. If rejected, the reason appears
