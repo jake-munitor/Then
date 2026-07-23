@@ -1,6 +1,7 @@
 export const radius = {
-  print: 8,
-  printPhoto: 5,
+  // Lauren's July 2026 spec: card 4, photo 3.
+  print: 4,
+  printPhoto: 3,
   sm: 8,
   md: 12,
   lg: 16,

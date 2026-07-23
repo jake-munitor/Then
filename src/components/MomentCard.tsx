@@ -115,10 +115,11 @@ export default function MomentCard({
         alignSelf: 'center',
         marginBottom: 22,
         borderRadius: radius.print,
+        // Lauren's July 2026 spec: y8 / blur24 / 8%, soft and close to the card.
         shadowColor: '#785A46',
-        shadowOpacity: 0.12,
-        shadowRadius: 30,
-        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 8 },
         elevation: 3,
       }}
     >
@@ -135,11 +136,15 @@ export default function MomentCard({
           paddingBottom: 16,
         }}
       >
-        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+        {/* Lauren's July 2026 spec: nearly imperceptible soft-light grain on
+            the card surface. The blend lives on the wrapper View (RN types
+            don't expose mixBlendMode on ImageStyle). The photo renders above
+            this layer, so the grain never touches it. */}
+        <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { mixBlendMode: 'soft-light' }]}>
           <Image
             source={require('../../assets/paper-texture.png')}
             resizeMode="cover"
-            style={[StyleSheet.absoluteFillObject, { opacity: 0.12 }]}
+            style={[StyleSheet.absoluteFillObject, { opacity: 0.02 }]}
           />
         </View>
         <Pressable

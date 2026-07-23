@@ -148,10 +148,11 @@ describe('MomentCard', () => {
     const photoMatStyle = StyleSheet.flatten(screen.getByTestId('moment-photo-mat').props.style);
 
     expect(frameStyle.backgroundColor).toBe(colors.polaroid);
-    expect(frameStyle.borderRadius).toBe(8);
+    // Lauren's July 2026 spec: card 4, photo 3.
+    expect(frameStyle.borderRadius).toBe(4);
     expect(frameStyle.paddingTop).toBe(14);
     expect(frameStyle.paddingHorizontal).toBe(14);
-    expect(photoMatStyle.borderRadius).toBe(5);
+    expect(photoMatStyle.borderRadius).toBe(3);
     expect(photoMatStyle.borderWidth).toBe(1);
   });
 

@@ -40,9 +40,9 @@ export default function SkeletonPolaroid({ width }: { width?: number }) {
         paddingHorizontal: 14,
         paddingBottom: 16,
         shadowColor: '#785A46',
-        shadowOpacity: 0.12,
-        shadowRadius: 30,
-        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 8 },
         elevation: 3,
       }}
     >

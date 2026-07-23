@@ -332,10 +332,11 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             width: detailCardWidth,
             alignSelf: 'center',
             borderRadius: radius.print,
+            // Lauren's July 2026 spec: y8 / blur24 / 8%.
             shadowColor: '#785A46',
-            shadowOpacity: 0.12,
-            shadowRadius: 30,
-            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.08,
+            shadowRadius: 24,
+            shadowOffset: { width: 0, height: 8 },
             elevation: 3,
           }}
         >
@@ -356,11 +357,11 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                     paddingBottom: 16,
                   }}
                 >
-                  <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+                  <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { mixBlendMode: 'soft-light' }]}>
                     <Image
                       source={require('../../assets/paper-texture.png')}
                       resizeMode="cover"
-                      style={[StyleSheet.absoluteFillObject, { opacity: 0.12 }]}
+                      style={[StyleSheet.absoluteFillObject, { opacity: 0.02 }]}
                     />
                   </View>
                   <View

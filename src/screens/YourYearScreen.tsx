@@ -96,9 +96,9 @@ export default function YourYearScreen({ route, navigation }: Props) {
                   borderRadius: radius.print,
                   backgroundColor: colors.polaroid,
                   shadowColor: '#785A46',
-                  shadowOpacity: 0.12,
-                  shadowRadius: 28,
-                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 24,
+                  shadowOffset: { width: 0, height: 8 },
                   elevation: 4,
                   transform: [
                     { translateX: index === 0 ? -82 : index === 2 ? 82 : 0 },
