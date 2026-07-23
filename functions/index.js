@@ -157,7 +157,10 @@ exports.createInitialProfile = onCall(async (request) => {
       displayName,
       handle,
       avatarUrl: null,
-      profileVisibility: 'private',
+      // Findable by default (1.0.1 decision): exposes only the profile card
+      // (name/handle/avatar) to signed-in users. Moments stay gated behind an
+      // approved follow regardless of this value.
+      profileVisibility: 'public',
       appearInWander: false,
       onboardingCompleted: false,
       createdAt: existingProfile.exists ? existingProfile.data().createdAt : FieldValue.serverTimestamp(),
@@ -175,7 +178,10 @@ exports.updateProfile = onCall(async (request) => {
   const uid = requireUid(request);
   const displayName = stringValue(request.data?.displayName, 'Display name', { required: true, max: 80 });
   const handle = normalizeHandle(request.data?.handle);
-  const profileVisibility = request.data?.profileVisibility === 'public' ? 'public' : 'private';
+  // Default findable: an explicit 'private' is honored, anything else lands
+  // 'public'. Old binaries (<= build 24) still send an explicit 'private'
+  // during onboarding, so their signups stay hidden until the client updates.
+  const profileVisibility = request.data?.profileVisibility === 'private' ? 'private' : 'public';
   const appearInWander = booleanValue(request.data?.appearInWander);
   const onboardingCompleted = booleanValue(request.data?.onboardingCompleted);
   const avatarUrl = typeof request.data?.avatarUrl === 'string' ? request.data.avatarUrl : undefined;
@@ -696,4 +702,31 @@ exports.sendPostingNudges = onSchedule('0 * * * *', async () => {
     await userDoc.ref.set({ lastNudge: { date: clock.date, slot } }, { merge: true });
     logger.info('Posting nudge sent', { uid, slot, timezone, friendCount, tokens: tokens.length });
   }));
+});
+
+// One-off migration for the 1.0.1 "findable by default" decision: flip every
+// existing private profile to public. Locked to the operator account; remove
+// after the backfill has run (see scripts/backfill-findable.js).
+const BACKFILL_OPERATOR_EMAIL = 'jake@munitor.ai';
+
+exports.adminBackfillFindable = onCall(async (request) => {
+  requireUid(request);
+  if (request.auth?.token?.email !== BACKFILL_OPERATOR_EMAIL) {
+    throw new HttpsError('permission-denied', 'Operator only.');
+  }
+  const dryRun = request.data?.dryRun === true;
+
+  const snap = await db.collection('publicUsers').where('profileVisibility', '==', 'private').get();
+  const flipped = [];
+  for (const profileDoc of snap.docs) {
+    flipped.push({ uid: profileDoc.id, handle: profileDoc.data()?.handle ?? null });
+    if (dryRun) continue;
+    const patch = { profileVisibility: 'public', updatedAt: FieldValue.serverTimestamp() };
+    await profileDoc.ref.set(patch, { merge: true });
+    // createInitialProfile/updateProfile mirror profile fields into the
+    // private users doc; keep that mirror consistent.
+    await db.collection('users').doc(profileDoc.id).set(patch, { merge: true });
+  }
+  logger.info('adminBackfillFindable', { dryRun, count: flipped.length });
+  return { dryRun, count: flipped.length, flipped };
 });

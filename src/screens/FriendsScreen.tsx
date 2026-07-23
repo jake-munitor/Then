@@ -233,7 +233,7 @@ export default function FriendsScreen() {
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
       <Searchbar
         ref={searchRef}
-        placeholder="Find someone by handle"
+        placeholder="Find someone by name or handle"
         value={query}
         onChangeText={setQuery}
         elevation={0}
@@ -308,7 +308,7 @@ export default function FriendsScreen() {
         title={`Keeping up with · ${followingList.length}`}
         people={followingList}
         emptyTitle="No friends yet"
-        emptyMessage="Search by handle to ask someone to keep up."
+        emptyMessage="Search by name or handle to ask someone to keep up."
         onRemove={(person) => setConfirming({ person, action: 'remove' })}
       />
 
@@ -329,7 +329,7 @@ export default function FriendsScreen() {
       ) : null}
 
       <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 11.5, lineHeight: 17 }}>
-        Private profiles don't appear here. Only people who've approved you.
+        People who've turned off "Let people find you" won't appear in search.
       </Text>
 
       <Portal>

@@ -232,17 +232,18 @@ export default function RollSettingsScreen({ navigation }: Props) {
 
       <SettingsGroup label="Privacy">
         <View style={{ padding: 16, gap: 12 }}>
-          <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>Profile visibility</Text>
+          <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>Let people find you</Text>
           <SegmentedControl
             value={profileVisibility}
             onChange={(value) => setProfileVisibility(value)}
             options={[
-              { value: 'private', label: 'Private' },
-              { value: 'public', label: 'Public' },
+              { value: 'public', label: 'Findable' },
+              { value: 'private', label: 'Hidden' },
             ]}
           />
           <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12.5, lineHeight: 18 }}>
-            Public profiles can be found in the Friends directory. Private ones stay hidden.
+            Findable means people can look you up by name or handle — they see only your
+            name and photo. Your moments always require your approval to see, either way.
           </Text>
         </View>
       </SettingsGroup>

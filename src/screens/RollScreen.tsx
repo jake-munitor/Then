@@ -248,7 +248,7 @@ export default function RollScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, backgroundColor: colors.background, paddingHorizontal: 9, paddingVertical: 4 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
               <Text style={{ color: colors.textSecondary, fontFamily: fonts.bodySemiBold, fontSize: 11 }}>
-                {profileVisibility === 'public' ? 'Public' : 'Private'}
+                {profileVisibility === 'public' ? 'Findable' : 'Hidden'}
               </Text>
             </View>
           </View>

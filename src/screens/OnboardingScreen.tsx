@@ -60,7 +60,9 @@ export default function OnboardingScreen() {
         uid: user.uid,
         displayName,
         handle: previewHandle,
-        profileVisibility: 'private',
+        // Findable by default: exposes only name/handle/avatar to signed-in
+        // users. Moments always require an approved follow regardless.
+        profileVisibility: 'public',
         appearInWander: false,
         avatarUrl,
         onboardingCompleted: true,

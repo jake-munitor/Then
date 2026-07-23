@@ -2,8 +2,14 @@
 
 ## Profiles
 
-- Private profiles are not listed in the Friends directory.
-- Public profiles are discoverable by signed-in users.
+- `profileVisibility` controls **findability only**: whether the profile card
+  (display name, handle, avatar) appears in Friends search for signed-in users. It
+  never exposes moments — those always require an approved follow (or per-moment
+  Wander opt-in), regardless of this setting.
+- As of 1.0.1 profiles default to `public` (surfaced in the UI as "Findable"). A
+  user may switch to `private` ("Hidden") at any time; hidden profiles are not
+  listed, and since requests require seeing a profile, hidden users can initiate
+  connections but not receive them.
 - Profiles with `appearInWander` enabled may be shown enough to support Wander discovery.
 - Handles are unique and reserved in `handles/{handle}` by Cloud Functions only.
 
