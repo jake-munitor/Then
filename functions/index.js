@@ -703,30 +703,3 @@ exports.sendPostingNudges = onSchedule('0 * * * *', async () => {
     logger.info('Posting nudge sent', { uid, slot, timezone, friendCount, tokens: tokens.length });
   }));
 });
-
-// One-off migration for the 1.0.1 "findable by default" decision: flip every
-// existing private profile to public. Locked to the operator account; remove
-// after the backfill has run (see scripts/backfill-findable.js).
-const BACKFILL_OPERATOR_EMAIL = 'jake@munitor.ai';
-
-exports.adminBackfillFindable = onCall(async (request) => {
-  requireUid(request);
-  if (request.auth?.token?.email !== BACKFILL_OPERATOR_EMAIL) {
-    throw new HttpsError('permission-denied', 'Operator only.');
-  }
-  const dryRun = request.data?.dryRun === true;
-
-  const snap = await db.collection('publicUsers').where('profileVisibility', '==', 'private').get();
-  const flipped = [];
-  for (const profileDoc of snap.docs) {
-    flipped.push({ uid: profileDoc.id, handle: profileDoc.data()?.handle ?? null });
-    if (dryRun) continue;
-    const patch = { profileVisibility: 'public', updatedAt: FieldValue.serverTimestamp() };
-    await profileDoc.ref.set(patch, { merge: true });
-    // createInitialProfile/updateProfile mirror profile fields into the
-    // private users doc; keep that mirror consistent.
-    await db.collection('users').doc(profileDoc.id).set(patch, { merge: true });
-  }
-  logger.info('adminBackfillFindable', { dryRun, count: flipped.length });
-  return { dryRun, count: flipped.length, flipped };
-});
