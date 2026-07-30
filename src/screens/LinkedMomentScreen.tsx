@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
 import Screen from '../components/Screen';
+import { PillButton } from '../components/DesignPrimitives';
 import type { RootStackParamList } from '../navigation/types';
 import { fetchMomentById } from '../services/moments';
 import { colors } from '../theme/colors';
@@ -13,11 +14,26 @@ import { goBackOrHome } from '../utils/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LinkedMoment'>;
 
+/**
+ * Firestore's getDoc has no timeout of its own - on a flaky connection it
+ * quietly retries forever, which left this screen spinning indefinitely
+ * (field report: tapping a push notification while driving). After this long,
+ * show the failure state with a retry instead. A late success still wins:
+ * if the fetch resolves after the timeout fires, we navigate anyway.
+ */
+const FETCH_TIMEOUT_MS = 12000;
+
 export default function LinkedMomentScreen({ route, navigation }: Props) {
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setFailed(false);
+    const timeout = setTimeout(() => {
+      if (active) setFailed(true);
+    }, FETCH_TIMEOUT_MS);
+
     fetchMomentById(route.params.momentId)
       .then((moment) => {
         if (!active) return;
@@ -31,26 +47,44 @@ export default function LinkedMomentScreen({ route, navigation }: Props) {
       })
       .catch(() => {
         if (active) setFailed(true);
-      });
+      })
+      .finally(() => clearTimeout(timeout));
+
     return () => {
       active = false;
+      clearTimeout(timeout);
     };
-  }, [navigation, route.params.momentId, route.params.target]);
+  }, [attempt, navigation, route.params.momentId, route.params.target]);
+
+  const openingNotes = route.params.target === 'notes';
+  const title = openingNotes ? 'Opening notes' : 'Opening moment';
 
   return (
     <Screen contentStyle={{ alignItems: 'center' }}>
       <View style={{ width: '100%', maxWidth: 560, gap: 16 }}>
         <PageHeader
-          title="Opening notes"
+          title={title}
           subtitle="Finding this moment."
           right={<IconButton icon="close" onPress={() => goBackOrHome(navigation)} accessibilityLabel="Close" />}
         />
         {failed ? (
-          <EmptyState title="Moment unavailable" message="This moment may have been deleted or is no longer visible." />
+          <View style={{ gap: 14 }}>
+            <EmptyState
+              title="Moment unavailable"
+              message="This moment may have been deleted, or the connection dropped while finding it."
+            />
+            <View style={{ alignItems: 'center' }}>
+              <PillButton icon="refresh" onPress={() => setAttempt((current) => current + 1)}>
+                Try again
+              </PillButton>
+            </View>
+          </View>
         ) : (
           <View style={{ alignItems: 'center', paddingVertical: 40 }}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Opening notes...</Text>
+            <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
+              {openingNotes ? 'Opening notes...' : 'Opening moment...'}
+            </Text>
           </View>
         )}
       </View>

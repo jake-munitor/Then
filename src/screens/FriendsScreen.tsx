@@ -22,6 +22,7 @@ import {
   reportUser,
   requestFollow,
   subscribeBlockedUserIds,
+  subscribeFollowers,
   subscribeFollowing,
   subscribeFollowRequests,
   subscribeOutgoingFollowRequestIds,
@@ -39,6 +40,8 @@ export default function FriendsScreen() {
   const [people, setPeople] = useState<PublicUser[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Record<string, PublicUser>>({});
+  const [followers, setFollowers] = useState<string[]>([]);
+  const [followerUsers, setFollowerUsers] = useState<Record<string, PublicUser>>({});
   const [requests, setRequests] = useState<FollowRequest[]>([]);
   const [requestUsers, setRequestUsers] = useState<Record<string, PublicUser>>({});
   const [requesting, setRequesting] = useState<PublicUser | null>(null);
@@ -74,6 +77,17 @@ export default function FriendsScreen() {
     if (!user?.uid) return;
     return subscribeFollowRequests(user.uid, setRequests, () => setListenerError('Follow requests could not be loaded.'));
   }, [refreshKey, user?.uid]);
+  useEffect(() => {
+    if (!user?.uid) {
+      setFollowers([]);
+      return;
+    }
+    return subscribeFollowers(user.uid, setFollowers, () => setListenerError('The people kept by you could not be loaded.'));
+  }, [refreshKey, user?.uid]);
+  useEffect(
+    () => subscribePublicUsers(followers, setFollowerUsers, () => setListenerError('Some friend details could not be loaded.')),
+    [followers.join('|')],
+  );
   useEffect(() => {
     if (!user?.uid) {
       setSentRequests([]);
@@ -214,6 +228,20 @@ export default function FriendsScreen() {
   };
 
   const followingList = following.map((uid) => followingUsers[uid]).filter(Boolean) as PublicUser[];
+  // Every follower gets a row even when their profile isn't readable (hidden
+  // and not followed back) - otherwise the list wouldn't match the "kept by"
+  // count on the roll, which is exactly the number people tap to inspect.
+  const followerList: PublicUser[] = followers.map(
+    (uid) =>
+      followerUsers[uid] ?? {
+        uid,
+        displayName: null,
+        handle: null,
+        avatarUrl: null,
+        profileVisibility: 'private',
+        appearInWander: false,
+      },
+  );
   const searchRef = useRef<React.ComponentRef<typeof Searchbar>>(null);
 
   return (
@@ -310,6 +338,13 @@ export default function FriendsScreen() {
         emptyTitle="No friends yet"
         emptyMessage="Search by name or handle to ask someone to keep up."
         onRemove={(person) => setConfirming({ person, action: 'remove' })}
+      />
+
+      <PeopleList
+        title={`Kept by · ${followerList.length}`}
+        people={followerList}
+        emptyTitle="No one yet"
+        emptyMessage="People whose requests you approve appear here."
       />
 
       {query.trim() ? (

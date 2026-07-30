@@ -177,6 +177,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
         </Text>
         <Text
           numberOfLines={1}
+          maxFontSizeMultiplier={1.2}
           style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}
         >
           Settings

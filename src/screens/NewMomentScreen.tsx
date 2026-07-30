@@ -137,6 +137,7 @@ export default function NewMomentScreen() {
               three-column flex:1 header. With real side widths it fits on one line. */}
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
             style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 20, lineHeight: 25 }}
           >
             a new moment

@@ -42,6 +42,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function RollScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<Nav>();
+  const tabNavigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>('private');
   const [appearInWander, setAppearInWander] = useState(false);
@@ -256,12 +257,28 @@ export default function RollScreen() {
             {profile?.handle ? `@${profile.handle}` : '@handle'}
           </Text>
           <View style={{ flexDirection: 'row', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
-            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
-              <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayRegular, fontSize: 18 }}>{following.length}</Text> keeping up
-            </Text>
-            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
-              <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayRegular, fontSize: 18 }}>{followers.length}</Text> kept by
-            </Text>
+            {/* Both stats open the Friends tab, where the matching lists live -
+                testers expected "4 kept by" to answer "who?" when tapped. */}
+            <Pressable
+              onPress={() => tabNavigation.navigate('FriendsTab')}
+              accessibilityRole="button"
+              accessibilityLabel={`${following.length} keeping up. See who.`}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
+                <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayRegular, fontSize: 18 }}>{following.length}</Text> keeping up
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => tabNavigation.navigate('FriendsTab')}
+              accessibilityRole="button"
+              accessibilityLabel={`Kept by ${followers.length}. See who.`}
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
+                <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayRegular, fontSize: 18 }}>{followers.length}</Text> kept by
+              </Text>
+            </Pressable>
           </View>
         </View>
       </View>
