@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { Button, Dialog, Portal, Text, TextInput } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -91,11 +91,45 @@ export default function WanderScreen() {
     [authorUids.join('|')],
   );
 
-  const openRequest = (moment: Moment) => {
+  const openRequest = useCallback((moment: Moment) => {
     setRequesting(moment);
     setContext(`I'd like to keep up.`);
     setError(null);
-  };
+  }, []);
+
+  // Stable identities so the memoized MomentCard can skip re-renders.
+  const openMoment = useCallback(
+    (moment: Moment) =>
+      navigation.navigate('MomentDetail', {
+        momentId: moment.id,
+        moment,
+        canNote: moment.authorUid === user?.uid || following.includes(moment.authorUid),
+      }),
+    [following, navigation, user?.uid],
+  );
+
+  const renderMoment = useCallback(
+    ({ item }: { item: Moment }) => {
+      const isSelf = item.authorUid === user?.uid;
+      const isFollowing = following.includes(item.authorUid);
+      const isPending = pendingRequests.includes(item.authorUid);
+      return (
+        <MomentCard
+          moment={item}
+          mode="wander"
+          author={publicUsers[item.authorUid]}
+          connectionLine={
+            isSelf ? 'your Wander post' : isFollowing ? 'keeping up' : isPending ? 'request pending' : 'wander'
+          }
+          onPress={openMoment}
+          onFollow={!isSelf && !isFollowing && !isPending ? openRequest : undefined}
+          onReport={!isSelf ? setReporting : undefined}
+          onBlock={!isSelf ? setBlocking : undefined}
+        />
+      );
+    },
+    [following, openMoment, openRequest, pendingRequests, publicUsers, user?.uid],
+  );
 
   const submitRequest = async () => {
     if (!user?.uid || !requesting) return;
@@ -196,38 +230,11 @@ export default function WanderScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <MomentCard
-            moment={item}
-            mode="wander"
-            author={publicUsers[item.authorUid]}
-            connectionLine={
-              item.authorUid === user?.uid
-                ? 'your Wander post'
-                : following.includes(item.authorUid)
-                  ? 'keeping up'
-                  : pendingRequests.includes(item.authorUid)
-                    ? 'request pending'
-                    : 'wander'
-            }
-            onPress={(moment) =>
-              navigation.navigate('MomentDetail', {
-                momentId: moment.id,
-                moment,
-                canNote: moment.authorUid === user?.uid || following.includes(moment.authorUid),
-              })
-            }
-            onFollow={
-              item.authorUid !== user?.uid &&
-              !following.includes(item.authorUid) &&
-              !pendingRequests.includes(item.authorUid)
-                ? openRequest
-                : undefined
-            }
-            onReport={item.authorUid !== user?.uid ? setReporting : undefined}
-            onBlock={item.authorUid !== user?.uid ? setBlocking : undefined}
-          />
-        )}
+        renderItem={renderMoment}
+        windowSize={7}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        removeClippedSubviews
         ListFooterComponent={
           visibleMoments.length && hasMore ? (
             <PillButton variant="secondary" onPress={loadMore} disabled={loadingMore}>

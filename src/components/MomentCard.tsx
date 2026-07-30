@@ -33,7 +33,7 @@ type Props = {
   canFlipBack?: boolean;
 };
 
-export default function MomentCard({
+function MomentCard({
   moment,
   author,
   mode = 'feed',
@@ -205,6 +205,8 @@ export default function MomentCard({
             <Text
               testID="moment-author-signature"
               maxFontSizeMultiplier={1.1}
+              // Deliberately not truncated - the signature wraps rather than
+              // ellipsizing, guarded by a test in MomentCard.test.tsx.
               style={{
                 color: colors.textSecondary,
                 fontFamily: fonts.signature,
@@ -325,3 +327,40 @@ function ActionIcon({
     </Pressable>
   );
 }
+
+/**
+ * Cards sit in a FlatList and each one holds live Firestore listeners, so an
+ * unnecessary re-render is expensive. Firestore rebuilds `moment` and `author`
+ * objects on every snapshot even when nothing changed, so reference equality
+ * alone would almost never hit - compare the fields the card actually draws.
+ */
+export default React.memo(MomentCard, (previous, next) => {
+  const sameMoment =
+    previous.moment.id === next.moment.id &&
+    previous.moment.imageUrl === next.moment.imageUrl &&
+    previous.moment.frontText === next.moment.frontText &&
+    previous.moment.memoryDate === next.moment.memoryDate &&
+    previous.moment.photoFilter === next.moment.photoFilter &&
+    previous.moment.keptCount === next.moment.keptCount &&
+    previous.moment.noteCount === next.moment.noteCount;
+
+  const sameAuthor =
+    previous.author?.uid === next.author?.uid &&
+    previous.author?.displayName === next.author?.displayName &&
+    previous.author?.handle === next.author?.handle &&
+    previous.author?.avatarUrl === next.author?.avatarUrl;
+
+  return (
+    sameMoment &&
+    sameAuthor &&
+    previous.mode === next.mode &&
+    previous.connectionLine === next.connectionLine &&
+    previous.canFlipBack === next.canFlipBack &&
+    previous.onPress === next.onPress &&
+    previous.onNotes === next.onNotes &&
+    previous.onFollow === next.onFollow &&
+    previous.onBlock === next.onBlock &&
+    previous.onDelete === next.onDelete &&
+    previous.onReport === next.onReport
+  );
+});

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -81,7 +81,22 @@ export default function FeedScreen() {
     [authorUids.join('|')],
   );
 
-  const openMoment = (moment: Moment) => navigation.navigate('MomentDetail', { momentId: moment.id, moment, canNote: true });
+  // Stable identities so the memoized MomentCard actually skips re-renders -
+  // an inline arrow here defeats the comparator on every parent render.
+  const openMoment = useCallback(
+    (moment: Moment) => navigation.navigate('MomentDetail', { momentId: moment.id, moment, canNote: true }),
+    [navigation],
+  );
+  const openNotes = useCallback(
+    (moment: Moment) => navigation.navigate('MomentDetail', { momentId: moment.id, moment, canNote: true }),
+    [navigation],
+  );
+  const renderMoment = useCallback(
+    ({ item }: { item: Moment }) => (
+      <MomentCard moment={item} author={publicUsers[item.authorUid]} onPress={openMoment} onNotes={openNotes} />
+    ),
+    [openMoment, openNotes, publicUsers],
+  );
   const visibleMoments = useMemo(() => sortMomentsForDisplay(moments, sort), [moments, sort]);
   const sortNote = sort === 'posted' ? 'by post date' : 'by photo date';
 
@@ -131,14 +146,11 @@ export default function FeedScreen() {
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <MomentCard
-            moment={item}
-            author={publicUsers[item.authorUid]}
-            onPress={openMoment}
-            onNotes={(moment) => navigation.navigate('MomentDetail', { momentId: moment.id, moment, canNote: true })}
-          />
-        )}
+        renderItem={renderMoment}
+        windowSize={7}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        removeClippedSubviews
         ListFooterComponent={
           visibleMoments.length ? (
             <View style={{ alignItems: 'center', gap: 10, paddingTop: 4 }}>
