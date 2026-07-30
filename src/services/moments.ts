@@ -102,6 +102,86 @@ export async function fetchMomentById(momentId: string) {
   return snap.exists() ? momentFromSnap(snap.id, snap.data()) : null;
 }
 
+/**
+ * Every moment an author dated within a calendar year, oldest first.
+ *
+ * Your Year previously loaded the 200 most recently *uploaded* moments and
+ * filtered them to the year in JavaScript. `createdAt` (upload time) and
+ * `memoryDate` (when it happened) are different things, so past 200 moments
+ * the recap silently dropped the earliest-uploaded ones, and anything
+ * backfilled with an old date landed in the wrong year entirely. A recap that
+ * quietly isn't complete is the one thing this feature cannot be, so the year
+ * is now a range query on `memoryDate` itself.
+ *
+ * Needs the authorUid + memoryDate composite index in firestore.indexes.json.
+ * This is a one-shot read rather than a listener: a recap is a static artifact,
+ * and the old live subscription re-rendered the whole screen on unrelated writes.
+ */
+export async function fetchMomentsForYear(params: { authorUid: string; year: number }): Promise<Moment[]> {
+  if (!db) return [];
+  const yearQuery = query(
+    collection(db, 'moments'),
+    where('authorUid', '==', params.authorUid),
+    where('memoryDate', '>=', `${params.year}-01-01`),
+    where('memoryDate', '<=', `${params.year}-12-31`),
+    orderBy('memoryDate', 'asc'),
+  );
+  const snap = await getDocs(yearQuery);
+  return snap.docs.map((momentDoc) => momentFromSnap(momentDoc.id, momentDoc.data()));
+}
+
+/**
+ * Which years this author actually has moments in, newest first — drives the
+ * year picker so past recaps are reachable and January isn't a dead end.
+ */
+export async function fetchYearsWithMoments(authorUid: string): Promise<number[]> {
+  if (!db) return [];
+
+  // Derived from the earliest and latest memoryDate rather than by scanning the
+  // archive: building this list from every document would cost one read per
+  // moment just to render a picker. The span may include a year the author
+  // happened not to post in, which lands on the screen's honest empty state.
+  const edge = async (direction: 'asc' | 'desc') => {
+    const snap = await getDocs(
+      query(
+        collection(db!, 'moments'),
+        where('authorUid', '==', authorUid),
+        orderBy('memoryDate', direction),
+        limit(1),
+      ),
+    );
+    const memoryDate = String(snap.docs[0]?.data()?.memoryDate ?? '');
+    const year = Number(memoryDate.slice(0, 4));
+    return Number.isFinite(year) && year > 1900 ? year : null;
+  };
+
+  const [oldest, newest] = await Promise.all([edge('asc'), edge('desc')]);
+  if (!oldest || !newest) return [];
+  return Array.from({ length: newest - oldest + 1 }, (_, offset) => newest - offset);
+}
+
+/**
+ * The author's private back-of-card reflections for a set of moments.
+ * YEARBOOK.md names these as core source material for the recap. Reads are
+ * issued in parallel and failures are swallowed per moment, so one unreadable
+ * reflection can't blank the whole year.
+ */
+export async function fetchMomentBacks(momentIds: string[]): Promise<Record<string, string>> {
+  if (!db || momentIds.length === 0) return {};
+  const entries = await Promise.all(
+    momentIds.map(async (momentId) => {
+      try {
+        const snap = await getDoc(doc(db!, 'moments', momentId, 'back', 'details'));
+        const text = snap.exists() ? String(snap.data()?.text ?? '').trim() : '';
+        return text ? ([momentId, text] as const) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return Object.fromEntries(entries.filter(Boolean) as Array<readonly [string, string]>);
+}
+
 export function subscribeMoment(
   momentId: string,
   onChange: (moment: Moment | null) => void,

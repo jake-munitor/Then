@@ -15,6 +15,22 @@
         { "fieldPath": "appearInWander", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "moments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "memoryDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "moments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "memoryDate", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
