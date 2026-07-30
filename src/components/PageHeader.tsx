@@ -16,7 +16,6 @@ export default function PageHeader(props: Props) {
     <ScreenHeader
       {...props}
       titleKind={props.title === 'Then' ? 'wordmark' : props.title === 'Settings' ? 'serif' : 'script'}
-      title={props.title === 'Then' ? 'then' : props.title}
     />
   );
 }

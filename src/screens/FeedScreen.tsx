@@ -103,7 +103,7 @@ export default function FeedScreen() {
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
       <ScreenHeader
-        title="then"
+        title="Then"
         subtitle="From the people you keep up with."
         avatarUrl={user?.uid ? publicUsers[user.uid]?.avatarUrl : null}
         initials={initialsFromName(user?.displayName)}

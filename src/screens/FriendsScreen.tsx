@@ -312,7 +312,7 @@ export default function FriendsScreen() {
                         {profile?.displayName ?? request.displayName ?? 'Then Friend'}
                       </Text>
                       <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12.5 }}>
-                        {profile?.handle ? `@${profile.handle}` : 'then profile'} · wants to keep up
+                        {profile?.handle ? `@${profile.handle}` : 'Then profile'} · wants to keep up
                       </Text>
                     </View>
                   </View>
@@ -506,7 +506,7 @@ function PeopleList({
                       {person.displayName ?? 'Then Friend'}
                     </Text>
                     <Text numberOfLines={1} style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12.5 }}>
-                      {person.handle ? `@${person.handle}` : 'then profile'}
+                      {person.handle ? `@${person.handle}` : 'Then profile'}
                     </Text>
                   </View>
                   {onRequest ? (

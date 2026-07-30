@@ -81,7 +81,7 @@ export default function AuthScreen() {
               lineHeight: 58,
             }}
           >
-            then
+            Then
           </Text>
           <Text style={{ marginTop: 6, color: colors.textSecondary, fontFamily: fonts.displayItalic, fontSize: 19, textAlign: 'center' }}>
             see your people, not the algorithm.

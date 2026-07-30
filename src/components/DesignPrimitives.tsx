@@ -79,7 +79,7 @@ function avatarStyle(size: number) {
 }
 
 export function Wordmark({
-  children = 'then',
+  children = 'Then',
   size = 42,
   style,
 }: {
