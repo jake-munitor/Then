@@ -398,9 +398,14 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                         color: colors.textSecondary,
                         fontFamily: fonts.signature,
                         fontSize: 21,
-                        lineHeight: 32,
+                        // Matches MomentCard: 32pt clipped the "j" descender
+                        // loop; the padding/margin pair protects the leading
+                        // entry swash.
+                        lineHeight: 36,
                         paddingTop: 5,
                         paddingBottom: 2,
+                        paddingLeft: 6,
+                        marginLeft: -6,
                         transform: [{ rotate: '-1.2deg' }],
                       }}
                     >

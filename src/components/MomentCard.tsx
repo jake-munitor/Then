@@ -211,7 +211,14 @@ function MomentCard({
                 color: colors.textSecondary,
                 fontFamily: fonts.signature,
                 fontSize: 21,
-                lineHeight: 32,
+                // Dancing Script's natural span at 21pt is ~32, so a 32pt line
+                // box clipped the "j" descender loop (field report: "jake"
+                // rendered with the j cut off). The padding/margin pair buys
+                // the leading entry swash room left of the glyph origin
+                // without moving the signature visually.
+                lineHeight: 36,
+                paddingLeft: 6,
+                marginLeft: -6,
                 transform: [{ rotate: '-1.2deg' }],
               }}
             >
