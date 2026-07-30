@@ -75,7 +75,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
 
         <View style={{ alignItems: 'center', gap: 5 }}>
           <SectionLabel>Your year on Then</SectionLabel>
-          <Text style={{ color: colors.textPrimary, fontFamily: fonts.script, fontSize: 76, lineHeight: 78 }}>
+          <Text style={{ color: colors.textPrimary, fontFamily: fonts.script, fontSize: 76, lineHeight: 100 }}>
             {year}
           </Text>
           <Text style={{ color: colors.textSecondary, fontFamily: fonts.displayItalic, fontSize: 18, lineHeight: 24 }}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { Text } from 'react-native-paper';
 
 import { colors } from '../theme/colors';
@@ -27,9 +27,10 @@ export default function DateStamp({ value, tone = 'chip' }: Props) {
         maxFontSizeMultiplier={1.1}
         style={{
           color: isAmber ? colors.dateAmber : colors.white,
-          fontFamily: isAmber
-            ? fonts.cameraBold
-            : Platform.select({ ios: 'Courier', android: 'monospace', default: 'Courier New' }),
+          // Both tones use the loaded Courier Prime. The chip tone previously
+          // fell back to the OS typewriter face, so the same component rendered
+          // two visibly different monospace faces.
+          fontFamily: isAmber ? fonts.cameraBold : fonts.cameraRegular,
           fontSize: isAmber ? 12 : 10,
           lineHeight: isAmber ? 14 : 12,
           letterSpacing: 1.15,

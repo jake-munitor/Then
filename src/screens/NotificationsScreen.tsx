@@ -66,13 +66,18 @@ export default function NotificationsScreen({ navigation }: Props) {
   return (
     <Screen contentStyle={{ gap: 16, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ flex: 1 }}>
+        {/* Fixed side columns: with flex:1 on all three the title only got a
+            third of the row and wrapped mid-word. */}
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
           <Icon source="chevron-left" color={colors.textPrimary} size={25} />
         </Pressable>
-        <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}>
+        <Text
+          numberOfLines={1}
+          style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}
+        >
           Notifications
         </Text>
-        <View style={{ flex: 1 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -117,7 +122,7 @@ export default function NotificationsScreen({ navigation }: Props) {
                 <View style={{ flex: 1, gap: 4 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                     {unread ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary }} /> : null}
-                    <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
+                    <Text numberOfLines={1} style={{ flexShrink: 1, color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
                       {actor?.displayName ?? 'Someone'} left a note
                     </Text>
                   </View>

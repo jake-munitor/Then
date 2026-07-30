@@ -130,13 +130,18 @@ export default function NewMomentScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ gap: 14, paddingTop: 20, paddingBottom: 30 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 40 }}>
-          <Text onPress={() => navigation.navigate('FeedTab')} style={{ flex: 1, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
+          <Text numberOfLines={1} onPress={() => navigation.navigate('FeedTab')} style={{ width: 62, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
             Cancel
           </Text>
-          <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 20, lineHeight: 25 }}>
-            a new{'\n'}moment
+          {/* The title used to carry a hardcoded newline to survive the old
+              three-column flex:1 header. With real side widths it fits on one line. */}
+          <Text
+            numberOfLines={1}
+            style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 20, lineHeight: 25 }}
+          >
+            a new moment
           </Text>
-          <View style={{ flex: 1 }} />
+          <View style={{ width: 62 }} />
         </View>
 
         <View

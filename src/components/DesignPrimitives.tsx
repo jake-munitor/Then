@@ -95,7 +95,10 @@ export function Wordmark({
           color: colors.textPrimary,
           fontFamily: fonts.scriptMedium,
           fontSize: size,
-          lineHeight: size * 0.95,
+          // Caveat has tall ascenders and deep descenders; a line box smaller
+          // than the font size shaves them, and on the multi-line onboarding
+          // headlines the rows physically overlap.
+          lineHeight: size * 1.35,
         },
         style,
       ]}
@@ -169,9 +172,11 @@ export function ScreenHeader({
 export function SectionRow({ label, note }: { label: string; note?: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18 }}>
-      <SectionLabel>{label}</SectionLabel>
+      {/* RN defaults flexShrink to 0, so without these a long note overflows
+          the row rather than letting the pair shrink to fit. */}
+      <SectionLabel style={{ flexShrink: 1 }}>{label}</SectionLabel>
       {note ? (
-        <Text style={{ color: colors.textFaintest, fontFamily: fonts.bodyRegular, fontSize: 11 }}>
+        <Text numberOfLines={1} style={{ flexShrink: 1, marginLeft: 10, color: colors.textFaintest, fontFamily: fonts.bodyRegular, fontSize: 11 }}>
           {note}
         </Text>
       ) : null}

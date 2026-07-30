@@ -172,13 +172,16 @@ export default function RollSettingsScreen({ navigation }: Props) {
   return (
     <Screen contentStyle={{ gap: 20, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 42 }}>
-        <Text onPress={() => navigation.goBack()} style={{ flex: 1, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
+        <Text numberOfLines={1} onPress={() => navigation.goBack()} style={{ width: 82, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
           ‹ Your roll
         </Text>
-        <Text style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}>
+        <Text
+          numberOfLines={1}
+          style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, fontFamily: fonts.captionSerifMedium, fontSize: 22 }}
+        >
           Settings
         </Text>
-        <Text onPress={saveProfile} style={{ flex: 1, textAlign: 'right', color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
+        <Text numberOfLines={1} onPress={saveProfile} style={{ width: 82, textAlign: 'right', color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
           Done
         </Text>
       </View>

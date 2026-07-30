@@ -467,10 +467,10 @@ function PeopleList({
                     <Avatar name={person.displayName ?? person.handle} size={44} />
                   )}
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>
+                    <Text numberOfLines={1} style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>
                       {person.displayName ?? 'Then Friend'}
                     </Text>
-                    <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12.5 }}>
+                    <Text numberOfLines={1} style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12.5 }}>
                       {person.handle ? `@${person.handle}` : 'then profile'}
                     </Text>
                   </View>

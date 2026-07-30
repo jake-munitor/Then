@@ -21,7 +21,8 @@ export const appTheme = {
     onSurface: colors.textPrimary,
     onSurfaceVariant: colors.textSecondary,
   },
-  fonts: configureFonts({
+  fonts: {
+    ...configureFonts({
     config: {
       ...MD3LightTheme.fonts,
       bodyLarge: { ...MD3LightTheme.fonts.bodyLarge, fontFamily: fonts.bodyRegular },
@@ -36,5 +37,12 @@ export const appTheme = {
       headlineSmall: { ...MD3LightTheme.fonts.headlineSmall, fontFamily: fonts.displayMedium },
       headlineMedium: { ...MD3LightTheme.fonts.headlineMedium, fontFamily: fonts.displayMedium },
     },
-  }),
+    }),
+    // Paper falls back to `default` for any <Text> without a `variant` - most
+    // of the app's error lines and dialog bodies. Left unset it stays MD3's
+    // 'System', so those silently render in the OS face beside our own fonts.
+    // Patched after configureFonts because `default` has no fontSize/lineHeight
+    // and so doesn't satisfy the sized-variant config type.
+    default: { ...MD3LightTheme.fonts.default, fontFamily: fonts.bodyRegular },
+  },
 };
