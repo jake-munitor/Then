@@ -26,6 +26,8 @@ export default function NewMomentScreen() {
   const [uri, setUri] = useState<string | null>(null);
   const [photoFilter, setPhotoFilter] = useState<PhotoFilter>(DEFAULT_PHOTO_FILTER);
   const [frontText, setFrontText] = useState('');
+  const [frontFocused, setFrontFocused] = useState(false);
+  const [backFocused, setBackFocused] = useState(false);
   const [backText, setBackText] = useState('');
   const [memoryDate, setMemoryDate] = useState(todayYYYYMMDD());
   const [appearInWander, setAppearInWander] = useState(false);
@@ -209,15 +211,24 @@ export default function NewMomentScreen() {
             <TextInput
               value={frontText}
               onChangeText={(value) => setFrontText(value.slice(0, FRONT_LIMIT))}
+              onFocus={() => setFrontFocused(true)}
+              onBlur={() => setFrontFocused(false)}
               disabled={busy}
               placeholder="first light, no plans"
+              // Paper's default placeholder resolves to textSecondary here -
+              // dark enough to read as already-entered text (field report).
+              placeholderTextColor={colors.textFaint}
+              selectionColor={colors.primary}
               mode="flat"
               underlineColor="transparent"
               activeUnderlineColor="transparent"
               style={{ backgroundColor: 'transparent', paddingHorizontal: 0 }}
               contentStyle={{ color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 19 }}
             />
-            <View style={{ height: 1, backgroundColor: colors.border }} />
+            {/* The Paper underline is intentionally hidden, so this divider is
+                the input's only focus affordance - it warms and thickens while
+                the caption is being written. */}
+            <View style={{ height: frontFocused ? 2 : 1, backgroundColor: frontFocused ? colors.primary : colors.border }} />
             <Text style={{ textAlign: 'right', color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
               {frontText.length} / {FRONT_LIMIT}
             </Text>
@@ -239,7 +250,7 @@ export default function NewMomentScreen() {
         <View
           style={{
             backgroundColor: colors.surfaceInset,
-            borderColor: colors.borderInset,
+            borderColor: backFocused ? colors.primary : colors.borderInset,
             borderWidth: 1,
             borderRadius: radius.lg,
             padding: 16,
@@ -256,10 +267,14 @@ export default function NewMomentScreen() {
           <TextInput
             value={backText}
             onChangeText={setBackText}
+            onFocus={() => setBackFocused(true)}
+            onBlur={() => setBackFocused(false)}
             maxLength={5000}
             disabled={busy}
             multiline
             placeholder="What do you want to remember?"
+            placeholderTextColor={colors.textFaint}
+            selectionColor={colors.primary}
             mode="flat"
             underlineColor="transparent"
             activeUnderlineColor="transparent"
