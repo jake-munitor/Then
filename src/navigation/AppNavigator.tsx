@@ -18,12 +18,14 @@ import AuthScreen from '../screens/AuthScreen';
 import NotesScreen from '../screens/NotesScreen';
 import FirebaseConfigScreen from '../screens/FirebaseConfigScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import InviteScreen from '../screens/InviteScreen';
 import LinkedMomentScreen from '../screens/LinkedMomentScreen';
 import MomentDetailScreen from '../screens/MomentDetailScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RollSettingsScreen from '../screens/RollSettingsScreen';
 import YourYearScreen from '../screens/YourYearScreen';
+import { inviteCodeFromUrl, stashPendingInviteCode } from '../services/invites';
 import { getLastNotificationURL, subscribeNotificationURLs } from '../services/pushNotifications';
 import { navigationIntegration } from '../services/telemetry';
 import TabsNavigator from './TabsNavigator';
@@ -43,15 +45,28 @@ const linking: LinkingOptions<RootStackParamList> = {
       // Matches both moments/<id> (friend-posted push -> detail) and
       // moments/<id>/notes (note notification -> notes thread).
       LinkedMoment: 'moments/:momentId/:target?',
+      Invite: 'invite/:code',
     },
   },
   async getInitialURL() {
     const url = await Linking.getInitialURL();
-    if (url) return url;
+    if (url) {
+      // An invite can land before the person has an account, in which case the
+      // Invite screen doesn't exist in the navigator yet and the URL would be
+      // silently dropped. Stash the code; TabsNavigator redeems it after
+      // onboarding. When signed in, the InviteScreen clears the stash itself.
+      const code = inviteCodeFromUrl(url);
+      if (code) void stashPendingInviteCode(code);
+      return url;
+    }
     return getLastNotificationURL();
   },
   subscribe(listener) {
-    const linkSubscription = Linking.addEventListener('url', ({ url }) => listener(url));
+    const linkSubscription = Linking.addEventListener('url', ({ url }) => {
+      const code = inviteCodeFromUrl(url);
+      if (code) void stashPendingInviteCode(code);
+      listener(url);
+    });
     let notificationCleanup: (() => void) | undefined;
     subscribeNotificationURLs(listener).then((cleanup) => {
       notificationCleanup = cleanup;
@@ -147,6 +162,7 @@ export default function AppNavigator() {
             <Stack.Screen name="YourYear" component={YourYearScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="LinkedMoment" component={LinkedMomentScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Invite" component={InviteScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Notes" component={NotesScreen} options={{ headerShown: false, presentation: 'modal' }} />
           </>
         )}

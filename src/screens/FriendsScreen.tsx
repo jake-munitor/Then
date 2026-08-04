@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Image, Pressable, Share, View } from 'react-native';
 import { Button, Dialog, Icon, Portal, Searchbar, Text, TextInput } from 'react-native-paper';
 
 import EmptyState from '../components/EmptyState';
@@ -27,6 +28,8 @@ import {
   subscribeFollowRequests,
   subscribeOutgoingFollowRequestIds,
 } from '../services/follows';
+import { createInvite, normalizeInviteCode, redeemInvite } from '../services/invites';
+import { track } from '../services/telemetry';
 import type { FollowRequest, PublicUser } from '../services/types';
 import { filterDiscoverableUsers, subscribeDiscoverableUsers, subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
@@ -36,7 +39,10 @@ import { radius } from '../theme/radius';
 
 export default function FriendsScreen() {
   const { user } = useContext(AuthContext);
+  const navigation = useNavigation<any>();
   const [query, setQuery] = useState('');
+  const [enteringCode, setEnteringCode] = useState(false);
+  const [inviteCodeEntry, setInviteCodeEntry] = useState('');
   const [people, setPeople] = useState<PublicUser[]>([]);
   const [following, setFollowing] = useState<string[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Record<string, PublicUser>>({});
@@ -129,6 +135,34 @@ export default function FriendsScreen() {
     setRequesting(person);
     setContext(`I'd like to keep up.`);
     setError(null);
+  };
+
+  const shareInvite = async () => {
+    try {
+      const invite = await createInvite();
+      const result = await Share.share({
+        message: `Join me on Then - one photo, one moment, just our people. ${invite.url}`,
+      });
+      if (result.action === Share.sharedAction) track('invite_shared');
+    } catch {
+      setError('Your invite could not be created. Try again.');
+    }
+  };
+
+  const submitInviteCode = async () => {
+    const code = normalizeInviteCode(inviteCodeEntry);
+    setBusy(true);
+    setError(null);
+    try {
+      const redeemedInvite = await redeemInvite(code);
+      setEnteringCode(false);
+      setInviteCodeEntry('');
+      navigation.navigate('Profile', { uid: redeemedInvite.inviterUid });
+    } catch (redeemError) {
+      setError(redeemError instanceof Error ? redeemError.message : 'This code could not be used.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submitRequest = async () => {
@@ -251,11 +285,18 @@ export default function FriendsScreen() {
         titleKind="script"
         subtitle="Everyone you keep up with, and who keeps up with you."
         right={
-          <IconCircleButton
-            icon="account-plus-outline"
-            onPress={() => searchRef.current?.focus()}
-            accessibilityLabel="Find someone"
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <IconCircleButton
+              icon="email-plus-outline"
+              onPress={shareInvite}
+              accessibilityLabel="Invite a friend"
+            />
+            <IconCircleButton
+              icon="account-plus-outline"
+              onPress={() => searchRef.current?.focus()}
+              accessibilityLabel="Find someone"
+            />
+          </View>
         }
       />
       <ListenerError message={listenerError} onRetry={() => { setListenerError(null); onRefresh(); }} />
@@ -278,6 +319,11 @@ export default function FriendsScreen() {
         }}
         inputStyle={{ fontFamily: fonts.bodyRegular, fontSize: 14 }}
       />
+      <Pressable onPress={() => { setEnteringCode(true); setError(null); }} accessibilityRole="button">
+        <Text style={{ color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 12.5, textAlign: 'center' }}>
+          Have an invite code?
+        </Text>
+      </Pressable>
       {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
 
       <View style={{ gap: 9 }}>
@@ -368,6 +414,31 @@ export default function FriendsScreen() {
       </Text>
 
       <Portal>
+        <Dialog visible={enteringCode} onDismiss={() => setEnteringCode(false)}>
+          <Dialog.Title>Enter an invite code</Dialog.Title>
+          <Dialog.Content>
+            <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
+              Six letters and numbers from a friend's invite link.
+            </Text>
+            <TextInput
+              label="invite code"
+              value={inviteCodeEntry}
+              onChangeText={(value) => setInviteCodeEntry(normalizeInviteCode(value))}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={6}
+              disabled={busy}
+              contentStyle={{ fontFamily: fonts.cameraRegular, letterSpacing: 3 }}
+            />
+            {error ? <Text style={{ color: colors.error, marginTop: 8 }}>{error}</Text> : null}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setEnteringCode(false)} disabled={busy}>Cancel</Button>
+            <Button onPress={submitInviteCode} loading={busy} disabled={busy || inviteCodeEntry.length !== 6}>
+              Connect
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
         <Dialog visible={Boolean(requesting)} onDismiss={() => setRequesting(null)}>
           <Dialog.Title>Ask to keep up</Dialog.Title>
           <Dialog.Content>

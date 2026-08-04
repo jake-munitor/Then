@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AppState, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
 import { Icon, useTheme } from 'react-native-paper';
 
 import FeedScreen from '../screens/FeedScreen';
@@ -9,6 +10,7 @@ import NewMomentScreen from '../screens/NewMomentScreen';
 import RollScreen from '../screens/RollScreen';
 import WanderScreen from '../screens/WanderScreen';
 import { subscribeFollowRequests } from '../services/follows';
+import { redeemInvite, takePendingInviteCode } from '../services/invites';
 import { subscribeNotifications } from '../services/notifications';
 import { cancelLocalPostingReminders } from '../services/postingReminders';
 import { registerForPushNotifications, setAppBadgeCount } from '../services/pushNotifications';
@@ -21,6 +23,7 @@ const Tab = createBottomTabNavigator<TabsParamList>();
 
 export default function TabsNavigator() {
   const theme = useTheme();
+  const navigation = useNavigation<any>();
   const { user } = useContext(AuthContext);
   const [requestCount, setRequestCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -69,6 +72,28 @@ export default function TabsNavigator() {
   useEffect(() => {
     cancelLocalPostingReminders().catch(() => {});
   }, []);
+
+  // An invite link that arrived before this person had an account was stashed
+  // by the deep-link layer. Now that they're signed in and onboarded (this
+  // navigator only mounts then), redeem it and land them on their friend's
+  // roll - the whole point of the invite was a non-empty first session.
+  useEffect(() => {
+    if (!user?.uid) return;
+    let active = true;
+    takePendingInviteCode()
+      .then(async (code) => {
+        if (!code || !active) return;
+        const redeemedInvite = await redeemInvite(code);
+        if (active) navigation.navigate('Profile', { uid: redeemedInvite.inviterUid });
+      })
+      .catch(() => {
+        // Expired or exhausted codes fail quietly; the person can still use
+        // manual entry on the Friends screen.
+      });
+    return () => {
+      active = false;
+    };
+  }, [navigation, user?.uid]);
 
   return (
     <Tab.Navigator

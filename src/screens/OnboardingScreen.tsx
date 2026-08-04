@@ -1,11 +1,12 @@
 import React, { useContext, useMemo, useState } from 'react';
-import { Image, View } from 'react-native';
+import { Image, Share, View } from 'react-native';
 import { Icon, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
 import Screen from '../components/Screen';
 import { Avatar, PillButton, Wordmark } from '../components/DesignPrimitives';
+import { createInvite } from '../services/invites';
 import { uploadAvatar } from '../services/photos';
 import { track } from '../services/telemetry';
 import { updateThenSettings } from '../services/users';
@@ -21,11 +22,14 @@ function handleFromName(value: string) {
 export default function OnboardingScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<any>();
-  const [step, setStep] = useState<'principles' | 'profile'>('principles');
+  const [step, setStep] = useState<'principles' | 'profile' | 'invite'>('principles');
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [handle, setHandle] = useState(handleFromName(user?.displayName ?? ''));
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [savedAvatarUrl, setSavedAvatarUrl] = useState<string | null>(null);
+  const [target, setTarget] = useState<'friends' | 'moment'>('moment');
   const [busyTarget, setBusyTarget] = useState<'friends' | 'moment' | null>(null);
+  const [busyInvite, setBusyInvite] = useState<'share' | 'skip' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const previewHandle = useMemo(() => handleFromName(handle), [handle]);
 
@@ -44,14 +48,18 @@ export default function OnboardingScreen() {
     if (!result.canceled) setAvatarUri(result.assets[0].uri);
   };
 
-  const finish = async (target: 'friends' | 'moment') => {
+  // Two-phase completion: the profile saves with onboardingCompleted false so
+  // the invite step can render - AppNavigator swaps this screen out the moment
+  // the flag flips true, so anything shown "after onboarding" would unmount
+  // mid-frame. completeOnboarding() flips the flag as its last act.
+  const saveProfile = async (nextTarget: 'friends' | 'moment') => {
     if (!user?.uid || !displayName.trim()) return;
     if (previewHandle.length < 3) {
       setError('Use at least 3 characters for your handle.');
       return;
     }
 
-    setBusyTarget(target);
+    setBusyTarget(nextTarget);
     setError(null);
     try {
       let avatarUrl: string | null | undefined;
@@ -65,6 +73,37 @@ export default function OnboardingScreen() {
         profileVisibility: 'public',
         appearInWander: false,
         avatarUrl,
+        onboardingCompleted: false,
+      });
+      setSavedAvatarUrl(avatarUrl ?? null);
+      setTarget(nextTarget);
+      setStep('invite');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not finish setup.');
+    } finally {
+      setBusyTarget(null);
+    }
+  };
+
+  const completeOnboarding = async (via: 'share' | 'skip') => {
+    if (!user?.uid) return;
+    setBusyInvite(via);
+    setError(null);
+    try {
+      if (via === 'share') {
+        const invite = await createInvite();
+        const result = await Share.share({
+          message: `Join me on Then - one photo, one moment, just our people. ${invite.url}`,
+        });
+        if (result.action === Share.sharedAction) track('invite_shared');
+      }
+      await updateThenSettings({
+        uid: user.uid,
+        displayName,
+        handle: previewHandle,
+        profileVisibility: 'public',
+        appearInWander: false,
+        avatarUrl: savedAvatarUrl,
         onboardingCompleted: true,
       });
       track('onboarding_completed', { target });
@@ -72,9 +111,40 @@ export default function OnboardingScreen() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not finish setup.');
     } finally {
-      setBusyTarget(null);
+      setBusyInvite(null);
     }
   };
+
+  if (step === 'invite') {
+    return (
+      <Screen contentStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingBottom: 34 }}>
+        <View style={{ gap: 18, alignItems: 'center' }}>
+          <Wordmark size={40}>Bring your people</Wordmark>
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14, lineHeight: 21, textAlign: 'center' }}>
+            Then is quiet on purpose - your feed is only the friends you invite. An invite link
+            connects you both the moment they join, no requests to approve.
+          </Text>
+          {error ? <Text style={{ color: colors.error, textAlign: 'center' }}>{error}</Text> : null}
+          <View style={{ gap: 10, width: '100%', marginTop: 8 }}>
+            <PillButton
+              icon="email-plus-outline"
+              onPress={() => completeOnboarding('share')}
+              disabled={Boolean(busyInvite)}
+            >
+              Invite a few friends
+            </PillButton>
+            <PillButton
+              variant="secondary"
+              onPress={() => completeOnboarding('skip')}
+              disabled={Boolean(busyInvite)}
+            >
+              Maybe later
+            </PillButton>
+          </View>
+        </View>
+      </Screen>
+    );
+  }
 
   if (step === 'principles') {
     return (
@@ -140,7 +210,7 @@ export default function OnboardingScreen() {
             <PillButton
               variant="secondary"
               icon="account-plus-outline"
-              onPress={() => finish('friends')}
+              onPress={() => saveProfile('friends')}
               disabled={Boolean(busyTarget) || !displayName.trim()}
               style={{ flex: 1 }}
             >
@@ -148,7 +218,7 @@ export default function OnboardingScreen() {
             </PillButton>
             <PillButton
               icon="camera-outline"
-              onPress={() => finish('moment')}
+              onPress={() => saveProfile('moment')}
               disabled={Boolean(busyTarget) || !displayName.trim()}
               style={{ flex: 1 }}
             >

@@ -12,7 +12,9 @@ import {
   subscribeNotificationPreferences,
   updateNotificationPreferences,
 } from '../services/notifications';
+import { createInvite } from '../services/invites';
 import { deleteStoredFile, uploadAvatar } from '../services/photos';
+import { track } from '../services/telemetry';
 import type { NotificationPreferences, ProfileVisibility } from '../services/types';
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
@@ -120,6 +122,18 @@ export default function RollSettingsScreen({ navigation }: Props) {
       setError(e instanceof Error ? e.message : 'Could not update avatar.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const shareInvite = async () => {
+    try {
+      const invite = await createInvite();
+      const result = await Share.share({
+        message: `Join me on Then - one photo, one moment, just our people. ${invite.url}`,
+      });
+      if (result.action === Share.sharedAction) track('invite_shared');
+    } catch {
+      setError('Your invite could not be created. Try again.');
     }
   };
 
@@ -259,6 +273,26 @@ export default function RollSettingsScreen({ navigation }: Props) {
             <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>New moments start opted in.</Text>
           </View>
           <Toggle value={appearInWander} onValueChange={setAppearInWander} disabled={busy} />
+        </SettingsRow>
+        <SettingsRow>
+          <Pressable
+            onPress={shareInvite}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: pressed ? 0.6 : 1 })}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+              <Icon source="email-plus-outline" color={colors.primary} size={18} />
+              <View>
+                <Text style={{ color: colors.primary, fontFamily: fonts.bodyMedium, fontSize: 14 }}>
+                  Invite friends
+                </Text>
+                <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
+                  A link that connects you both instantly.
+                </Text>
+              </View>
+            </View>
+            <Icon source="chevron-right" color={colors.textFaintest} size={20} />
+          </Pressable>
         </SettingsRow>
         <SettingsRow isLast>
           <Pressable

@@ -120,7 +120,18 @@ any collision with that app's `[client]` dynamic routing.
 
 ---
 
-## 4. Invite links that pre-connect (~2–3 days)
+## 4. Invite links that pre-connect (~2–3 days) — BUILT 2026-08-03
+
+Implemented as speced below, with two deltas: the active-code pointer lives on
+`users/{uid}.activeInvite` instead of a composite index on `invites`, and the
+approval-notification trigger gained invite-specific wording (`viaInvite` flag on
+the following docs). Ship order matters: **deploy functions + rules before the
+OTA** — the client calls `createInvite`/`redeemInvite`, which don't exist in
+production until deployed.
+
+Still open in the `munitor-dashboard` repo: the web fallback page at
+`/then/invite/<code>` (App Store link + the code for manual entry) for people
+without the app installed. The AASA already claims the path.
 
 **Why:** Friends-only app ⇒ a solo signup sees an empty feed and churns. Getting new
 users to 2–3 connections in their first session is the growth metric.

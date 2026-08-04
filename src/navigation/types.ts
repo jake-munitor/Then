@@ -10,6 +10,7 @@ export type RootStackParamList = {
   YourYear: { year?: number } | undefined;
   Notes: { moment: Moment };
   LinkedMoment: { momentId: string; target?: string };
+  Invite: { code: string };
   Profile: { handle?: string; uid?: string };
 };
 

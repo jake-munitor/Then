@@ -196,4 +196,24 @@ maybeDescribe('firestore security rules', () => {
       updatedAt: new Date(),
     }));
   });
+
+  it('lets only the inviter read an invite, and nobody write one', async () => {
+    await seed(['invites', 'ABC234'], {
+      inviterUid: 'inviter',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 86400000),
+      redeemedBy: [],
+      maxRedemptions: 10,
+    });
+
+    const inviter = testEnv.authenticatedContext('inviter').firestore();
+    const stranger = testEnv.authenticatedContext('stranger').firestore();
+
+    await assertSucceeds(getDoc(doc(inviter, 'invites', 'ABC234')));
+    // A redeemer never reads the invite doc - redemption goes through the
+    // callable - so codes cannot be probed or enumerated client-side.
+    await assertFails(getDoc(doc(stranger, 'invites', 'ABC234')));
+    await assertFails(setDoc(doc(stranger, 'invites', 'ZZZ999'), { inviterUid: 'stranger' }));
+    await assertFails(updateDoc(doc(inviter, 'invites', 'ABC234'), { maxRedemptions: 1000 }));
+  });
 });

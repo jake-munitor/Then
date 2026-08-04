@@ -1,6 +1,6 @@
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
-const { FieldValue, getFirestore } = require('firebase-admin/firestore');
+const { FieldValue, Timestamp, getFirestore } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
 const { logger } = require('firebase-functions');
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
@@ -605,13 +605,18 @@ exports.sendApprovalNotification = onDocumentCreated('users/{requesterUid}/follo
   if (requesterSnap.data()?.notificationPreferences?.friendApprovals === false) return;
   const owner = ownerSnap.data() || {};
   const name = owner.displayName || 'Your friend';
+  // Invite redemptions create the same following docs, but "approved your
+  // request" is the wrong story when both sides said yes via a link.
+  const viaInvite = event.data?.data()?.viaInvite === true;
   const [tokens, badge] = await Promise.all([pushTokensFor(requesterUid), unreadBadgeFor(requesterUid)]);
   await sendExpoPush(tokens.map(({ token }) => ({
     to: token,
     sound: 'default',
     badge,
-    title: `${name} approved`,
-    body: "You're keeping up now - their moments land in your feed.",
+    title: viaInvite ? `${name} is on Then with you` : `${name} approved`,
+    body: viaInvite
+      ? "Invite accepted - you're keeping up with each other now."
+      : "You're keeping up now - their moments land in your feed.",
     data: { type: 'friendApproval', url: owner.handle ? `then://profile/${encodeURIComponent(owner.handle)}` : 'then://' },
   })));
 });
@@ -702,4 +707,114 @@ exports.sendPostingNudges = onSchedule('0 * * * *', async () => {
     await userDoc.ref.set({ lastNudge: { date: clock.date, slot } }, { merge: true });
     logger.info('Posting nudge sent', { uid, slot, timezone, friendCount, tokens: tokens.length });
   }));
+});
+
+// --- Invite links ------------------------------------------------------------
+//
+// A friends-only feed makes the empty first session the biggest churn risk, so
+// an invite pre-connects both people: the inviter explicitly asked, the
+// redeemer explicitly accepted, and both consented - no request/approve
+// friction on either side (ROADMAP item 4).
+
+const { randomInt } = require('crypto');
+
+const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const INVITE_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
+const INVITE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const INVITE_MAX_REDEMPTIONS = 10;
+
+function mintInviteCode() {
+  return Array.from({ length: 6 }, () => INVITE_ALPHABET[randomInt(INVITE_ALPHABET.length)]).join('');
+}
+
+function normalizeInviteCode(value) {
+  return String(value ?? '').trim().toUpperCase();
+}
+
+exports.createInvite = onCall(async (request) => {
+  const uid = requireUid(request);
+
+  // Reuse the caller's active code so a person shares one link, not a trail of
+  // them. The pointer lives on the private user doc to avoid needing a
+  // composite index on the invites collection.
+  const userRef = db.collection('users').doc(uid);
+  const existing = (await userRef.get()).data()?.activeInvite;
+  if (existing?.code && existing.expiresAt?.toMillis?.() > Date.now()) {
+    const inviteSnap = await db.collection('invites').doc(existing.code).get();
+    if (inviteSnap.exists) {
+      return { code: existing.code, expiresAt: existing.expiresAt.toMillis() };
+    }
+  }
+
+  let code = null;
+  for (let attempt = 0; attempt < 5 && !code; attempt += 1) {
+    const candidate = mintInviteCode();
+    const clash = await db.collection('invites').doc(candidate).get();
+    if (!clash.exists) code = candidate;
+  }
+  if (!code) throw new HttpsError('resource-exhausted', 'Could not mint an invite code. Try again.');
+
+  const expiresAt = Timestamp.fromMillis(Date.now() + INVITE_TTL_MS);
+  const batch = db.batch();
+  batch.set(db.collection('invites').doc(code), {
+    inviterUid: uid,
+    createdAt: FieldValue.serverTimestamp(),
+    expiresAt,
+    redeemedBy: [],
+    maxRedemptions: INVITE_MAX_REDEMPTIONS,
+  });
+  batch.set(userRef, { activeInvite: { code, expiresAt } }, { merge: true });
+  await batch.commit();
+  return { code, expiresAt: expiresAt.toMillis() };
+});
+
+exports.redeemInvite = onCall(async (request) => {
+  const uid = requireUid(request);
+  const code = normalizeInviteCode(request.data?.code);
+  if (!INVITE_CODE_PATTERN.test(code)) {
+    throw new HttpsError('invalid-argument', 'That does not look like an invite code.');
+  }
+
+  const inviteRef = db.collection('invites').doc(code);
+  const inviterUid = (await inviteRef.get()).data()?.inviterUid;
+  if (!inviterUid) throw new HttpsError('not-found', 'This invite does not exist.');
+  if (inviterUid === uid) throw new HttpsError('failed-precondition', 'This is your own invite.');
+  if (await blockedEitherWay(inviterUid, uid)) {
+    throw new HttpsError('failed-precondition', 'This invite cannot be used.');
+  }
+
+  await db.runTransaction(async (tx) => {
+    const invite = (await tx.get(inviteRef)).data();
+    if (!invite) throw new HttpsError('not-found', 'This invite does not exist.');
+    const redeemedBy = invite.redeemedBy ?? [];
+    // Idempotent: a second tap on the same link is a no-op, not an error.
+    if (redeemedBy.includes(uid)) return;
+    if (invite.expiresAt?.toMillis?.() < Date.now()) {
+      throw new HttpsError('failed-precondition', 'This invite has expired.');
+    }
+    if (redeemedBy.length >= (invite.maxRedemptions ?? INVITE_MAX_REDEMPTIONS)) {
+      throw new HttpsError('resource-exhausted', 'This invite has been used up.');
+    }
+
+    const approvedAt = FieldValue.serverTimestamp();
+    // Approved mutual follow, both directions. viaInvite lets the approval
+    // notification use invite wording instead of request/approve wording.
+    tx.set(db.collection('users').doc(inviterUid).collection('followers').doc(uid), { uid, approvedAt, viaInvite: true });
+    tx.set(db.collection('users').doc(uid).collection('following').doc(inviterUid), { uid: inviterUid, approvedAt, viaInvite: true });
+    tx.set(db.collection('users').doc(uid).collection('followers').doc(inviterUid), { uid: inviterUid, approvedAt, viaInvite: true });
+    tx.set(db.collection('users').doc(inviterUid).collection('following').doc(uid), { uid, approvedAt, viaInvite: true });
+    // Any pending requests between the two are now moot.
+    tx.delete(db.collection('users').doc(inviterUid).collection('followRequests').doc(uid));
+    tx.delete(db.collection('users').doc(uid).collection('followRequests').doc(inviterUid));
+    tx.delete(db.collection('users').doc(uid).collection('outgoingFollowRequests').doc(inviterUid));
+    tx.delete(db.collection('users').doc(inviterUid).collection('outgoingFollowRequests').doc(uid));
+    tx.update(inviteRef, { redeemedBy: FieldValue.arrayUnion(uid) });
+  });
+
+  const inviterProfile = (await db.collection('publicUsers').doc(inviterUid).get()).data() ?? {};
+  return {
+    inviterUid,
+    displayName: inviterProfile.displayName ?? null,
+    handle: inviterProfile.handle ?? null,
+  };
 });

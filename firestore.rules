@@ -133,6 +133,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /invites/{code} {
+      // The inviter may see their own code's state; nobody else can enumerate
+      // or probe codes. Minting and redemption go through Cloud Functions.
+      allow read: if signedIn() && resource.data.inviterUid == request.auth.uid;
+      allow write: if false;
+    }
+
     match /users/{uid} {
       allow read: if isSelf(uid);
       allow create: if validProfileCreate(uid);
