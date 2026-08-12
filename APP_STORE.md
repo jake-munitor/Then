@@ -164,13 +164,19 @@ indicator if you care (nobody was ever rejected for battery level).
 `C:\Users\jakef\Downloads\then-shots\` (any folder), then:
 
 ```powershell
-python scripts/appstore-screenshots.py C:\Users\jakef\Downloads\then-shots
+python scripts/appstore-marketing.py C:\Users\jakef\Downloads\then-shots
 ```
 
-Upload everything from the generated `appstore\` subfolder to the 6.9" slot in
-App Store Connect. The script resizes any modern iPhone screenshot to exactly
-1320×2868 (letterboxing onto the app's paper color only if the aspect ratio is
-unusual).
+Upload everything from the generated `marketing\` subfolder to the 6.9" slot in
+App Store Connect. This composes each raw capture as a **polaroid-framed
+marketing shot** — paper background, serif headline, handwritten sub-caption,
+tilted card with a warm shadow — instead of a bare screen grab. Captions,
+ordering, and source files live in the `SHOTS` list at the top of the script;
+first shots surface in search results, so the feed and the approval model lead.
+
+(The older `scripts/appstore-screenshots.py` still exists for plain resizing —
+letterboxing any modern iPhone capture to exactly 1320×2868 — but the framed
+set is what the listing should use.)
 
 ---
 
