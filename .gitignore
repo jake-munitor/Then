@@ -26,3 +26,6 @@ firestore-debug.log
 *.mobileprovision
 Polaroid Photo Sharing App.zip
 Screenshot-*.png
+
+# Conversation-pasted images land in cwd; never commit them
+image-*.png

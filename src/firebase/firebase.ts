@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, initializeAuth } from 'firebase/auth';
 import * as FirebaseAuth from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -82,7 +82,17 @@ if (firebaseApp && isFirebaseConfigured() && !firebaseInitError) {
   }
 
   if (!firebaseInitError) {
-    dbInstance = getFirestore(firebaseApp);
+    try {
+      // Firestore's default streaming transport can wedge on React Native
+      // during network transitions (cellular hand-offs, background/foreground)
+      // and requests then neither resolve nor reject - the field-reported
+      // "stuck opening a moment from a push" hang. Auto-detect falls back to
+      // long polling when the stream is broken.
+      dbInstance = initializeFirestore(firebaseApp, { experimentalAutoDetectLongPolling: true });
+    } catch {
+      // Already initialized (e.g. fast refresh) - reuse the existing instance.
+      dbInstance = getFirestore(firebaseApp);
+    }
     functionsInstance = getFunctions(firebaseApp);
     storageInstance = getStorage(firebaseApp);
   }

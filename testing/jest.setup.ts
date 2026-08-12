@@ -150,6 +150,7 @@ jest.mock('firebase/storage', () => ({
 }));
 
 jest.mock('firebase/firestore', () => ({
+  initializeFirestore: jest.fn(() => ({})),
   collection: jest.fn(() => ({})),
   doc: jest.fn(() => ({})),
   query: jest.fn(() => ({})),

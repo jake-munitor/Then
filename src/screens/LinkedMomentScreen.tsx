@@ -9,6 +9,7 @@ import Screen from '../components/Screen';
 import { PillButton } from '../components/DesignPrimitives';
 import type { RootStackParamList } from '../navigation/types';
 import { fetchMomentById } from '../services/moments';
+import { captureException } from '../services/telemetry';
 import { colors } from '../theme/colors';
 import { goBackOrHome } from '../utils/navigation';
 
@@ -31,7 +32,16 @@ export default function LinkedMomentScreen({ route, navigation }: Props) {
     let active = true;
     setFailed(false);
     const timeout = setTimeout(() => {
-      if (active) setFailed(true);
+      if (!active) return;
+      setFailed(true);
+      // A timeout here means Firestore neither resolved nor rejected - the
+      // wedged-transport case. Count it in Sentry so recurrence is visible
+      // without waiting for a screenshot report.
+      captureException(new Error('LinkedMoment fetch timed out'), {
+        momentId: route.params.momentId,
+        target: route.params.target ?? null,
+        attempt,
+      });
     }, FETCH_TIMEOUT_MS);
 
     fetchMomentById(route.params.momentId)
