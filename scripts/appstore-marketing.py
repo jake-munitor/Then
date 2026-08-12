@@ -43,7 +43,11 @@ SHOTS = [
         'tilt': -2.0,
     },
     {
-        'source': 'IMG_4256.PNG',
+        # Deliberately the DEMO account's Friends view ("Then Review") - the
+        # original capture put real family names and wedding photos in the
+        # public listing. Capture: sign into the demo account, Friends tab,
+        # screenshot, drop it in the input folder under this name.
+        'source': 'demo-friends.PNG',
         'out': 'then-02-friends.png',
         'headline': 'Only the friends\nyou approve.',
         'script': 'every follow needs a yes',
@@ -157,8 +161,14 @@ def main() -> None:
     out_dir = source_dir / 'marketing'
     out_dir.mkdir(exist_ok=True)
     print(f'Composing {len(SHOTS)} marketing shots -> {out_dir}')
+    skipped = []
     for shot_config in SHOTS:
+        if not (source_dir / shot_config['source']).exists():
+            skipped.append(shot_config)
+            continue
         compose(shot_config, source_dir, out_dir)
+    for shot_config in skipped:
+        print(f"  SKIPPED {shot_config['out']} - missing {shot_config['source']}")
     print('Done. Upload the contents of marketing/ to the 6.9" slot in App Store Connect.')
 
 
