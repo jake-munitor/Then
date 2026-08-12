@@ -17,6 +17,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+# Default is the 6.9" slot; pass e.g. --size 1284x2778 for the 6.5"/6.7" slot
+# (what App Store Connect asks for on this app's version page). All layout
+# constants scale off the width, so any portrait size renders correctly.
 CANVAS = (1320, 2868)
 
 # Brand tokens, mirrored from src/theme/colors.ts and the web style.css.
@@ -85,14 +88,14 @@ def rounded(image: Image.Image, radius: int) -> Image.Image:
     return out
 
 
-def build_polaroid(screenshot: Image.Image, max_height: int) -> Image.Image:
+def build_polaroid(screenshot: Image.Image, max_height: int, scale: float = 1.0) -> Image.Image:
     """The capture mounted on a white mat: even borders, thick polaroid chin.
 
     Scaled so the finished card never overflows the canvas - the first render
     ran the tab bar off the bottom edge and buried the footer wordmark.
     """
-    border, chin = 34, 130
-    shot_width = 960
+    border, chin = round(34 * scale), round(130 * scale)
+    shot_width = round(960 * scale)
     card_height = round(screenshot.height * (shot_width / screenshot.width)) + border + chin
     if card_height > max_height:
         shot_width = round(shot_width * (max_height - border - chin) / (card_height - border - chin))
@@ -107,31 +110,32 @@ def build_polaroid(screenshot: Image.Image, max_height: int) -> Image.Image:
     return card
 
 
-def compose(shot_config: dict, source_dir: Path, out_dir: Path) -> None:
-    canvas = Image.new('RGBA', CANVAS, (*PAPER, 255))
+def compose(shot_config: dict, source_dir: Path, out_dir: Path, canvas_size: tuple) -> None:
+    s = canvas_size[0] / 1320  # scale factor relative to the design size
+    canvas = Image.new('RGBA', canvas_size, (*PAPER, 255))
     draw = ImageDraw.Draw(canvas)
 
-    headline_font = ImageFont.truetype(SERIF, 128)
-    script_font = ImageFont.truetype(SCRIPT, 84)
-    wordmark_font = ImageFont.truetype(SERIF_ITALIC, 56)
+    headline_font = ImageFont.truetype(SERIF, round(128 * s))
+    script_font = ImageFont.truetype(SCRIPT, round(84 * s))
+    wordmark_font = ImageFont.truetype(SERIF_ITALIC, round(56 * s))
 
     # Headline block, centered.
-    y = 200
+    y = round(200 * s)
     for line in shot_config['headline'].split('\n'):
         width = draw.textlength(line, font=headline_font)
-        draw.text(((CANVAS[0] - width) / 2, y), line, font=headline_font, fill=TEXT_PRIMARY)
-        y += 150
+        draw.text(((canvas_size[0] - width) / 2, y), line, font=headline_font, fill=TEXT_PRIMARY)
+        y += round(150 * s)
 
     # Handwritten sub-caption in terracotta.
     script_text = shot_config['script']
     width = draw.textlength(script_text, font=script_font)
-    draw.text(((CANVAS[0] - width) / 2, y + 22), script_text, font=script_font, fill=PRIMARY)
+    draw.text(((canvas_size[0] - width) / 2, y + round(22 * s)), script_text, font=script_font, fill=PRIMARY)
 
     # The polaroid, tilted, with a soft warm shadow. Reserve room below for
     # the footer wordmark plus breathing space.
-    card_y = y + 170
+    card_y = y + round(170 * s)
     screenshot = Image.open(source_dir / shot_config['source'])
-    card = build_polaroid(screenshot, max_height=CANVAS[1] - card_y - 230)
+    card = build_polaroid(screenshot, max_height=canvas_size[1] - card_y - round(230 * s), scale=s)
     tilt = shot_config['tilt']
     rotated = card.rotate(tilt, expand=True, resample=Image.BICUBIC)
 
@@ -146,19 +150,25 @@ def compose(shot_config: dict, source_dir: Path, out_dir: Path) -> None:
     # Small wordmark footer.
     footer = 'Then'
     width = draw.textlength(footer, font=wordmark_font)
-    draw.text(((CANVAS[0] - width) / 2, CANVAS[1] - 150), footer, font=wordmark_font, fill=TEXT_SECONDARY)
+    draw.text(((canvas_size[0] - width) / 2, canvas_size[1] - round(150 * s)), footer, font=wordmark_font, fill=TEXT_SECONDARY)
 
     out = canvas.convert('RGB')
     out.save(out_dir / shot_config['out'], 'PNG')
-    print(f"  {shot_config['out']}  <- {shot_config['source']}")
+    print(f"  {shot_config['out']}  {canvas_size[0]}x{canvas_size[1]}  <- {shot_config['source']}")
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    canvas_size = CANVAS
+    for arg in sys.argv[1:]:
+        if arg.startswith('--size'):
+            w, h = arg.split('=', 1)[1].lower().split('x') if '=' in arg else ('', '')
+            canvas_size = (int(w), int(h))
+    if not args:
         print(__doc__)
         raise SystemExit(1)
-    source_dir = Path(sys.argv[1])
-    out_dir = source_dir / 'marketing'
+    source_dir = Path(args[0])
+    out_dir = source_dir / f'marketing-{canvas_size[0]}x{canvas_size[1]}' if canvas_size != CANVAS else source_dir / 'marketing'
     out_dir.mkdir(exist_ok=True)
     print(f'Composing {len(SHOTS)} marketing shots -> {out_dir}')
     skipped = []
@@ -166,7 +176,7 @@ def main() -> None:
         if not (source_dir / shot_config['source']).exists():
             skipped.append(shot_config)
             continue
-        compose(shot_config, source_dir, out_dir)
+        compose(shot_config, source_dir, out_dir, canvas_size)
     for shot_config in skipped:
         print(f"  SKIPPED {shot_config['out']} - missing {shot_config['source']}")
     print('Done. Upload the contents of marketing/ to the 6.9" slot in App Store Connect.')
