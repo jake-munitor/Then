@@ -10,8 +10,9 @@ also satisfying the 6.5" requirement ASC quotes alongside it).
 
 Usage:
     python scripts/appstore-format.py <folder-with-images>
+    python scripts/appstore-format.py <folder> --size=2048x2732   # iPad 12.9"/13"
 
-Writes to <folder>/appstore-1284/.
+Writes to <folder>/appstore-<width>x<height>/.
 """
 
 import sys
@@ -24,36 +25,46 @@ PAPER = (243, 237, 228)
 ASPECT_TOLERANCE = 0.02
 
 
-def conform(source: Path, out_dir: Path) -> None:
+def conform(source: Path, out_dir: Path, target: tuple) -> None:
     image = Image.open(source).convert('RGB')
-    target_aspect = TARGET[0] / TARGET[1]
+    target_aspect = target[0] / target[1]
     aspect = image.width / image.height
 
     if abs(aspect - target_aspect) / target_aspect <= ASPECT_TOLERANCE:
-        scale = max(TARGET[0] / image.width, TARGET[1] / image.height)
+        scale = max(target[0] / image.width, target[1] / image.height)
         resized = image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
-        left = (resized.width - TARGET[0]) // 2
-        top = (resized.height - TARGET[1]) // 2
-        out = resized.crop((left, top, left + TARGET[0], top + TARGET[1]))
+        left = (resized.width - target[0]) // 2
+        top = (resized.height - target[1]) // 2
+        out = resized.crop((left, top, left + target[0], top + target[1]))
         mode = 'fill-crop'
     else:
-        scale = min(TARGET[0] / image.width, TARGET[1] / image.height)
+        # Scale to fit and center on the brand paper. For a 9:16 source on a
+        # 3:4 iPad canvas the side margins are wide, but the source's own
+        # background is this same paper colour, so the seam is invisible.
+        scale = min(target[0] / image.width, target[1] / image.height)
         resized = image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
-        out = Image.new('RGB', TARGET, PAPER)
-        out.paste(resized, ((TARGET[0] - resized.width) // 2, (TARGET[1] - resized.height) // 2))
+        out = Image.new('RGB', target, PAPER)
+        out.paste(resized, ((target[0] - resized.width) // 2, (target[1] - resized.height) // 2))
         mode = 'letterbox'
 
-    upscaled = ' UPSCALED - source smaller than target, expect softness' if image.width < TARGET[0] else ''
-    out.save(out_dir / f'{source.stem}-1284x2778.png', 'PNG')
+    factor = min(target[0] / image.width, target[1] / image.height)
+    upscaled = f' UPSCALED {factor:.1f}x - expect softness' if factor > 1.05 else ''
+    out.save(out_dir / f'{source.stem}-{target[0]}x{target[1]}.png', 'PNG')
     print(f'  {source.name}  [{mode}]{upscaled}')
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
+    positional = [a for a in sys.argv[1:] if not a.startswith('--')]
+    target = TARGET
+    for arg in sys.argv[1:]:
+        if arg.startswith('--size=') :
+            width, height = arg.split('=', 1)[1].lower().split('x')
+            target = (int(width), int(height))
+    if not positional:
         print(__doc__)
         raise SystemExit(1)
-    folder = Path(sys.argv[1])
-    out_dir = folder / 'appstore-1284'
+    folder = Path(positional[0])
+    out_dir = folder / f'appstore-{target[0]}x{target[1]}'
     out_dir.mkdir(exist_ok=True)
     images = sorted(
         p for p in folder.iterdir() if p.suffix.lower() in {'.png', '.jpg', '.jpeg'} and p.is_file()
@@ -61,10 +72,10 @@ def main() -> None:
     if not images:
         print(f'No images found in {folder}')
         raise SystemExit(1)
-    print(f'Conforming {len(images)} image(s) -> {out_dir}')
+    print(f'Conforming {len(images)} image(s) to {target[0]}x{target[1]} -> {out_dir}')
     for image_path in images:
-        conform(image_path, out_dir)
-    print('Done. Upload appstore-1284/ contents to App Store Connect.')
+        conform(image_path, out_dir, target)
+    print(f'Done. Upload {out_dir.name}/ contents to App Store Connect.')
 
 
 if __name__ == '__main__':
