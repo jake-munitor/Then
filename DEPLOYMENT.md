@@ -116,34 +116,47 @@ Use a production EAS build when native config, permissions, Expo modules, entitl
    icons), badge clearing, Your Year ordering, deep links, and Lauren's refined polaroid
    card spec. This is the first real test of all of it.
 
-### Deferred to build 25: the `expo-image` swap
+## Build 25 — STAGED IN CODE, NOT BUILT
 
-Swapping React Native's `Image` for `expo-image` (real disk caching — the last
-outstanding de-glitch item) was **deliberately held back from build 24** to keep that
-build focused on proving OTA delivery works.
+`expo-image` is **merged and green** (typecheck, 84 tests) but **no binary exists**.
+It was staged rather than built because one native swap does not justify a
+pay-as-you-go build credit on its own — bank more native-only work first, then
+build once.
 
-Why it is safe to defer, and what to know when picking it up:
+**`app.json` is deliberately still `1.0.1` / build `24`.** Do not bump it while
+1.0.1 sits in review: a rejection would require another build *on that same
+version*, and a premature bump makes that awkward. Bump as the first step of
+actually building, and pick the version then:
 
-- It is a native module, so it must be compiled into a binary — it can never ship over
-  OTA. That makes the build itself the decision point.
-- Scope is smaller than it looks. Only *remote* images benefit, so it is really two
-  paths: `FilteredMomentImage` (every moment photo) and the avatar surfaces. Leave the
-  bundled `paper-texture.png` uses in `MomentCard`/`MomentDetailScreen` on RN `Image` —
-  local assets gain nothing.
-- The migration is mechanical: `resizeMode` → `contentFit`, plus the prop type in
-  `FilteredMomentImage.tsx`. The app uses no `Image.getSize`, `resolveAssetSource`,
-  `prefetch`, `onLoad`, `defaultSource`, `tintColor`, or `blurRadius` — the APIs that
-  make these migrations painful.
-- Set `transition={0}` and `cachePolicy="memory-disk"` explicitly rather than trusting
-  defaults, and add an `expo-image` mock to `testing/jest.setup.ts`.
-- **The real risk is visual, and the test suite cannot catch it.** `FilteredMomentImage`
-  builds the polaroid look by layering `opacity: look.imageOpacity` on the image under
-  absolute overlays; expo-image composites through its own native view.
-  `photoFilterContract.test.ts` asserts overlay testIDs, not pixels, so it stays green
-  even if all four filters shift. Check `normal`, `film`, `sunfade`, and `coolFlash` on a
-  real device by eye before submitting.
-- If they do look wrong, reverting that one component to RN `Image` is a JS-only change
-  and ships over OTA — the native module simply sits unused. No new build required.
+- 1.0.1 was **released** → build 25 must be **1.0.2** (a released train is closed
+  forever — this cost a wasted build credit on 2026-07-22).
+- 1.0.1 was **rejected** → build 25 stays **1.0.1**, build number 25.
+
+What is already done, for the record:
+
+- `FilteredMomentImage` and the avatar/thumb surfaces in `DesignPrimitives` use
+  `expo-image` with `cachePolicy="memory-disk"` and `transition={0}` (its default
+  cross-fade would make graded polaroids bloom in — wrong for a print metaphor).
+- `resizeMode` is mapped to `contentFit` through a small lookup, so callers keep
+  the RN vocabulary.
+- The bundled `paper-texture.png` uses stay on RN `Image` — local assets gain
+  nothing from a disk cache.
+- `testing/jest.setup.ts` renders `expo-image` as an RN `Image`, so existing
+  style/testID assertions are untouched.
+
+**The remaining risk is visual and no test can catch it.** The four photo tones are
+graded with the RN `filter` primitive on a wrapper `View`, and expo-image
+composites through its own native view. Check `normal`, `film`, `sunfade` and
+`coolFlash` by eye on a device before submitting. If they look wrong, reverting
+that one component to RN `Image` is JS-only and ships over OTA — the native module
+just sits unused, no new build needed.
+
+### Other work waiting on a build
+
+Nothing else, currently. The archive-grid virtualization (`RollScreen.tsx` maps
+into a `ScrollView`) is **JS-only and can ship over OTA at any time** — it does not
+need to wait for build 25. It is bounded by cursor pagination today, so it is not
+urgent.
 
 ## Device QA
 

@@ -35,6 +35,17 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
+// expo-image is a native module; render it as an RN Image so existing
+// assertions on style/testID/accessibilityLabel keep working unchanged.
+jest.mock('expo-image', () => {
+  const React = require('react');
+  const { Image } = require('react-native');
+  return {
+    Image: ({ contentFit, cachePolicy, transition, ...props }: any) =>
+      React.createElement(Image, { resizeMode: contentFit, ...props }),
+  };
+});
+
 jest.mock('expo-font', () => ({
   isLoaded: jest.fn(() => true),
   loadAsync: jest.fn(async () => {}),
