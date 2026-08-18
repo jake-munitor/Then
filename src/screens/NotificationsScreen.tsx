@@ -12,6 +12,7 @@ import { markAllNotificationsRead, subscribeNotifications } from '../services/no
 import { subscribePublicUsers } from '../services/users';
 import type { AppNotification, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
+import { goBackOrHome } from '../utils/navigation';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { radius } from '../theme/radius';
@@ -68,7 +69,7 @@ export default function NotificationsScreen({ navigation }: Props) {
       <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
         {/* Fixed side columns: with flex:1 on all three the title only got a
             third of the row and wrapped mid-word. */}
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
+        <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
           <Icon source="chevron-left" color={colors.textPrimary} size={25} />
         </Pressable>
         <Text

@@ -288,11 +288,11 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ gap: 16, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36 }}>
-          <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ flex: 1 }}>
+          <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
             <Icon source="chevron-left" color={colors.textPrimary} size={25} />
           </Pressable>
           <SectionLabel style={{ flex: 1, textAlign: 'center' }}>A moment</SectionLabel>
-          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+          <View style={{ width: 44, alignItems: 'flex-end' }}>
             <Menu
               visible={menuOpen}
               onDismiss={() => setMenuOpen(false)}

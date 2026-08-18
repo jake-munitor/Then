@@ -11,6 +11,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { fetchMomentBacks, fetchMomentsForYear, fetchYearsWithMoments } from '../services/moments';
 import type { Moment } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
+import { goBackOrHome } from '../utils/navigation';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { radius } from '../theme/radius';
@@ -113,7 +114,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
   return (
     <Screen contentStyle={{ paddingBottom: 96 }}>
       <View style={{ paddingHorizontal: 22, paddingTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
+        <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
           <Icon source="chevron-left" color={colors.textPrimary} size={25} />
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -309,7 +310,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
                 Open first memory
               </PillButton>
             ) : (
-              <PillButton variant="secondary" icon="filmstrip" onPress={() => navigation.goBack()}>
+              <PillButton variant="secondary" icon="filmstrip" onPress={() => goBackOrHome(navigation)}>
                 Back to your roll
               </PillButton>
             )}

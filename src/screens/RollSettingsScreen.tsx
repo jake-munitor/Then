@@ -18,6 +18,7 @@ import { track } from '../services/telemetry';
 import type { NotificationPreferences, ProfileVisibility } from '../services/types';
 import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
+import { goBackOrHome } from '../utils/navigation';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { radius } from '../theme/radius';
@@ -80,7 +81,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
         avatarUrl: avatarUri,
         onboardingCompleted: true,
       });
-      navigation.goBack();
+      goBackOrHome(navigation);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');
     } finally {
@@ -186,7 +187,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
   return (
     <Screen contentStyle={{ gap: 20, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 42 }}>
-        <Text numberOfLines={1} onPress={() => navigation.goBack()} style={{ width: 82, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
+        <Text numberOfLines={1} onPress={() => goBackOrHome(navigation)} style={{ width: 82, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
           ‹ Your roll
         </Text>
         <Text
