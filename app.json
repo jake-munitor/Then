@@ -26,7 +26,7 @@
         "NSCameraUsageDescription": "Then needs camera access so you can take and share new moments.",
         "NSUserNotificationUsageDescription": "Then sends quiet notifications when friends leave notes on your moments."
       },
-      "buildNumber": "24"
+      "buildNumber": "25"
     },
     "android": {
       "package": "com.then.app",

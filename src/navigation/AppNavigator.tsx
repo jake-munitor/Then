@@ -26,12 +26,20 @@ import ProfileScreen from '../screens/ProfileScreen';
 import RollSettingsScreen from '../screens/RollSettingsScreen';
 import YourYearScreen from '../screens/YourYearScreen';
 import { inviteCodeFromUrl, stashPendingInviteCode } from '../services/invites';
+import { cacheOnboarding, readCachedOnboarding } from '../utils/launchState';
 import { getLastNotificationURL, subscribeNotificationURLs } from '../services/pushNotifications';
 import { navigationIntegration } from '../services/telemetry';
 import TabsNavigator from './TabsNavigator';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/**
+ * Longest the launch screen may wait on the profile snapshot. Deliberately
+ * longer than AuthContext's 4s auth fallback so the two don't race, and short
+ * enough that a stalled network never reads as a hung app.
+ */
+const PROFILE_GATE_TIMEOUT_MS = 6000;
 
 const linking: LinkingOptions<RootStackParamList> = {
   // The universal-link site lives under /then on app.munitor.ai, so the web
@@ -91,20 +99,53 @@ export default function AppNavigator() {
       setOnboardingCompleted(false);
       return;
     }
+    const uid = user.uid;
+    let active = true;
     setProfileLoading(true);
-    return onSnapshot(
-      doc(db, 'publicUsers', user.uid),
+
+    // Seed from the last known answer so a slow or dead connection lands the
+    // user where they were, rather than back in onboarding.
+    void readCachedOnboarding(uid).then((cached) => {
+      if (active && cached !== null) setOnboardingCompleted(cached);
+    });
+
+    // Hard ceiling on the launch gate. Firestore can neither resolve nor
+    // reject on a wedged connection, and this screen previously waited on
+    // that forever - the 2.1.0 rejection ("loading indefinitely on launch").
+    // Whatever is known by now is good enough to render the app.
+    const timeout = setTimeout(() => {
+      if (active) setProfileLoading(false);
+    }, PROFILE_GATE_TIMEOUT_MS);
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'publicUsers', uid),
       (snap) => {
         const profile = snap.data();
         const hasExistingProfileBasics = Boolean(profile?.displayName && profile?.handle);
-        setOnboardingCompleted(profile?.onboardingCompleted !== false && (Boolean(profile?.onboardingCompleted) || hasExistingProfileBasics));
+        const completed =
+          profile?.onboardingCompleted !== false &&
+          (Boolean(profile?.onboardingCompleted) || hasExistingProfileBasics);
+        clearTimeout(timeout);
+        if (!active) return;
+        setOnboardingCompleted(completed);
         setProfileLoading(false);
+        void cacheOnboarding(uid, completed);
       },
       () => {
+        // An explicit error is an answer: fall through to onboarding, which is
+        // recoverable, rather than holding the launch screen.
+        clearTimeout(timeout);
+        if (!active) return;
         setOnboardingCompleted(false);
         setProfileLoading(false);
       },
     );
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, [user?.uid]);
 
   if (!isFirebaseConfigured() || firebaseInitError) {
