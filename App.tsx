@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -19,8 +19,10 @@ import { Sentry } from './src/services/telemetry';
 import { colors } from './src/theme/colors';
 import { appTheme } from './src/theme/theme';
 
+const FONT_TIMEOUT_MS = 8000;
+
 function App() {
-  const [loaded] = useFonts({
+  const [loaded, fontError] = useFonts({
     HankenGrotesk_400Regular: require('./assets/fonts/HankenGrotesk_400Regular.ttf'),
     HankenGrotesk_500Medium: require('./assets/fonts/HankenGrotesk_500Medium.ttf'),
     HankenGrotesk_600SemiBold: require('./assets/fonts/HankenGrotesk_600SemiBold.ttf'),
@@ -39,7 +41,18 @@ function App() {
     CourierPrime_700Bold,
   });
 
-  if (!loaded) {
+  // Never gate the app on fonts indefinitely. useFonts reports an error we
+  // previously discarded, and a stalled load reported neither - either one
+  // left this spinner on screen forever, the same shape as the launch hang
+  // Apple rejected 1.0.1 for. Rendering in system fonts is far better than
+  // rendering nothing.
+  const [fontWaitElapsed, setFontWaitElapsed] = useState(false);
+  useEffect(() => {
+    const timeout = setTimeout(() => setFontWaitElapsed(true), FONT_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (!loaded && !fontError && !fontWaitElapsed) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
         <ActivityIndicator color={colors.primary} />

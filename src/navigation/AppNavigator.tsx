@@ -76,9 +76,13 @@ const linking: LinkingOptions<RootStackParamList> = {
       listener(url);
     });
     let notificationCleanup: (() => void) | undefined;
-    subscribeNotificationURLs(listener).then((cleanup) => {
-      notificationCleanup = cleanup;
-    });
+    subscribeNotificationURLs(listener)
+      .then((cleanup) => {
+        notificationCleanup = cleanup;
+      })
+      // Lazily imported native module; a load failure must not surface as an
+      // unhandled rejection during navigation setup.
+      .catch(() => {});
 
     return () => {
       linkSubscription.remove();

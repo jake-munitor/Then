@@ -89,14 +89,23 @@ export default function OnboardingScreen() {
     if (!user?.uid) return;
     setBusyInvite(via);
     setError(null);
-    try {
-      if (via === 'share') {
+    // The invite is a bonus, never a gate. Minting it hits a Cloud Function,
+    // so a cold start or a network blip used to throw into the catch below and
+    // leave onboardingCompleted false - stranding a new account on the final
+    // step of signup. Failures here are swallowed so setup still finishes.
+    if (via === 'share') {
+      try {
         const invite = await createInvite();
         const result = await Share.share({
           message: `Join me on Then - one photo, one moment, just our people. ${invite.url}`,
         });
         if (result.action === Share.sharedAction) track('invite_shared');
+      } catch {
+        // Invites are also reachable from Friends and Roll Settings later.
       }
+    }
+
+    try {
       await updateThenSettings({
         uid: user.uid,
         displayName,
