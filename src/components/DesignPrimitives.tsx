@@ -1,6 +1,6 @@
 import React from 'react';
-import { Image as ExpoImage } from 'expo-image';
 import {
+  Image,
   ImageStyle,
   Pressable,
   StyleProp,
@@ -25,13 +25,8 @@ type AvatarProps = {
 export function Avatar({ uri, name, size = 40, onPress, style }: AvatarProps) {
   const initial = (name ?? '?').trim().slice(0, 1).toUpperCase() || '?';
   const content = uri ? (
-    // expo-image for the disk cache: avatars repeat across every list row and
-    // re-downloaded on each session under RN Image.
-    <ExpoImage
+    <Image
       source={{ uri }}
-      contentFit="cover"
-      cachePolicy="memory-disk"
-      transition={0}
       style={[
         avatarStyle(size),
         { backgroundColor: colors.photoBg },
@@ -423,11 +418,8 @@ export function Thumb({
         style,
       ]}
     >
-      <ExpoImage
+      <Image
         source={{ uri }}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        transition={0}
         style={{
           width: '100%',
           height: '100%',

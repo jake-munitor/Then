@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { Image, type ImageContentFit } from 'expo-image';
+import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { colors } from '../theme/colors';
 import { normalizePhotoFilter, type PhotoFilter } from '../utils/photoFilters';
@@ -83,18 +82,10 @@ type Props = {
   uri: string;
   filter?: PhotoFilter | string | null;
   aspectRatio?: number;
-  /** RN's resizeMode vocabulary, mapped to expo-image's contentFit. */
   resizeMode?: 'cover' | 'contain' | 'stretch' | 'center';
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string;
-};
-
-const CONTENT_FIT: Record<string, ImageContentFit> = {
-  cover: 'cover',
-  contain: 'contain',
-  stretch: 'fill',
-  center: 'none',
 };
 
 export default function FilteredMomentImage({
@@ -117,14 +108,7 @@ export default function FilteredMomentImage({
       <View style={hasGrading ? { width: '100%', filter: look.filters } : styles.ungraded}>
         <Image
           source={{ uri }}
-          contentFit={CONTENT_FIT[resizeMode] ?? 'cover'}
-          // Real disk caching is the whole point of expo-image here; photos
-          // stop re-downloading every session.
-          cachePolicy="memory-disk"
-          // Explicitly no fade. expo-image cross-fades by default, which would
-          // make graded polaroids bloom in rather than simply being there -
-          // wrong for a print metaphor, and a visible change from RN Image.
-          transition={0}
+          resizeMode={resizeMode}
           style={[styles.image, { aspectRatio }]}
           accessibilityLabel={accessibilityLabel}
         />
