@@ -62,6 +62,7 @@ jest.mock('expo-image-picker', () => ({
 
 jest.mock('@sentry/react-native', () => ({
   init: jest.fn(),
+  addBreadcrumb: jest.fn(),
   wrap: jest.fn((component) => component),
   captureException: jest.fn(),
   reactNavigationIntegration: jest.fn(() => ({

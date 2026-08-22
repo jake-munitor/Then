@@ -85,6 +85,16 @@ export function resetUser() {
   posthogClient?.reset();
 }
 
+/**
+ * One breadcrumb per launch-gate transition (fonts, auth, profile, initial
+ * URL, navigation ready). The fourth 2.1.0 rejection was diagnosed entirely
+ * from breadcrumbs on the review device; these make the next one diagnosable
+ * in a single look rather than by inference from what is absent.
+ */
+export function launchBreadcrumb(message: string, data?: Record<string, unknown>) {
+  if (isSentryConfigured) Sentry.addBreadcrumb({ category: 'launch', level: 'info', message, data });
+}
+
 export function captureException(error: unknown, context?: TelemetryProperties) {
   if (isSentryConfigured) Sentry.captureException(error, { extra: context });
   posthogClient?.captureException(error, context);

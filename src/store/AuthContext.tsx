@@ -15,7 +15,7 @@ import { auth } from '../firebase/firebase';
 import { deleteAccountData } from '../services/account';
 import { callFunction } from '../services/cloudFunctions';
 import { clearSnapshotCache } from '../services/snapshotCache';
-import { identifyUser, resetUser, track } from '../services/telemetry';
+import { identifyUser, resetUser, track, launchBreadcrumb } from '../services/telemetry';
 
 export type AuthUser = {
   uid: string;
@@ -57,12 +57,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const loadingFallback = setTimeout(() => {
       setIsLoading(false);
+      launchBreadcrumb('auth gate timed out, proceeding signed out');
     }, 4000);
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       clearTimeout(loadingFallback);
       setUser(firebaseUser ? toAuthUser(firebaseUser) : null);
       setIsLoading(false);
+      launchBreadcrumb('auth state resolved', { signedIn: Boolean(firebaseUser) });
       if (firebaseUser) {
         identifyUser(firebaseUser.uid);
       } else {

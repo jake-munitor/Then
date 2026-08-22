@@ -116,6 +116,28 @@ Use a production EAS build when native config, permissions, Expo modules, entitl
    icons), badge clearing, Your Year ordering, deep links, and Lauren's refined polaroid
    card spec. This is the first real test of all of it.
 
+## Launch-path rules (learned across four 2.1.0 rejections)
+
+Every rejection of 1.0.1 was "loading indefinitely on launch", and each one
+had a different cause. The rules that would have prevented all of them:
+
+1. **Nothing on the path to the first screen may await an unbounded promise.**
+   Wrap with `withTimeout()` (`src/utils/async.ts`). Firestore snapshots, lazy
+   native imports and `getLastNotificationResponseAsync()` have all hung.
+2. **Gates run in parallel, never in series.** App.tsx must render the provider
+   tree unconditionally; fonts are an overlay, not an early return. Before
+   build 27 the gates stacked to 18s worst case and the reviewer gave up at 14s.
+3. **`NavigationContainer` needs a `fallback`** — it renders nothing while
+   `getInitialURL` resolves.
+4. **Every gate transition emits a `launch` breadcrumb** (`launchBreadcrumb()`).
+   The build-26 rejection was diagnosed entirely from review-device breadcrumbs;
+   with these, the next one is a single look at Sentry, not inference.
+5. **Never publish JS that imports a native module absent from a live binary.**
+   The fingerprint runtime policy now makes this structurally impossible.
+
+`testing/unit/launchState.test.ts` enforces 1–3 at the source level and was
+verified to fail when each regression is reintroduced.
+
 ## Build 25 — STAGED IN CODE, NOT BUILT
 
 `expo-image` is **merged and green** (typecheck, 84 tests) but **no binary exists**.

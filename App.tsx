@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { PaperProvider } from 'react-native-paper';
@@ -15,11 +15,16 @@ import {
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/store/AuthContext';
-import { Sentry } from './src/services/telemetry';
+import { launchBreadcrumb, Sentry } from './src/services/telemetry';
 import { colors } from './src/theme/colors';
 import { appTheme } from './src/theme/theme';
 
-const FONT_TIMEOUT_MS = 8000;
+/**
+ * Fonts are bundled, so they load in well under a second. This is the longest
+ * the overlay may cover the already-running app before we show it in system
+ * fonts instead; the custom faces swap in whenever they arrive.
+ */
+const FONT_OVERLAY_MAX_MS = 1500;
 
 function App() {
   const [loaded, fontError] = useFonts({
@@ -41,24 +46,31 @@ function App() {
     CourierPrime_700Bold,
   });
 
-  // Never gate the app on fonts indefinitely. useFonts reports an error we
-  // previously discarded, and a stalled load reported neither - either one
-  // left this spinner on screen forever, the same shape as the launch hang
-  // Apple rejected 1.0.1 for. Rendering in system fonts is far better than
-  // rendering nothing.
+  // The font overlay sits ON TOP of the running app; it never gates it.
+  //
+  // Until build 26 this was an early return, so AuthProvider and AppNavigator
+  // did not even mount until fonts finished - and each of those has its own
+  // gate. Worst case stacked to fonts (8s) + auth (4s) + profile (6s) = 18s of
+  // spinner with every timer working perfectly. The App Review device gave
+  // up at 14s, four submissions running. Breadcrumbs from that device showed
+  // no auth traffic at all: the provider had never mounted.
+  //
+  // Now every gate starts at t=0 and runs in parallel, so time-to-first-screen
+  // is the slowest single gate, not the sum.
   const [fontWaitElapsed, setFontWaitElapsed] = useState(false);
   useEffect(() => {
-    const timeout = setTimeout(() => setFontWaitElapsed(true), FONT_TIMEOUT_MS);
+    const timeout = setTimeout(() => setFontWaitElapsed(true), FONT_OVERLAY_MAX_MS);
     return () => clearTimeout(timeout);
   }, []);
+  useEffect(() => {
+    if (loaded) launchBreadcrumb('fonts loaded');
+    else if (fontError) launchBreadcrumb('fonts failed, using system fonts', { message: String(fontError) });
+  }, [loaded, fontError]);
+  useEffect(() => {
+    if (fontWaitElapsed && !loaded && !fontError) launchBreadcrumb('fonts still loading, overlay lifted');
+  }, [fontWaitElapsed, loaded, fontError]);
 
-  if (!loaded && !fontError && !fontWaitElapsed) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
-  }
+  const showFontOverlay = !loaded && !fontError && !fontWaitElapsed;
 
   return (
     <PaperProvider theme={appTheme}>
@@ -66,6 +78,17 @@ function App() {
         <AppNavigator />
         <StatusBar style="dark" />
       </AuthProvider>
+      {showFontOverlay ? (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFillObject,
+            { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+          ]}
+        >
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : null}
     </PaperProvider>
   );
 }

@@ -28,7 +28,8 @@ import YourYearScreen from '../screens/YourYearScreen';
 import { inviteCodeFromUrl, stashPendingInviteCode } from '../services/invites';
 import { cacheOnboarding, readCachedOnboarding } from '../utils/launchState';
 import { getLastNotificationURL, subscribeNotificationURLs } from '../services/pushNotifications';
-import { navigationIntegration } from '../services/telemetry';
+import { launchBreadcrumb, navigationIntegration } from '../services/telemetry';
+import { withTimeout } from '../utils/async';
 import TabsNavigator from './TabsNavigator';
 import type { RootStackParamList } from './types';
 
@@ -40,6 +41,15 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  * enough that a stalled network never reads as a hung app.
  */
 const PROFILE_GATE_TIMEOUT_MS = 6000;
+
+/**
+ * NavigationContainer awaits linking.getInitialURL() before rendering its
+ * first route - and renders nothing meanwhile. That lookup goes through a lazy
+ * expo-notifications import and getLastNotificationResponseAsync(), neither of
+ * which is guaranteed to settle. Bound it: a missed cold-start deep link costs
+ * one tap; an unbounded wait here is a blank screen forever.
+ */
+const INITIAL_URL_TIMEOUT_MS = 2000;
 
 const linking: LinkingOptions<RootStackParamList> = {
   // The universal-link site lives under /then on app.munitor.ai, so the web
@@ -57,7 +67,16 @@ const linking: LinkingOptions<RootStackParamList> = {
     },
   },
   async getInitialURL() {
-    const url = await Linking.getInitialURL();
+    const url = await withTimeout(
+      (async () => {
+        const linkUrl = await Linking.getInitialURL();
+        if (linkUrl) return linkUrl;
+        return getLastNotificationURL();
+      })(),
+      INITIAL_URL_TIMEOUT_MS,
+      null,
+    );
+    launchBreadcrumb('initial url resolved', { hasUrl: Boolean(url) });
     if (url) {
       // An invite can land before the person has an account, in which case the
       // Invite screen doesn't exist in the navigator yet and the URL would be
@@ -65,9 +84,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       // onboarding. When signed in, the InviteScreen clears the stash itself.
       const code = inviteCodeFromUrl(url);
       if (code) void stashPendingInviteCode(code);
-      return url;
     }
-    return getLastNotificationURL();
+    return url;
   },
   subscribe(listener) {
     const linkSubscription = Linking.addEventListener('url', ({ url }) => {
@@ -110,7 +128,10 @@ export default function AppNavigator() {
     // Seed from the last known answer so a slow or dead connection lands the
     // user where they were, rather than back in onboarding.
     void readCachedOnboarding(uid).then((cached) => {
-      if (active && cached !== null) setOnboardingCompleted(cached);
+      if (active && cached !== null) {
+        setOnboardingCompleted(cached);
+        launchBreadcrumb('profile gate seeded from cache', { onboardingCompleted: cached });
+      }
     });
 
     // Hard ceiling on the launch gate. Firestore can neither resolve nor
@@ -118,7 +139,9 @@ export default function AppNavigator() {
     // that forever - the 2.1.0 rejection ("loading indefinitely on launch").
     // Whatever is known by now is good enough to render the app.
     const timeout = setTimeout(() => {
-      if (active) setProfileLoading(false);
+      if (!active) return;
+      setProfileLoading(false);
+      launchBreadcrumb('profile gate timed out, proceeding');
     }, PROFILE_GATE_TIMEOUT_MS);
 
     const unsubscribe = onSnapshot(
@@ -133,6 +156,7 @@ export default function AppNavigator() {
         if (!active) return;
         setOnboardingCompleted(completed);
         setProfileLoading(false);
+        launchBreadcrumb('profile snapshot received', { onboardingCompleted: completed });
         void cacheOnboarding(uid, completed);
       },
       () => {
@@ -142,6 +166,7 @@ export default function AppNavigator() {
         if (!active) return;
         setOnboardingCompleted(false);
         setProfileLoading(false);
+        launchBreadcrumb('profile snapshot errored, falling through to onboarding');
       },
     );
 
@@ -168,7 +193,15 @@ export default function AppNavigator() {
   return (
     <NavigationContainer
       ref={navigationRef}
+      // Rendered while getInitialURL resolves; without it the container shows
+      // nothing at all for that window.
+      fallback={
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      }
       onReady={() => {
+        launchBreadcrumb('navigation ready', { signedIn: Boolean(user), onboardingCompleted });
         // Must happen after the container is ready, or screen transactions
         // are never attached and perf monitoring silently records nothing.
         navigationIntegration.registerNavigationContainer(navigationRef);
