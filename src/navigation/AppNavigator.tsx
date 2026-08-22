@@ -109,7 +109,12 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
-export default function AppNavigator() {
+type AppNavigatorProps = {
+  /** Fires once the first route has rendered - the launch watchdog's all-clear. */
+  onReady?: () => void;
+};
+
+export default function AppNavigator({ onReady }: AppNavigatorProps) {
   const { user, isLoading } = useContext(AuthContext);
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [profileLoading, setProfileLoading] = useState(false);
@@ -202,6 +207,7 @@ export default function AppNavigator() {
       }
       onReady={() => {
         launchBreadcrumb('navigation ready', { signedIn: Boolean(user), onboardingCompleted });
+        onReady?.();
         // Must happen after the container is ready, or screen transactions
         // are never attached and perf monitoring silently records nothing.
         navigationIntegration.registerNavigationContainer(navigationRef);

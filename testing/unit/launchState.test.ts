@@ -43,7 +43,7 @@ describe('launch gate', () => {
    */
   it('never gates the provider tree on fonts', () => {
     const source = fs.readFileSync(path.resolve(__dirname, '../../App.tsx'), 'utf8');
-    const providerIndex = source.indexOf('<AuthProvider>');
+    const providerIndex = source.indexOf('<AuthProvider');
     expect(providerIndex).toBeGreaterThan(0);
     const body = source.slice(source.indexOf('function App()'), providerIndex);
     // Top-level `return (` statements sit at two-space indentation. Exactly one

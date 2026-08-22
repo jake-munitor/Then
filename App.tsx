@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { PaperProvider } from 'react-native-paper';
@@ -15,7 +16,7 @@ import {
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/store/AuthContext';
-import { launchBreadcrumb, Sentry } from './src/services/telemetry';
+import { captureException, launchBreadcrumb, Sentry } from './src/services/telemetry';
 import { colors } from './src/theme/colors';
 import { appTheme } from './src/theme/theme';
 
@@ -25,6 +26,15 @@ import { appTheme } from './src/theme/theme';
  * fonts instead; the custom faces swap in whenever they arrive.
  */
 const FONT_OVERLAY_MAX_MS = 1500;
+
+/**
+ * Launch watchdog. Every individual gate below is bounded, so the first route
+ * should render within ~6s on any network. If it has not by this point, the
+ * cause is something not yet imagined - and the one outcome that must never
+ * happen is an indefinite spinner. Show a real screen with a retry instead,
+ * and report it with the launch breadcrumbs attached so the cause is visible.
+ */
+const LAUNCH_WATCHDOG_MS = 10000;
 
 function App() {
   const [loaded, fontError] = useFonts({
@@ -72,12 +82,54 @@ function App() {
 
   const showFontOverlay = !loaded && !fontError && !fontWaitElapsed;
 
+  const [navigationReady, setNavigationReady] = useState(false);
+  const [launchStalled, setLaunchStalled] = useState(false);
+  const [treeKey, setTreeKey] = useState(0);
+  useEffect(() => {
+    if (navigationReady) return;
+    const timeout = setTimeout(() => {
+      setLaunchStalled(true);
+      captureException(new Error('Launch watchdog: no route rendered'), { afterMs: LAUNCH_WATCHDOG_MS });
+    }, LAUNCH_WATCHDOG_MS);
+    return () => clearTimeout(timeout);
+  }, [navigationReady, treeKey]);
+
+  const retryLaunch = () => {
+    launchBreadcrumb('launch retry requested');
+    setLaunchStalled(false);
+    setNavigationReady(false);
+    // Remounting the provider tree restarts every gate from scratch.
+    setTreeKey((current) => current + 1);
+  };
+
   return (
     <PaperProvider theme={appTheme}>
-      <AuthProvider>
-        <AppNavigator />
+      <AuthProvider key={treeKey}>
+        <AppNavigator onReady={() => setNavigationReady(true)} />
         <StatusBar style="dark" />
       </AuthProvider>
+      {launchStalled && !navigationReady ? (
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            { alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14, backgroundColor: colors.background },
+          ]}
+        >
+          <Text style={{ color: colors.textPrimary, fontSize: 18, textAlign: 'center' }}>
+            Then is taking longer than usual to open.
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center' }}>
+            Check your connection, then try again.
+          </Text>
+          <Pressable
+            onPress={retryLaunch}
+            accessibilityRole="button"
+            style={{ marginTop: 8, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 999, backgroundColor: colors.primary }}
+          >
+            <Text style={{ color: colors.white, fontSize: 15 }}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {showFontOverlay ? (
         <View
           pointerEvents="none"
