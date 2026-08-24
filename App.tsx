@@ -16,7 +16,7 @@ import {
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/store/AuthContext';
-import { captureException, launchBreadcrumb, Sentry } from './src/services/telemetry';
+import { captureException, getLaunchLog, launchBreadcrumb, Sentry } from './src/services/telemetry';
 import { colors } from './src/theme/colors';
 import { appTheme } from './src/theme/theme';
 
@@ -128,6 +128,15 @@ function App() {
           >
             <Text style={{ color: colors.white, fontSize: 15 }}>Try again</Text>
           </Pressable>
+          {/* On-screen launch log: readable and screenshottable even when
+              telemetry cannot leave the device. */}
+          <View style={{ marginTop: 18, alignSelf: 'stretch' }}>
+            {getLaunchLog().map((line, index) => (
+              <Text key={index} style={{ color: colors.textSecondary, fontSize: 11, fontFamily: 'Courier', textAlign: 'left' }}>
+                {line}
+              </Text>
+            ))}
+          </View>
         </View>
       ) : null}
       {showFontOverlay ? (

@@ -91,8 +91,21 @@ export function resetUser() {
  * from breadcrumbs on the review device; these make the next one diagnosable
  * in a single look rather than by inference from what is absent.
  */
+const launchLog: string[] = [];
+const launchStartedAt = Date.now();
+
 export function launchBreadcrumb(message: string, data?: Record<string, unknown>) {
   if (isSentryConfigured) Sentry.addBreadcrumb({ category: 'launch', level: 'info', message, data });
+  // Mirrored locally so the launch watchdog screen can display the log even
+  // when telemetry cannot leave the device - the build-26 repro iPad sent
+  // nothing to Sentry across five stuck launches.
+  const elapsed = ((Date.now() - launchStartedAt) / 1000).toFixed(1);
+  launchLog.push(`${elapsed}s  ${message}${data ? ' ' + JSON.stringify(data) : ''}`);
+  if (launchLog.length > 20) launchLog.shift();
+}
+
+export function getLaunchLog(): string[] {
+  return [...launchLog];
 }
 
 export function captureException(error: unknown, context?: TelemetryProperties) {
