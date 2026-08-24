@@ -119,7 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await signOut(auth);
       },
     }),
-    [user],
+    // isLoading MUST be a dependency. With deps [user] alone, a signed-out
+    // launch (user null -> null, unchanged) left consumers holding the stale
+    // memoized value with isLoading: true forever - the launch gate never
+    // opened, only on fresh installs. That was the root cause of all four
+    // 2.1.0 App Review rejections; every timer fix fired correctly but was
+    // invisible through the stale context object.
+    [user, isLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

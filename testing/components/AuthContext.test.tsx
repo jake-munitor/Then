@@ -61,4 +61,10 @@ describe('AuthProvider account deletion', () => {
       (deleteAccountData as jest.Mock).mock.invocationCallOrder[0],
     );
   });
+
+  // The signed-out launch-gate regression lives in authLaunchGate.test.tsx -
+  // it needs an async onAuthStateChanged mock, which this file's global sync
+  // mock cannot express (and under which the bug does not reproduce).
+
 });
+
