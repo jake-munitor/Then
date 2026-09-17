@@ -141,7 +141,7 @@ export default function FriendsScreen() {
     try {
       const invite = await createInvite();
       const result = await Share.share({
-        message: `Join me on Then - one photo, one moment, just our people. ${invite.url}`,
+        message: `Join me on Then - one photo, one moment, just your people. ${invite.url}`,
       });
       if (result.action === Share.sharedAction) track('invite_shared');
     } catch {
