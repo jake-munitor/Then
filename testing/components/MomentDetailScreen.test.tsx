@@ -126,6 +126,20 @@ describe('MomentDetailScreen', () => {
     expect(composerStyle.alignSelf).toBe('center');
   });
 
+  it('gives the private back the same paper frame as the front', () => {
+    renderDetail('owner');
+
+    const front = StyleSheet.flatten(screen.getByTestId('moment-detail-frame').props.style);
+    const back = StyleSheet.flatten(screen.getByTestId('moment-detail-back').props.style);
+
+    expect(back.backgroundColor).toBe(front.backgroundColor);
+    expect(back.borderRadius).toBe(front.borderRadius);
+    expect(back.borderTopColor).toBe(front.borderTopColor);
+    // Fixed to the front's size; a long reflection scrolls inside it.
+    expect(back.height).toBeGreaterThanOrEqual(front.minHeight);
+    expect(screen.getByTestId('moment-detail-back-scroll')).toBeTruthy();
+  });
+
   it('uses the handwritten signature instead of metadata under the detail caption', () => {
     renderDetail('friend');
 

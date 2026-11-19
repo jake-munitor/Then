@@ -69,7 +69,7 @@ describe('NotesScreen', () => {
     fireEvent.press(screen.getByLabelText('Close notes'));
     expect(goBack).toHaveBeenCalledTimes(1);
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByText('No notes yet.')).toBeTruthy();
+    expect(screen.getByText('No notes yet. Write the first one.')).toBeTruthy();
   });
 
   it('falls back to the main tabs when notes is the only screen in the stack', () => {

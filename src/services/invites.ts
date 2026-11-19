@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { callFunction } from './cloudFunctions';
+import { suggestNotifications } from './pushPrimer';
 import { track } from './telemetry';
 
 /**
@@ -49,6 +50,8 @@ export async function redeemInvite(rawCode: string): Promise<RedeemedInvite> {
   if (!isInviteCode(code)) throw new Error('That does not look like an invite code.');
   const result = await callFunction<RedeemedInvite>('redeemInvite', { code });
   track('invite_redeemed');
+  // Connected to a friend: now a notification has something to be about.
+  suggestNotifications('friend');
   return result;
 }
 

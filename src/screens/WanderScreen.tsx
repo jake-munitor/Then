@@ -23,6 +23,8 @@ import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { dialogStyle } from '../theme/theme';
+import { fonts } from '../theme/fonts';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -224,9 +226,9 @@ export default function WanderScreen() {
         ListHeaderComponentStyle={{ width: '100%', marginBottom: 14 }}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingHorizontal: 30, paddingTop: 72 }}>
-            <Text style={{ color: colors.textPrimary, fontSize: 21 }}>Nothing here yet</Text>
-            <Text style={{ marginTop: 8, color: colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
-              Public moments appear here chronologically when people choose to appear in Wander.
+            <Text style={{ color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 22, lineHeight: 28 }}>Quiet out here</Text>
+            <Text style={{ marginTop: 8, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13.5, textAlign: 'center', lineHeight: 20 }}>
+              When people choose to share beyond their circle, their moments show up here, newest first.
             </Text>
           </View>
         }
@@ -245,7 +247,7 @@ export default function WanderScreen() {
       />
 
       <Portal>
-        <Dialog visible={Boolean(requesting)} onDismiss={() => setRequesting(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(requesting)} onDismiss={() => setRequesting(null)}>
           <Dialog.Title>Ask to keep up</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -261,7 +263,7 @@ export default function WanderScreen() {
             </Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={Boolean(reporting)} onDismiss={() => setReporting(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(reporting)} onDismiss={() => setReporting(null)}>
           <Dialog.Title>Report moment?</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -275,7 +277,7 @@ export default function WanderScreen() {
             <Button onPress={submitReport} loading={busy} disabled={busy}>Report</Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={Boolean(blocking)} onDismiss={() => setBlocking(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(blocking)} onDismiss={() => setBlocking(null)}>
           <Dialog.Title>Block this person?</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary }}>

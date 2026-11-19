@@ -350,7 +350,7 @@ export function subscribeMomentsByIds(
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 }
 
-export async function createMoment(params: {
+export type CreateMomentParams = {
   uid: string;
   uri: string;
   frontText: string;
@@ -358,9 +358,17 @@ export async function createMoment(params: {
   backText: string;
   memoryDate: string;
   appearInWander: boolean;
-}) {
+};
+
+/** A fresh moment id, reserved before the upload so the outbox and the feed can refer to the same moment. */
+export function newMomentId() {
   if (!db) throw new Error('Firebase is not initialized.');
-  const momentRef = doc(collection(db, 'moments'));
+  return doc(collection(db, 'moments')).id;
+}
+
+export async function createMoment(params: CreateMomentParams & { momentId?: string }) {
+  if (!db) throw new Error('Firebase is not initialized.');
+  const momentRef = params.momentId ? doc(db, 'moments', params.momentId) : doc(collection(db, 'moments'));
   const imageUrl = await uploadMomentPhoto({ uid: params.uid, momentId: momentRef.id, uri: params.uri });
   await setDoc(momentRef, {
     authorUid: params.uid,

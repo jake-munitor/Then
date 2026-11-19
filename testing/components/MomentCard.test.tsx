@@ -141,6 +141,28 @@ describe('MomentCard', () => {
     expect(screen.getByTestId('moment-photo-image-filter-sunfade-peach-wash')).toBeTruthy();
   });
 
+  it('gives each action a 44pt tap area without enlarging the glyph', () => {
+    renderCard();
+
+    for (const label of ['Keep this', 'Open notes', 'Save for later']) {
+      const action = screen.getByLabelText(label);
+      const style = StyleSheet.flatten(action.props.style);
+      const slop = action.props.hitSlop;
+      expect(style.minHeight + slop.top + slop.bottom).toBeGreaterThanOrEqual(44);
+      expect(style.minWidth + slop.left + slop.right).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('uses the shared ivory frame with a lit top edge and shaded lower edge', () => {
+    renderCard();
+
+    const frameStyle = StyleSheet.flatten(screen.getByTestId('moment-frame').props.style);
+
+    expect(frameStyle.backgroundColor).toBe('#F3EFE6');
+    expect(frameStyle.borderTopColor).not.toBe(frameStyle.borderBottomColor);
+    expect(frameStyle.overflow).toBe('hidden');
+  });
+
   it('frames the square photo in a warm polaroid card', () => {
     renderCard();
 

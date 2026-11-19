@@ -15,6 +15,7 @@ import { AuthContext } from '../store/AuthContext';
 import { goBackOrHome } from '../utils/navigation';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
@@ -66,11 +67,11 @@ export default function NotificationsScreen({ navigation }: Props) {
 
   return (
     <Screen contentStyle={{ gap: 16, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: layout.headerHeight }}>
         {/* Fixed side columns: with flex:1 on all three the title only got a
             third of the row and wrapped mid-word. */}
-        <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
-          <Icon source="chevron-left" color={colors.textPrimary} size={25} />
+        <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: layout.touchTarget, minHeight: layout.touchTarget, justifyContent: 'center' }}>
+          <Icon source="chevron-left" color={colors.textPrimary} size={iconSize.nav} />
         </Pressable>
         <Text
           numberOfLines={1}
@@ -89,7 +90,7 @@ export default function NotificationsScreen({ navigation }: Props) {
             {unreadCount ? `${unreadCount} unread` : 'All caught up'}
           </Text>
         </View>
-        <PillButton variant="secondary" onPress={markRead} disabled={busy || !unreadCount} style={{ minHeight: 38 }}>
+        <PillButton variant="secondary" onPress={markRead} disabled={busy || !unreadCount} style={{ minHeight: layout.buttonHeightCompact }}>
           Mark read
         </PillButton>
       </View>

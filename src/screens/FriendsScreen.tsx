@@ -34,7 +34,9 @@ import type { FollowRequest, PublicUser } from '../services/types';
 import { filterDiscoverableUsers, subscribeDiscoverableUsers, subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { dialogStyle } from '../theme/theme';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 
 export default function FriendsScreen() {
@@ -311,7 +313,7 @@ export default function FriendsScreen() {
           borderColor: colors.border,
           borderWidth: 1,
           borderRadius: radius.pill,
-          shadowColor: '#2A2622',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.05,
           shadowRadius: 10,
           shadowOffset: { width: 0, height: 3 },
@@ -339,7 +341,7 @@ export default function FriendsScreen() {
           <View
             style={{
               borderRadius: radius.lg,
-              shadowColor: '#2A2622',
+              shadowColor: colors.shadow,
               shadowOpacity: 0.06,
               shadowRadius: 16,
               shadowOffset: { width: 0, height: 6 },
@@ -363,10 +365,10 @@ export default function FriendsScreen() {
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <PillButton onPress={() => handleApprove(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: 42 }}>
+                    <PillButton onPress={() => handleApprove(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                       Approve
                     </PillButton>
-                    <PillButton variant="secondary" onPress={() => handleDecline(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: 42 }}>
+                    <PillButton variant="secondary" onPress={() => handleDecline(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                       Decline
                     </PillButton>
                   </View>
@@ -381,16 +383,16 @@ export default function FriendsScreen() {
       <PeopleList
         title={`Keeping up with · ${followingList.length}`}
         people={followingList}
-        emptyTitle="No friends yet"
-        emptyMessage="Search by name or handle to ask someone to keep up."
+        emptyTitle="Nobody here yet"
+        emptyMessage="Send an invite, or search a name to ask someone to keep up."
         onRemove={(person) => setConfirming({ person, action: 'remove' })}
       />
 
       <PeopleList
         title={`Kept by · ${followerList.length}`}
         people={followerList}
-        emptyTitle="No one yet"
-        emptyMessage="People whose requests you approve appear here."
+        emptyTitle="Nobody yet"
+        emptyMessage="Say yes to a request and they show up here."
       />
 
       {query.trim() ? (
@@ -414,7 +416,7 @@ export default function FriendsScreen() {
       </Text>
 
       <Portal>
-        <Dialog visible={enteringCode} onDismiss={() => setEnteringCode(false)}>
+        <Dialog style={dialogStyle} visible={enteringCode} onDismiss={() => setEnteringCode(false)}>
           <Dialog.Title>Enter an invite code</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -439,7 +441,7 @@ export default function FriendsScreen() {
             </Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={Boolean(requesting)} onDismiss={() => setRequesting(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(requesting)} onDismiss={() => setRequesting(null)}>
           <Dialog.Title>Ask to keep up</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -453,7 +455,7 @@ export default function FriendsScreen() {
             <Button onPress={submitRequest} loading={busy} disabled={busy || !context.trim()}>Send</Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={Boolean(confirming)} onDismiss={() => setConfirming(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(confirming)} onDismiss={() => setConfirming(null)}>
           <Dialog.Title>{confirming?.action === 'remove' ? 'Stop keeping up?' : 'Cancel request?'}</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary }}>
@@ -470,7 +472,7 @@ export default function FriendsScreen() {
             </Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={Boolean(reporting)} onDismiss={() => setReporting(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(reporting)} onDismiss={() => setReporting(null)}>
           <Dialog.Title>Report profile?</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -484,7 +486,7 @@ export default function FriendsScreen() {
             <Button onPress={submitReport} loading={busy} disabled={busy}>Report</Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={Boolean(blocking)} onDismiss={() => setBlocking(null)}>
+        <Dialog style={dialogStyle} visible={Boolean(blocking)} onDismiss={() => setBlocking(null)}>
           <Dialog.Title>Block this person?</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary }}>
@@ -534,7 +536,7 @@ function PeopleList({
         <View
           style={{
             borderRadius: radius.lg,
-            shadowColor: '#2A2622',
+            shadowColor: colors.shadow,
             shadowOpacity: 0.06,
             shadowRadius: 16,
             shadowOffset: { width: 0, height: 6 },
@@ -565,7 +567,7 @@ function PeopleList({
                         height: 44,
                         borderRadius: 22,
                         backgroundColor: colors.photoBg,
-                        borderColor: 'rgba(243, 237, 228, 0.9)',
+                        borderColor: colors.surface,
                         borderWidth: 1.5,
                       }}
                     />
@@ -592,11 +594,11 @@ function PeopleList({
                       <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
                         {isFollowing ? 'Remove' : requested ? 'Pending' : 'Ask'}
                       </Text>
-                      <Icon source="chevron-right" color={colors.textFaintest} size={19} />
+                      <Icon source="chevron-right" color={colors.textFaintest} size={iconSize.action} />
                     </Pressable>
                   ) : (
                     <Pressable onPress={() => onRemove?.(person)} style={({ pressed }) => ({ opacity: pressed ? 0.68 : 1 })}>
-                      <Icon source="chevron-right" color={colors.textFaintest} size={22} />
+                      <Icon source="chevron-right" color={colors.textFaintest} size={iconSize.action} />
                     </Pressable>
                   )}
                 </View>

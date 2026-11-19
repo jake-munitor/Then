@@ -9,34 +9,60 @@ type FilterOverlay = {
   style: ViewStyle;
 };
 
+type GradeLayer = {
+  id: string;
+  mode: NonNullable<ViewStyle['mixBlendMode']>;
+  /** Flat colour with its strength in the alpha channel. */
+  color: string;
+};
+
 type FilterLook = {
   backgroundColor: string;
   /**
-   * Real colour grading, applied to the photo itself. These looks used to be
-   * built by dropping the image's opacity so the beige card showed through,
-   * which washed the contrast out and read as hazy rather than filmic. RN 0.81
-   * (new architecture, which this app enables) supports actual filter
-   * primitives, so the photo now stays fully opaque and gets graded instead.
+   * The colour grade, as flat blend layers laid over the photo.
+   *
+   * These looks were first specified as filter chains (sepia, saturate,
+   * contrast, hue-rotate). On iOS, React Native applies only `brightness`
+   * and `opacity` from `filter` and silently drops the rest, so on an iPhone
+   * every tone was a brightness nudge and nothing more. Blend modes do work
+   * on iOS, so each chain is reproduced here with layers fitted numerically
+   * to the original chain: W3C blend maths against the CSS filter maths, on
+   * pixels sampled from nine real photographs, then checked on three photos
+   * the fit never saw. Mean error against the designed look, per channel on
+   * a 0-255 scale, before -> after (held-out photos in brackets):
+   *   film       9.3 -> 2.6   (8.2 -> 1.3)
+   *   sunfade    9.7 -> 1.9   (13.6 -> 1.1)
+   *   cool flash 6.0 -> 2.9   (5.3 -> 2.5)
+   * Cool flash keeps the largest gap because a hue rotation cannot be built
+   * from flat layers. The colours look odd in isolation (a mauve "tone",
+   * olive highlights); they are fitted as a set and only make sense together.
+   *
+   * No layer goes above 50% alpha and the photo stays fully opaque
+   * underneath, so a blend mode that failed to apply would show as a heavy
+   * wash, never a covered photo.
    */
-  filters: ViewStyle['filter'];
+  grade: GradeLayer[];
   /**
    * Kept for the character a tone curve cannot express - light leaks, edge
-   * falloff, flash spill. Much lighter than before, since grading now does the
-   * heavy lifting rather than these sitting on top of a washed-out image.
+   * falloff, flash spill.
    */
   overlays: FilterOverlay[];
 };
 
 const FILTER_LOOKS: Record<PhotoFilter, FilterLook> = {
   normal: {
-    backgroundColor: colors.surfaceWarm,
-    filters: [],
+    backgroundColor: colors.photoBg,
+    grade: [],
     overlays: [],
   },
   film: {
     backgroundColor: '#E8C88C',
     // Warm classic stock: gentle sepia bias, richer colour, a little more bite.
-    filters: [{ sepia: 0.2 }, { saturate: 1.1 }, { contrast: 1.12 }, { brightness: 1.02 }],
+    grade: [
+      { id: 'tone', mode: 'color', color: 'rgba(172, 94, 136, 0.131)' },
+      { id: 'highlights', mode: 'color-dodge', color: 'rgba(47, 54, 23, 0.5)' },
+      { id: 'shadows', mode: 'color-burn', color: 'rgba(219, 236, 223, 0.5)' },
+    ],
     overlays: [
       { id: 'amber-wash', style: { backgroundColor: '#D58A3A', bottom: 0, opacity: 0.08, right: 0 } },
       { id: 'matte-fade', style: { backgroundColor: '#2A211B', bottom: 0, opacity: 0.03, right: 0 } },
@@ -46,7 +72,11 @@ const FILTER_LOOKS: Record<PhotoFilter, FilterLook> = {
   sunfade: {
     backgroundColor: '#F1D6B8',
     // Sun-bleached: lifted blacks (low contrast), pulled colour, warm and bright.
-    filters: [{ sepia: 0.3 }, { saturate: 0.82 }, { contrast: 0.88 }, { brightness: 1.1 }],
+    grade: [
+      { id: 'tone', mode: 'color', color: 'rgba(17, 4, 7, 0.426)' },
+      { id: 'lifted-blacks', mode: 'screen', color: 'rgba(43, 43, 43, 0.366)' },
+      { id: 'glow', mode: 'color-dodge', color: 'rgba(42, 44, 16, 0.5)' },
+    ],
     overlays: [
       { id: 'peach-wash', style: { backgroundColor: '#E9A56E', bottom: 0, opacity: 0.1, right: 0 } },
       {
@@ -63,7 +93,11 @@ const FILTER_LOOKS: Record<PhotoFilter, FilterLook> = {
   coolFlash: {
     backgroundColor: '#C7DCDC',
     // Direct flash: cooler hue, slightly desaturated, crisp and bright.
-    filters: [{ saturate: 0.92 }, { contrast: 1.1 }, { brightness: 1.05 }, { hueRotate: '-8deg' }],
+    grade: [
+      { id: 'cool-cast', mode: 'color', color: 'rgba(137, 94, 137, 0.095)' },
+      { id: 'highlights', mode: 'color-dodge', color: 'rgba(42, 43, 37, 0.5)' },
+      { id: 'shadows', mode: 'color-burn', color: 'rgba(222, 236, 230, 0.5)' },
+    ],
     overlays: [
       { id: 'blue-wash', style: { backgroundColor: '#517789', bottom: 0, opacity: 0.08, right: 0 } },
       {
@@ -99,20 +133,23 @@ export default function FilteredMomentImage({
 }: Props) {
   const selectedFilter = normalizePhotoFilter(filter);
   const look = FILTER_LOOKS[selectedFilter];
-  const hasGrading = Array.isArray(look.filters) && look.filters.length > 0;
 
   return (
     <View testID={testID} style={[styles.frame, { backgroundColor: look.backgroundColor }, style]}>
-      {/* The grade lives on a wrapper View: RN types expose `filter` on
-          ViewStyle, not ImageStyle. */}
-      <View style={hasGrading ? { width: '100%', filter: look.filters } : styles.ungraded}>
-        <Image
-          source={{ uri }}
-          resizeMode={resizeMode}
-          style={[styles.image, { aspectRatio }]}
-          accessibilityLabel={accessibilityLabel}
+      <Image
+        source={{ uri }}
+        resizeMode={resizeMode}
+        style={[styles.image, { aspectRatio }]}
+        accessibilityLabel={accessibilityLabel}
+      />
+      {look.grade.map((layer) => (
+        <View
+          key={layer.id}
+          pointerEvents="none"
+          testID={testID ? `${testID}-grade-${selectedFilter}-${layer.id}` : undefined}
+          style={[styles.grade, { backgroundColor: layer.color, mixBlendMode: layer.mode }]}
         />
-      </View>
+      ))}
       {look.overlays.map((overlay) => (
         <View
           key={overlay.id}
@@ -129,13 +166,20 @@ const styles = StyleSheet.create({
   frame: {
     width: '100%',
     overflow: 'hidden',
+    // Blend layers mix with the photo only, never with whatever is behind
+    // the frame.
+    isolation: 'isolate',
   },
-  ungraded: {
-    width: '100%',
+  grade: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
   },
   image: {
     width: '100%',
-    backgroundColor: colors.surfaceWarm,
+    backgroundColor: colors.photoBg,
   },
   overlay: {
     position: 'absolute',

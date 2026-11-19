@@ -2,6 +2,7 @@ import { MD3LightTheme, configureFonts } from 'react-native-paper';
 
 import { colors } from './colors';
 import { fonts } from './fonts';
+import { radius } from './radius';
 
 export const appTheme = {
   ...MD3LightTheme,
@@ -20,6 +21,17 @@ export const appTheme = {
     onBackground: colors.textPrimary,
     onSurface: colors.textPrimary,
     onSurfaceVariant: colors.textSecondary,
+    // Paper tints raised surfaces (dialogs, menus) with its default purple
+    // primary. Every level is cream instead, so nothing leaves the palette.
+    elevation: {
+      level0: 'transparent',
+      level1: colors.surface,
+      level2: colors.surface,
+      level3: colors.surface,
+      level4: colors.surface,
+      level5: colors.surface,
+    },
+    backdrop: 'rgba(81, 72, 63, 0.42)',
   },
   fonts: {
     ...configureFonts({
@@ -46,3 +58,9 @@ export const appTheme = {
     default: { ...MD3LightTheme.fonts.default, fontFamily: fonts.bodyRegular },
   },
 };
+
+/**
+ * Paper derives a dialog's corner radius from `roundness` (7x, so 84pt here -
+ * nearly a pill). Every dialog takes this instead, to match the app's cards.
+ */
+export const dialogStyle = { borderRadius: radius.xl, backgroundColor: colors.surface } as const;

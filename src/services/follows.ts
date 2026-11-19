@@ -13,6 +13,7 @@ import {
 import { db } from '../firebase/firebase';
 import { callFunction } from './cloudFunctions';
 import { withSnapshotCache } from './snapshotCache';
+import { suggestNotifications } from './pushPrimer';
 import { track } from './telemetry';
 import type { FollowRequest, ListenerErrorHandler } from './types';
 
@@ -121,6 +122,8 @@ export async function requestFollow(params: {
   });
   await batch.commit();
   track('follow_request_sent');
+  // They will want to hear when the answer comes.
+  suggestNotifications('friend');
 }
 
 export async function getPendingFollowRequestIds(requesterUid: string, targetUids: string[]) {
@@ -137,6 +140,7 @@ export async function getPendingFollowRequestIds(requesterUid: string, targetUid
 export async function approveFollow(params: { ownerUid: string; requesterUid: string }) {
   await callFunction('approveFollowRequest', { requesterUid: params.requesterUid });
   track('follow_request_approved');
+  suggestNotifications('friend');
 }
 
 export async function declineFollow(params: { ownerUid: string; requesterUid: string }) {

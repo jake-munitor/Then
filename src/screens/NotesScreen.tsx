@@ -97,7 +97,7 @@ export default function NotesScreen({ route, navigation }: Props) {
           {loading ? (
             <ActivityIndicator />
           ) : notes.length === 0 ? (
-            <Text style={{ color: colors.textSecondary }}>No notes yet.</Text>
+            <Text style={{ color: colors.textSecondary }}>No notes yet. Write the first one.</Text>
           ) : (
             notes.map((note) => (
               <View key={note.id} style={{ backgroundColor: colors.paper, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 16 }}>

@@ -80,8 +80,8 @@ export default function LinkedMomentScreen({ route, navigation }: Props) {
         {failed ? (
           <View style={{ gap: 14 }}>
             <EmptyState
-              title="Moment unavailable"
-              message="This moment may have been deleted, or the connection dropped while finding it."
+              title="This moment is gone"
+              message="It may have been deleted, or the connection dropped on the way."
             />
             <View style={{ alignItems: 'center' }}>
               <PillButton icon="refresh" onPress={() => setAttempt((current) => current + 1)}>

@@ -1,18 +1,20 @@
 import React, { useContext, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, useWindowDimensions, View } from 'react-native';
 import { Icon, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 
-import FilteredMomentImage from '../components/FilteredMomentImage';
+import DevelopingPhoto from '../components/DevelopingPhoto';
 import PhotoFilterPicker from '../components/PhotoFilterPicker';
+import PolaroidFrame, { PrintShadow } from '../components/PolaroidFrame';
 import Screen from '../components/Screen';
 import { PillButton, SectionLabel, Toggle } from '../components/DesignPrimitives';
-import { createMoment } from '../services/moments';
+import { clearRestoredDraft, shareMoment, useMomentOutbox } from '../services/momentOutbox';
 import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 import { dateFromImagePickerAsset, isValidYYYYMMDD, todayYYYYMMDD } from '../utils/dates';
 import type { PhotoFilter } from '../utils/photoFilters';
@@ -23,6 +25,9 @@ const DEFAULT_PHOTO_FILTER: PhotoFilter = 'film';
 export default function NewMomentScreen() {
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<any>();
+  const { width: windowWidth } = useWindowDimensions();
+  // Same print width as a feed card, so the composer is the finished object.
+  const cardWidth = Math.min(Math.max(windowWidth - 36, 286), 430);
   const [uri, setUri] = useState<string | null>(null);
   const [photoFilter, setPhotoFilter] = useState<PhotoFilter>(DEFAULT_PHOTO_FILTER);
   const [frontText, setFrontText] = useState('');
@@ -32,7 +37,6 @@ export default function NewMomentScreen() {
   const [memoryDate, setMemoryDate] = useState(todayYYYYMMDD());
   const [appearInWander, setAppearInWander] = useState(false);
   const [wanderDefault, setWanderDefault] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -47,6 +51,21 @@ export default function NewMomentScreen() {
       () => setError('Your Wander preference could not be loaded.'),
     );
   }, [user?.uid]);
+
+  // A failed share the person chose to edit comes back here with everything
+  // they had: photo, tone, caption, back, date.
+  const { draft } = useMomentOutbox();
+  React.useEffect(() => {
+    if (!draft) return;
+    setUri(draft.uri);
+    setPhotoFilter(draft.photoFilter);
+    setFrontText(draft.frontText);
+    setBackText(draft.backText);
+    setMemoryDate(draft.memoryDate);
+    setAppearInWander(draft.appearInWander);
+    setError(null);
+    clearRestoredDraft();
+  }, [draft]);
 
   const pickPhoto = async () => {
     setError(null);
@@ -87,7 +106,7 @@ export default function NewMomentScreen() {
     }
   };
 
-  const submit = async () => {
+  const submit = () => {
     if (!user?.uid || !uri) return;
     setError(null);
     if (!frontText.trim()) {
@@ -103,38 +122,41 @@ export default function NewMomentScreen() {
       return;
     }
 
-    setBusy(true);
-    try {
-      await createMoment({
-        uid: user.uid,
-        uri,
-        photoFilter,
-        frontText,
-        backText,
-        memoryDate: memoryDate.trim(),
-        appearInWander,
-      });
-      setUri(null);
-      setPhotoFilter(DEFAULT_PHOTO_FILTER);
-      setFrontText('');
-      setBackText('');
-      setMemoryDate(todayYYYYMMDD());
-      setAppearInWander(wanderDefault);
-      navigation.navigate('FeedTab');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not share.');
-    } finally {
-      setBusy(false);
-    }
+    // Hand the moment to the outbox and let go. The feed shows it at once as
+    // a pending print; if the upload fails, the photo and words wait there
+    // with Try again / Edit / Discard.
+    shareMoment({
+      uid: user.uid,
+      uri,
+      photoFilter,
+      frontText,
+      backText,
+      memoryDate: memoryDate.trim(),
+      appearInWander,
+    });
+    setUri(null);
+    setPhotoFilter(DEFAULT_PHOTO_FILTER);
+    setFrontText('');
+    setBackText('');
+    setMemoryDate(todayYYYYMMDD());
+    setAppearInWander(wanderDefault);
+    navigation.navigate('FeedTab');
   };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ gap: 14, paddingTop: 20, paddingBottom: 30 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 40 }}>
-          <Text numberOfLines={1} onPress={() => navigation.navigate('FeedTab')} style={{ width: 62, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
-            Cancel
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: layout.headerHeight }}>
+          <Pressable
+            onPress={() => navigation.navigate('FeedTab')}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={{ width: 62, minHeight: layout.headerHeight, justifyContent: 'center' }}
+          >
+            <Text numberOfLines={1} style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
+              Cancel
+            </Text>
+          </Pressable>
           {/* The title used to carry a hardcoded newline to survive the old
               three-column flex:1 header. With real side widths it fits on one line. */}
           <Text
@@ -147,104 +169,120 @@ export default function NewMomentScreen() {
           <View style={{ width: 62 }} />
         </View>
 
+        {/* The composer is the print itself: the chosen photo develops inside
+            the same ivory frame the feed uses, and the caption is written in
+            its bottom border while that happens. */}
+        <PrintShadow style={{ width: cardWidth, alignSelf: 'center' }}>
+          <PolaroidFrame testID="new-moment-frame" style={{ paddingBottom: 12 }}>
+            <View
+              style={{
+                borderRadius: radius.printPhoto,
+                overflow: 'hidden',
+                backgroundColor: colors.photoBg,
+                borderColor: colors.photoMatBorder,
+                borderWidth: 1,
+              }}
+            >
+              {uri ? (
+                <>
+                  <DevelopingPhoto
+                    uri={uri}
+                    filter={photoFilter}
+                    accessibilityLabel={frontText || 'Selected moment photo'}
+                    testID="new-moment-photo-preview"
+                  />
+                  <Pressable
+                    onPress={pickPhoto}
+                    accessibilityRole="button"
+                    accessibilityLabel="Replace photo"
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      position: 'absolute',
+                      right: 12,
+                      bottom: 12,
+                      borderRadius: radius.pill,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: 'rgba(81, 72, 63, 0.58)',
+                      opacity: pressed ? 0.72 : 1,
+                    })}
+                  >
+                    <Icon source="camera-outline" color={colors.white} size={iconSize.inline} />
+                    <Text style={{ color: colors.white, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>Replace</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <View style={{ width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+                  <Icon source="image-outline" color={colors.textFaint} size={34} />
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <PillButton icon="camera-outline" onPress={takePhoto} style={{ minHeight: layout.buttonHeightCompact }}>
+                      Camera
+                    </PillButton>
+                    <PillButton variant="secondary" icon="image-outline" onPress={pickPhoto} style={{ minHeight: layout.buttonHeightCompact }}>
+                      Library
+                    </PillButton>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            <View style={{ paddingTop: 8 }}>
+              <TextInput
+                value={frontText}
+                onChangeText={(value) => setFrontText(value.slice(0, FRONT_LIMIT))}
+                onFocus={() => setFrontFocused(true)}
+                onBlur={() => setFrontFocused(false)}
+                placeholder="first light, no plans"
+                // Paper's default placeholder resolves to textSecondary here -
+                // dark enough to read as already-entered text (field report).
+                placeholderTextColor={colors.textFaint}
+                selectionColor={colors.primary}
+                mode="flat"
+                underlineColor="transparent"
+                activeUnderlineColor="transparent"
+                style={{ backgroundColor: 'transparent', paddingHorizontal: 0, height: 46 }}
+                // Set in the caption face at the caption size, so what is
+                // typed here is what the finished print shows.
+                contentStyle={{ color: colors.textPrimary, fontFamily: fonts.captionSerif, fontSize: 16 }}
+              />
+              {/* The Paper underline is intentionally hidden, so this divider is
+                  the input's only focus affordance - it warms and thickens while
+                  the caption is being written. */}
+              <View style={{ height: frontFocused ? 2 : 1, backgroundColor: frontFocused ? colors.primary : colors.border }} />
+              <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <SectionLabel>On the front</SectionLabel>
+                <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
+                  {frontText.length} / {FRONT_LIMIT}
+                </Text>
+              </View>
+            </View>
+          </PolaroidFrame>
+        </PrintShadow>
+
         <View
           style={{
             backgroundColor: colors.surface,
-            borderColor: colors.border,
+            borderColor: colors.borderInset,
             borderWidth: 1,
             borderRadius: radius.lg,
-            padding: 9,
-            shadowColor: '#2A2622',
-            shadowOpacity: 0.07,
-            shadowRadius: 26,
-            shadowOffset: { width: 0, height: 10 },
-            elevation: 3,
+            padding: 16,
+            gap: 12,
           }}
         >
-          {uri ? (
-            <View style={{ borderRadius: 9, overflow: 'hidden', backgroundColor: colors.photoBg }}>
-              <FilteredMomentImage
-                uri={uri}
-                filter={photoFilter}
-                aspectRatio={1}
-                style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.photoBg }}
-                accessibilityLabel={frontText || 'Selected moment photo'}
-                testID="new-moment-photo-preview"
-              />
-              <Pressable
-                onPress={pickPhoto}
-                disabled={busy}
-                style={({ pressed }) => ({
-                  position: 'absolute',
-                  right: 12,
-                  bottom: 12,
-                  borderRadius: radius.pill,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: 'rgba(28,24,20,0.58)',
-                  opacity: pressed ? 0.72 : 1,
-                })}
-              >
-                <Icon source="camera-outline" color={colors.white} size={14} />
-                <Text style={{ color: colors.white, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>Replace</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={{ minHeight: 260, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.photoBg, borderRadius: 9 }}>
-              <Icon source="image-outline" color={colors.textFaint} size={34} />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <PillButton icon="camera-outline" onPress={takePhoto} disabled={busy} style={{ minHeight: 42 }}>
-                  Camera
-                </PillButton>
-                <PillButton variant="secondary" icon="image-outline" onPress={pickPhoto} disabled={busy} style={{ minHeight: 42 }}>
-                  Library
-                </PillButton>
-              </View>
-            </View>
-          )}
-
-          <View style={{ paddingHorizontal: 8, paddingTop: 14, paddingBottom: 10, gap: 10 }}>
-            <SectionLabel>On the front</SectionLabel>
-            <TextInput
-              value={frontText}
-              onChangeText={(value) => setFrontText(value.slice(0, FRONT_LIMIT))}
-              onFocus={() => setFrontFocused(true)}
-              onBlur={() => setFrontFocused(false)}
-              disabled={busy}
-              placeholder="first light, no plans"
-              // Paper's default placeholder resolves to textSecondary here -
-              // dark enough to read as already-entered text (field report).
-              placeholderTextColor={colors.textFaint}
-              selectionColor={colors.primary}
-              mode="flat"
-              underlineColor="transparent"
-              activeUnderlineColor="transparent"
-              style={{ backgroundColor: 'transparent', paddingHorizontal: 0 }}
-              contentStyle={{ color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 19 }}
-            />
-            {/* The Paper underline is intentionally hidden, so this divider is
-                the input's only focus affordance - it warms and thickens while
-                the caption is being written. */}
-            <View style={{ height: frontFocused ? 2 : 1, backgroundColor: frontFocused ? colors.primary : colors.border }} />
-            <Text style={{ textAlign: 'right', color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
-              {frontText.length} / {FRONT_LIMIT}
-            </Text>
-            {uri ? <PhotoFilterPicker value={photoFilter} onChange={setPhotoFilter} disabled={busy} /> : null}
-            <TextInput
-              label="date stamp"
-              value={memoryDate}
-              onChangeText={setMemoryDate}
-              disabled={busy}
-              mode="outlined"
-              outlineColor={colors.border}
-              activeOutlineColor={colors.primary}
-              style={{ backgroundColor: colors.surfaceInset }}
-              contentStyle={{ fontFamily: fonts.cameraRegular, letterSpacing: 0.6 }}
-            />
-          </View>
+          {uri ? <PhotoFilterPicker value={photoFilter} onChange={setPhotoFilter} /> : null}
+          <TextInput
+            label="date stamp"
+            value={memoryDate}
+            onChangeText={setMemoryDate}
+            mode="outlined"
+            outlineColor={colors.border}
+            activeOutlineColor={colors.primary}
+            style={{ backgroundColor: colors.surfaceInset }}
+            contentStyle={{ fontFamily: fonts.cameraRegular, letterSpacing: 0.6 }}
+          />
         </View>
 
         <View
@@ -259,7 +297,7 @@ export default function NewMomentScreen() {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Icon source="file-document-outline" color={colors.textMuted} size={18} />
+              <Icon source="file-document-outline" color={colors.textMuted} size={iconSize.small} />
               <SectionLabel>On the back</SectionLabel>
             </View>
             <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 11 }}>private to you</Text>
@@ -270,7 +308,6 @@ export default function NewMomentScreen() {
             onFocus={() => setBackFocused(true)}
             onBlur={() => setBackFocused(false)}
             maxLength={5000}
-            disabled={busy}
             multiline
             placeholder="What do you want to remember?"
             placeholderTextColor={colors.textFaint}
@@ -302,11 +339,11 @@ export default function NewMomentScreen() {
               Beyond your circle, chronological.
             </Text>
           </View>
-          <Toggle value={appearInWander} onValueChange={setAppearInWander} disabled={busy} />
+          <Toggle value={appearInWander} onValueChange={setAppearInWander} />
         </View>
 
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
-        <PillButton icon="camera-outline" onPress={submit} disabled={busy || !uri}>
+        <PillButton icon="camera-outline" onPress={submit} disabled={!uri}>
           Develop & share
         </PillButton>
         <Text style={{ color: colors.textFaint, textAlign: 'center', fontFamily: fonts.bodyRegular, fontSize: 11.5, lineHeight: 17 }}>

@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import ListenerError from '../components/ListenerError';
 import MomentCard from '../components/MomentCard';
+import PendingMomentCard from '../components/PendingMomentCard';
 import SkeletonPolaroid from '../components/SkeletonPolaroid';
 import MomentSortControl from '../components/MomentSortControl';
 import Screen from '../components/Screen';
@@ -13,6 +14,7 @@ import { PillButton, ScreenHeader, SectionRow } from '../components/DesignPrimit
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { RootStackParamList, TabsParamList } from '../navigation/types';
 import { subscribeFollowing } from '../services/follows';
+import { discardPendingMoment, editPendingMoment, retryPendingMoment, useMomentOutbox } from '../services/momentOutbox';
 import { subscribeMomentsByAuthors } from '../services/moments';
 import { subscribePublicUsers } from '../services/users';
 import type { Moment, PublicUser } from '../services/types';
@@ -100,6 +102,21 @@ export default function FeedScreen() {
   const visibleMoments = useMemo(() => sortMomentsForDisplay(moments, sort), [moments, sort]);
   const sortNote = sort === 'posted' ? 'by post date' : 'by photo date';
 
+  // Moments still on their way out. Each drops off this list the instant the
+  // real one shows up in the feed, so a print is never shown twice.
+  const outbox = useMomentOutbox();
+  const pendingMoments = useMemo(
+    () => outbox.pending.filter((entry) => !moments.some((moment) => moment.id === entry.momentId)),
+    [moments, outbox.pending],
+  );
+  const editPending = useCallback(
+    (momentId: string) => {
+      editPendingMoment(momentId);
+      tabNavigation.navigate('NewMomentTab' as keyof TabsParamList);
+    },
+    [tabNavigation],
+  );
+
   return (
     <Screen scroll={false} contentStyle={{ padding: 0 }}>
       <ScreenHeader
@@ -123,18 +140,35 @@ export default function FeedScreen() {
           alignItems: 'center',
         }}
         ListHeaderComponent={
-          visibleMoments.length ? (
+          visibleMoments.length || pendingMoments.length ? (
             <View style={{ gap: 10 }}>
-              <SectionRow label="Recent" note={sortNote} />
-              <View style={{ paddingHorizontal: 18 }}>
-                <MomentSortControl value={sort} onChange={setSort} />
-              </View>
+              {visibleMoments.length ? (
+                <>
+                  <SectionRow label="Recent" note={sortNote} />
+                  <View style={{ paddingHorizontal: 18 }}>
+                    <MomentSortControl value={sort} onChange={setSort} />
+                  </View>
+                </>
+              ) : null}
+              {pendingMoments.length ? (
+                <View style={{ paddingTop: 4, marginBottom: -8 }}>
+                  {pendingMoments.map((entry) => (
+                    <PendingMomentCard
+                      key={entry.momentId}
+                      moment={entry}
+                      onRetry={retryPendingMoment}
+                      onEdit={editPending}
+                      onDiscard={discardPendingMoment}
+                    />
+                  ))}
+                </View>
+              ) : null}
             </View>
           ) : null
         }
         ListHeaderComponentStyle={{ width: '100%', marginBottom: 8 }}
         ListEmptyComponent={
-          momentsLoaded ? (
+          pendingMoments.length ? null : momentsLoaded ? (
             <EmptyFeed
               onShare={() => tabNavigation.navigate('NewMomentTab' as keyof TabsParamList)}
               onFind={() => tabNavigation.navigate('FriendsTab' as keyof TabsParamList)}
@@ -175,13 +209,13 @@ function EmptyFeed({ onShare, onFind }: { onShare: () => void; onFind: () => voi
           borderRadius: radius.print,
           borderWidth: 1.5,
           borderStyle: 'dashed',
-          borderColor: '#D4C8B4',
+          borderColor: colors.borderStrong,
           backgroundColor: colors.surface,
           padding: 10,
           transform: [{ rotate: '-3deg' }],
         }}
       >
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1EADC' }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.photoBg }}>
           <Icon source="image-outline" color={colors.textFaintest} size={28} />
         </View>
         <View style={{ height: 34 }} />

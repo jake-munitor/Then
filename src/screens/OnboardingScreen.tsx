@@ -2,17 +2,18 @@ import React, { useContext, useMemo, useState } from 'react';
 import { Image, Share, View } from 'react-native';
 import { Icon, Text, TextInput } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
 
 import Screen from '../components/Screen';
 import { Avatar, PillButton, Wordmark } from '../components/DesignPrimitives';
-import { createInvite } from '../services/invites';
+import { createInvite, isInviteCode, normalizeInviteCode, stashPendingInviteCode } from '../services/invites';
 import { uploadAvatar } from '../services/photos';
 import { track } from '../services/telemetry';
 import { updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
+import { OnboardingGateContext } from '../store/OnboardingGate';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 
 function handleFromName(value: string) {
@@ -21,7 +22,7 @@ function handleFromName(value: string) {
 
 export default function OnboardingScreen() {
   const { user } = useContext(AuthContext);
-  const navigation = useNavigation<any>();
+  const { finishOnboarding } = useContext(OnboardingGateContext);
   const [step, setStep] = useState<'principles' | 'profile' | 'invite'>('principles');
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [handle, setHandle] = useState(handleFromName(user?.displayName ?? ''));
@@ -30,6 +31,7 @@ export default function OnboardingScreen() {
   const [target, setTarget] = useState<'friends' | 'moment'>('moment');
   const [busyTarget, setBusyTarget] = useState<'friends' | 'moment' | null>(null);
   const [busyInvite, setBusyInvite] = useState<'share' | 'skip' | null>(null);
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const previewHandle = useMemo(() => handleFromName(handle), [handle]);
 
@@ -87,8 +89,17 @@ export default function OnboardingScreen() {
 
   const completeOnboarding = async (via: 'share' | 'skip') => {
     if (!user?.uid) return;
+    if (inviteCode && !isInviteCode(inviteCode)) {
+      setError('Invite codes are 6 letters and numbers. Check it, or clear the box.');
+      return;
+    }
     setBusyInvite(via);
     setError(null);
+    // A code typed here waits in the stash; the main app redeems it the
+    // moment it opens and lands this person on their friend's roll. Asking
+    // here matters because iOS drops the invite link during an install, and
+    // the only other place to enter a code is a small link on Friends.
+    if (inviteCode) await stashPendingInviteCode(inviteCode);
     // The invite is a bonus, never a gate. Minting it hits a Cloud Function,
     // so a cold start or a network blip used to throw into the catch below and
     // leave onboardingCompleted false - stranding a new account on the final
@@ -116,10 +127,11 @@ export default function OnboardingScreen() {
         onboardingCompleted: true,
       });
       track('onboarding_completed', { target });
-      navigation.replace('MainTabs', { screen: target === 'friends' ? 'FriendsTab' : 'NewMomentTab' });
+      // The buttons stay busy on success: this screen unmounts as soon as the
+      // navigator swaps, and re-enabling them invited repeat taps.
+      finishOnboarding(target === 'friends' ? 'FriendsTab' : 'NewMomentTab');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not finish setup.');
-    } finally {
       setBusyInvite(null);
     }
   };
@@ -133,6 +145,26 @@ export default function OnboardingScreen() {
             Then is quiet on purpose - your feed is only the friends you invite. An invite link
             connects you both the moment they join, no requests to approve.
           </Text>
+          <View style={{ width: '100%', gap: 6 }}>
+            <TextInput
+              label="Invited by a friend? Their code"
+              value={inviteCode}
+              onChangeText={(value) => setInviteCode(normalizeInviteCode(value))}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={6}
+              disabled={Boolean(busyInvite)}
+              mode="outlined"
+              outlineColor={colors.border}
+              activeOutlineColor={colors.primary}
+              style={{ backgroundColor: colors.surface }}
+              contentStyle={{ fontFamily: fonts.cameraRegular, letterSpacing: 3 }}
+              testID="onboarding-invite-code"
+            />
+            <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12, textAlign: 'center' }}>
+              Six letters and numbers from their invite link. You'll be connected as soon as you finish.
+            </Text>
+          </View>
           {error ? <Text style={{ color: colors.error, textAlign: 'center' }}>{error}</Text> : null}
           <View style={{ gap: 10, width: '100%', marginTop: 8 }}>
             <PillButton
@@ -172,9 +204,9 @@ export default function OnboardingScreen() {
         </View>
         <PillButton onPress={() => setStep('profile')}>Continue</PillButton>
         <View style={{ marginTop: 18, flexDirection: 'row', gap: 6, justifyContent: 'center' }}>
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#CFC4B2' }} />
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.border }} />
           <View style={{ width: 22, height: 7, borderRadius: 4, backgroundColor: colors.primary }} />
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#CFC4B2' }} />
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.border }} />
         </View>
       </Screen>
     );
@@ -197,7 +229,7 @@ export default function OnboardingScreen() {
             ) : (
               <Avatar name={displayName} size={88} />
             )}
-            <PillButton variant="secondary" icon="image-outline" onPress={chooseAvatar} disabled={Boolean(busyTarget)} style={{ minHeight: 42 }}>
+            <PillButton variant="secondary" icon="image-outline" onPress={chooseAvatar} disabled={Boolean(busyTarget)} style={{ minHeight: layout.buttonHeightCompact }}>
               Change photo
             </PillButton>
           </View>
@@ -255,7 +287,7 @@ function Principle({ icon, title, body }: { icon: string; title: string; body: s
           borderWidth: 1,
         }}
       >
-        <Icon source={icon} color={colors.textSecondary} size={21} />
+        <Icon source={icon} color={colors.textSecondary} size={iconSize.action} />
       </View>
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={{ color: colors.textPrimary, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{title}</Text>

@@ -33,6 +33,7 @@ import { subscribePublicUsers } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 import { initialsFromName } from '../utils/formatters';
 
@@ -233,7 +234,7 @@ export default function RollScreen() {
           flexDirection: 'row',
           gap: 16,
           alignItems: 'center',
-          shadowColor: '#2A2622',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.06,
           shadowRadius: 24,
           shadowOffset: { width: 0, height: 10 },
@@ -299,7 +300,7 @@ export default function RollScreen() {
 
       {view === 'requests' ? (
         requests.length === 0 ? (
-          <EmptyState title="No follow requests" message="Follow requests land here." />
+          <EmptyState title="No requests right now" message="When someone asks to keep up with you, it shows here." />
         ) : (
           <View style={{ gap: 12 }}>
             {requests.map((request) => {
@@ -318,10 +319,10 @@ export default function RollScreen() {
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <PillButton onPress={() => handleApprove(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: 42 }}>
+                    <PillButton onPress={() => handleApprove(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                       Approve
                     </PillButton>
-                    <PillButton variant="secondary" onPress={() => handleDecline(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: 42 }}>
+                    <PillButton variant="secondary" onPress={() => handleDecline(request.requesterUid)} disabled={Boolean(actingOnRequest)} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                       Decline
                     </PillButton>
                   </View>
@@ -332,8 +333,8 @@ export default function RollScreen() {
         )
       ) : visibleMoments.length === 0 ? (
         <EmptyState
-          title={view === 'archive' ? 'Your archive is waiting' : 'Nothing saved yet'}
-          message={view === 'archive' ? 'Shared moments appear here.' : 'Saved moments appear here.'}
+          title={view === 'archive' ? 'Your roll starts here' : 'Nothing saved yet'}
+          message={view === 'archive' ? 'Share a moment and it stays here, in order.' : 'Tap the bookmark on a moment to keep it close.'}
         />
       ) : (
         <View style={{ width: gridWidth, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: gridGap }}>
@@ -388,7 +389,7 @@ function HeaderIconWithBadge({
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Icon source={icon} color={colors.textMuted} size={21} />
+      <Icon source={icon} color={colors.textMuted} size={iconSize.action} />
       {count ? (
         <View
           style={{

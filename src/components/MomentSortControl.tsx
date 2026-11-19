@@ -4,6 +4,7 @@ import { Icon, Menu, Text } from 'react-native-paper';
 
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { layout } from '../theme/layout';
 import type { MomentSort } from '../utils/momentSorting';
 
 type Props = {
@@ -51,12 +52,12 @@ export default function MomentSortControl({ value, onChange }: Props) {
             onPress={() => setOpen(true)}
             style={({ pressed }) => ({
               width: '100%',
-              minHeight: 38,
+              minHeight: layout.touchTarget,
               paddingHorizontal: 12,
-              borderColor: pressed ? 'rgba(181, 167, 146, 0.55)' : 'rgba(181, 167, 146, 0.35)',
+              borderColor: pressed ? 'rgba(163, 151, 140, 0.55)' : 'rgba(163, 151, 140, 0.35)',
               borderWidth: 1,
               borderRadius: 999,
-              backgroundColor: pressed ? 'rgba(221, 209, 191, 0.38)' : 'rgba(255, 253, 247, 0.74)',
+              backgroundColor: pressed ? 'rgba(163, 151, 140, 0.16)' : 'rgba(248, 245, 239, 0.74)',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',

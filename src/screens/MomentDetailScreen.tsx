@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Button, Dialog, Icon, Menu, Portal, Text, TextInput } from 'react-native-paper';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import DateStamp from '../components/DateStamp';
 import FilteredMomentImage from '../components/FilteredMomentImage';
+import PolaroidFrame, { paperVariant, PrintShadow } from '../components/PolaroidFrame';
 import Screen from '../components/Screen';
 import { Avatar, PillButton, SectionLabel } from '../components/DesignPrimitives';
 import type { RootStackParamList } from '../navigation/types';
@@ -26,12 +27,20 @@ import { subscribePublicUsers } from '../services/users';
 import type { Moment, MomentBack, Note, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { dialogStyle } from '../theme/theme';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 import { formatMemoryDate } from '../utils/dates';
+import { useReducedMotion } from '../utils/motion';
 import { goBackOrHome } from '../utils/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MomentDetail'>;
+
+// Lauren's spec: a brief, smooth turn (250-350ms). With Reduce Motion on, the
+// two sides cross-fade in place instead of rotating.
+const FLIP_DURATION_MS = 320;
+const FLIP_REDUCED_DURATION_MS = 160;
 
 export default function MomentDetailScreen({ route, navigation }: Props) {
   const { user } = useContext(AuthContext);
@@ -53,6 +62,10 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
   const flip = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
+  // The back is laid over the front; it takes the front's measured height so
+  // both sides of the print are the same physical size.
+  const [frontHeight, setFrontHeight] = useState(0);
   const { width: windowWidth } = useWindowDimensions();
 
   useEffect(
@@ -128,10 +141,11 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     Animated.timing(flip, {
       toValue: flipped ? 1 : 0,
-      duration: 650,
+      duration: reducedMotion ? FLIP_REDUCED_DURATION_MS : FLIP_DURATION_MS,
+      easing: Easing.inOut(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [flip, flipped]);
+  }, [flip, flipped, reducedMotion]);
 
   if (!moment) {
     return (
@@ -261,35 +275,51 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const printHeight = Math.max(detailPrintMinHeight, frontHeight);
+  // Each side stays solid until it is edge-on, then hands over - a turning
+  // card, not two ghosts. Under Reduce Motion there is no turn, only a fade.
   const frontStyle = {
     transform: [
+      { perspective: 1200 },
       {
         rotateY: flip.interpolate({
           inputRange: [0, 1],
-          outputRange: ['0deg', '180deg'],
+          outputRange: reducedMotion ? ['0deg', '0deg'] : ['0deg', '180deg'],
         }),
       },
     ],
-    opacity: flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 0] }),
+    opacity: flip.interpolate({
+      inputRange: reducedMotion ? [0, 1] : [0, 0.49, 0.51, 1],
+      outputRange: reducedMotion ? [1, 0] : [1, 1, 0, 0],
+    }),
   };
   const backStyle = {
     transform: [
+      { perspective: 1200 },
       {
         rotateY: flip.interpolate({
           inputRange: [0, 1],
-          outputRange: ['180deg', '360deg'],
+          outputRange: reducedMotion ? ['0deg', '0deg'] : ['180deg', '360deg'],
         }),
       },
     ],
-    opacity: flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] }),
+    opacity: flip.interpolate({
+      inputRange: reducedMotion ? [0, 1] : [0, 0.49, 0.51, 1],
+      outputRange: reducedMotion ? [0, 1] : [0, 0, 1, 1],
+    }),
   };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Screen contentStyle={{ gap: 16, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 36 }}>
-          <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
-            <Icon source="chevron-left" color={colors.textPrimary} size={25} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: layout.headerHeight }}>
+          <Pressable
+            onPress={() => goBackOrHome(navigation)}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={{ width: layout.touchTarget, minHeight: layout.touchTarget, justifyContent: 'center' }}
+          >
+            <Icon source="chevron-left" color={colors.textPrimary} size={iconSize.nav} />
           </Pressable>
           <SectionLabel style={{ flex: 1, textAlign: 'center' }}>A moment</SectionLabel>
           <View style={{ width: 44, alignItems: 'flex-end' }}>
@@ -305,7 +335,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                   hitSlop={12}
                   style={({ pressed }) => ({ padding: 6, opacity: pressed ? 0.6 : 1 })}
                 >
-                  <Icon source="dots-horizontal" color={colors.textFaint} size={24} />
+                  <Icon source="dots-horizontal" color={colors.textFaint} size={iconSize.nav} />
                 </Pressable>
               }
             >
@@ -327,49 +357,27 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
 
         {listenerError ? <Text style={{ color: colors.error }}>{listenerError}</Text> : null}
 
-        <View
-          style={{
-            width: detailCardWidth,
-            alignSelf: 'center',
-            borderRadius: radius.print,
-            // Lauren's July 2026 spec: y8 / blur24 / 8%.
-            shadowColor: '#785A46',
-            shadowOpacity: 0.08,
-            shadowRadius: 24,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 3,
-          }}
-        >
+        <View style={{ width: detailCardWidth, alignSelf: 'center' }}>
           <Pressable onPress={() => isOwner && !editingBack && setFlipped((current) => !current)} disabled={!isOwner}>
             <View style={{ minHeight: detailPrintMinHeight }}>
-              <Animated.View style={[{ backfaceVisibility: 'hidden' }, frontStyle]}>
-                <View
+              {/* The shadow lives inside each face so it turns with the print
+                  instead of staying behind as a flat rectangle. */}
+              <Animated.View
+                onLayout={(event) => setFrontHeight(Math.round(event.nativeEvent.layout.height))}
+                style={[{ backfaceVisibility: 'hidden' }, frontStyle]}
+              >
+                <PrintShadow>
+                <PolaroidFrame
                   testID="moment-detail-frame"
-                  style={{
-                    minHeight: detailPrintMinHeight,
-                    backgroundColor: colors.polaroid,
-                    borderColor: 'rgba(120, 90, 70, 0.05)',
-                    borderWidth: 1,
-                    borderRadius: radius.print,
-                    overflow: 'hidden',
-                    paddingTop: 14,
-                    paddingHorizontal: 14,
-                    paddingBottom: 16,
-                  }}
+                  variant={paperVariant(moment.id)}
+                  style={{ minHeight: detailPrintMinHeight }}
                 >
-                  <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { mixBlendMode: 'soft-light' }]}>
-                    <Image
-                      source={require('../../assets/paper-texture.png')}
-                      resizeMode="cover"
-                      style={[StyleSheet.absoluteFillObject, { opacity: 0.02 }]}
-                    />
-                  </View>
                   <View
                     style={{
                       borderRadius: radius.printPhoto,
                       overflow: 'hidden',
                       backgroundColor: colors.photoBg,
-                      borderColor: 'rgba(243, 237, 228, 0.75)',
+                      borderColor: colors.photoMatBorder,
                       borderWidth: 1,
                     }}
                   >
@@ -412,7 +420,8 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                       {authorName.toLowerCase()}
                     </Text>
                   </View>
-                </View>
+                </PolaroidFrame>
+                </PrintShadow>
               </Animated.View>
               {isOwner ? (
                 <Animated.View
@@ -429,24 +438,30 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                     backStyle,
                   ]}
                 >
-                  <View
-                    style={{
-                      minHeight: detailPrintMinHeight,
-                      backgroundColor: colors.backPaper,
-                      borderColor: 'rgba(120, 90, 70, 0.05)',
-                      borderWidth: 1,
-                      borderRadius: radius.print,
-                      padding: 24,
-                    }}
+                  <PrintShadow>
+                  {/* Same paper, same edge, same size as the front. */}
+                  <PolaroidFrame
+                    testID="moment-detail-back"
+                    variant={paperVariant(moment.id)}
+                    // A fixed height, not a minimum: a long reflection scrolls
+                    // inside the print instead of spilling over the screen below.
+                    style={{ height: printHeight, paddingTop: 24, paddingHorizontal: 24, paddingBottom: 24 }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <SectionLabel>On the back</SectionLabel>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Icon source="lock-outline" color={colors.textFaint} size={13} />
+                        <Icon source="lock-outline" color={colors.textFaint} size={iconSize.inline} />
                         <Text style={{ color: colors.textFaint, fontFamily: fonts.bodySemiBold, fontSize: 10 }}>PRIVATE TO YOU</Text>
                       </View>
                     </View>
-                    <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 34 }}>
+                    <ScrollView
+                      testID="moment-detail-back-scroll"
+                      style={{ flex: 1 }}
+                      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 20 }}
+                      nestedScrollEnabled
+                      keyboardShouldPersistTaps="handled"
+                      showsVerticalScrollIndicator={false}
+                    >
                       {editingBack ? (
                         <TextInput
                           value={backDraft}
@@ -459,35 +474,37 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                           underlineColor="transparent"
                           activeUnderlineColor="transparent"
                           disabled={busyAction === 'back'}
-                          style={{ minHeight: 180, backgroundColor: 'transparent' }}
-                          contentStyle={{ color: '#4A4136', fontFamily: fonts.scriptMedium, fontSize: 25, lineHeight: 34 }}
+                          scrollEnabled={false}
+                          style={{ minHeight: 140, backgroundColor: 'transparent' }}
+                          contentStyle={{ color: colors.textPrimary, fontFamily: fonts.scriptMedium, fontSize: 25, lineHeight: 34 }}
                         />
                       ) : (
-                        <Text style={{ color: '#4A4136', fontFamily: fonts.scriptMedium, fontSize: 27, lineHeight: 35 }}>
-                          {back?.text || 'No private reflection yet.'}
+                        <Text style={{ color: colors.textPrimary, fontFamily: fonts.scriptMedium, fontSize: 27, lineHeight: 35 }}>
+                          {back?.text || 'Blank for now. What do you want to remember?'}
                         </Text>
                       )}
-                    </View>
+                    </ScrollView>
                     <View style={{ borderTopColor: colors.borderStrong, borderTopWidth: 1, paddingTop: 14, gap: 12 }}>
                       <Text style={{ color: colors.textFaint, fontFamily: fonts.bodySemiBold, fontSize: 10.5, letterSpacing: 1 }}>
                         {memoryDate.toUpperCase()} - only you can read this
                       </Text>
                       {editingBack ? (
                         <View style={{ flexDirection: 'row', gap: 10 }}>
-                          <PillButton variant="secondary" onPress={cancelBackEdit} disabled={busyAction === 'back'} style={{ flex: 1, minHeight: 40 }}>
+                          <PillButton variant="secondary" onPress={cancelBackEdit} disabled={busyAction === 'back'} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                             Cancel
                           </PillButton>
-                          <PillButton onPress={submitBack} disabled={busyAction === 'back'} style={{ flex: 1, minHeight: 40 }}>
+                          <PillButton onPress={submitBack} disabled={busyAction === 'back'} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                             Save back
                           </PillButton>
                         </View>
                       ) : (
-                        <PillButton variant="secondary" icon="pencil-outline" onPress={startBackEdit} style={{ minHeight: 40 }}>
+                        <PillButton variant="secondary" icon="pencil-outline" onPress={startBackEdit} style={{ minHeight: layout.buttonHeightCompact }}>
                           Edit back
                         </PillButton>
                       )}
                     </View>
-                  </View>
+                  </PolaroidFrame>
+                  </PrintShadow>
                 </Animated.View>
               ) : null}
             </View>
@@ -506,8 +523,14 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-            <Pressable onPress={handleKeep} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1, flexDirection: 'row', alignItems: 'center', gap: 4 })}>
-              <Icon source={kept ? 'heart' : 'heart-outline'} color={kept ? colors.primary : colors.textFaint} size={18} />
+            <Pressable
+              onPress={handleKeep}
+              accessibilityRole="button"
+              accessibilityLabel={kept ? 'Unkeep this' : 'Keep this'}
+              hitSlop={8}
+              style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1, minHeight: layout.touchTarget, flexDirection: 'row', alignItems: 'center', gap: 4 })}
+            >
+              <Icon source={kept ? 'heart' : 'heart-outline'} color={kept ? colors.primary : colors.textFaint} size={iconSize.action} />
               <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>
                 {moment.keptCount} kept
               </Text>
@@ -518,8 +541,14 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                 <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 12 }}>{notes.length} notes</Text>
               </>
             ) : null}
-            <Pressable onPress={handleSave} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}>
-              <Icon source={saved ? 'bookmark' : 'bookmark-outline'} color={saved ? colors.primary : colors.textFaint} size={18} />
+            <Pressable
+              onPress={handleSave}
+              accessibilityRole="button"
+              accessibilityLabel={saved ? 'Remove from saved' : 'Save for later'}
+              hitSlop={8}
+              style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1, minWidth: 28, minHeight: layout.touchTarget, alignItems: 'center', justifyContent: 'center' })}
+            >
+              <Icon source={saved ? 'bookmark' : 'bookmark-outline'} color={saved ? colors.primary : colors.textFaint} size={iconSize.action} />
             </Pressable>
           </View>
           {isOwner ? (
@@ -534,7 +563,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
                   startBackEdit();
                 }
               }}
-              style={{ minHeight: 40 }}
+              style={{ minHeight: layout.buttonHeightCompact }}
             >
               {flipped ? 'See the front' : back?.text ? 'Edit back' : 'Add back'}
             </PillButton>
@@ -562,7 +591,9 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
               );
             })
           ) : (
-            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13 }}>No notes yet.</Text>
+            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13 }}>
+              {isOwner ? 'No notes yet. They land here when your people write.' : 'No notes yet. Leave the first one.'}
+            </Text>
           )}
         </View>
         ) : null}
@@ -578,7 +609,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
               borderWidth: 1,
               borderRadius: radius.pill,
               paddingLeft: 16,
-              paddingRight: 8,
+              paddingRight: 2,
               minHeight: 50,
               flexDirection: 'row',
               alignItems: 'center',
@@ -597,15 +628,21 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
               style={{ flex: 1, backgroundColor: 'transparent' }}
               contentStyle={{ color: colors.textPrimary, fontFamily: fonts.displayItalic, fontSize: 15 }}
             />
-            <Pressable onPress={submitNote} disabled={!text.trim() || Boolean(busyAction)} accessibilityRole="button" accessibilityLabel="Send note">
-              <Icon source="send" color={text.trim() ? colors.primary : colors.textFaint} size={21} />
+            <Pressable
+              onPress={submitNote}
+              disabled={!text.trim() || Boolean(busyAction)}
+              accessibilityRole="button"
+              accessibilityLabel="Send note"
+              style={{ width: layout.touchTarget, minHeight: layout.touchTarget, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Icon source="send" color={text.trim() ? colors.primary : colors.textFaint} size={iconSize.action} />
             </Pressable>
           </View>
         ) : null}
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
 
         <Portal>
-          <Dialog visible={confirming === 'delete'} onDismiss={() => setConfirming(null)}>
+          <Dialog style={dialogStyle} visible={confirming === 'delete'} onDismiss={() => setConfirming(null)}>
             <Dialog.Title>Delete this moment?</Dialog.Title>
             <Dialog.Content>
               <Text style={{ color: colors.textSecondary }}>
@@ -620,7 +657,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             </Dialog.Actions>
           </Dialog>
 
-          <Dialog visible={confirming === 'report'} onDismiss={() => setConfirming(null)}>
+          <Dialog style={dialogStyle} visible={confirming === 'report'} onDismiss={() => setConfirming(null)}>
             <Dialog.Title>Report moment?</Dialog.Title>
             <Dialog.Content>
               <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -641,7 +678,7 @@ export default function MomentDetailScreen({ route, navigation }: Props) {
             </Dialog.Actions>
           </Dialog>
 
-          <Dialog visible={confirming === 'block'} onDismiss={() => setConfirming(null)}>
+          <Dialog style={dialogStyle} visible={confirming === 'block'} onDismiss={() => setConfirming(null)}>
             <Dialog.Title>Block {authorName}?</Dialog.Title>
             <Dialog.Content>
               <Text style={{ color: colors.textSecondary }}>

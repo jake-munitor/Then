@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { Icon, useTheme } from 'react-native-paper';
 
+import NotificationPrimer from '../components/NotificationPrimer';
 import FeedScreen from '../screens/FeedScreen';
 import FriendsScreen from '../screens/FriendsScreen';
 import NewMomentScreen from '../screens/NewMomentScreen';
@@ -15,8 +16,10 @@ import { subscribeNotifications } from '../services/notifications';
 import { cancelLocalPostingReminders } from '../services/postingReminders';
 import { registerForPushNotifications, setAppBadgeCount } from '../services/pushNotifications';
 import { AuthContext } from '../store/AuthContext';
+import { OnboardingGateContext } from '../store/OnboardingGate';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize } from '../theme/layout';
 import type { TabsParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabsParamList>();
@@ -25,6 +28,9 @@ export default function TabsNavigator() {
   const theme = useTheme();
   const navigation = useNavigation<any>();
   const { user } = useContext(AuthContext);
+  // Read once at mount: a person who just finished onboarding lands on the
+  // tab they chose there; everyone else opens on Home.
+  const { initialTab } = useContext(OnboardingGateContext);
   const [requestCount, setRequestCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
 
@@ -35,6 +41,9 @@ export default function TabsNavigator() {
     }
     return subscribeFollowRequests(user.uid, (requests) => setRequestCount(requests.length));
   }, [user?.uid]);
+  // Registers the push token only if permission was already granted. The
+  // question itself is asked later, by NotificationPrimer, once the person
+  // has a friend or a first moment.
   useEffect(() => {
     if (!user?.uid) return;
     registerForPushNotifications().catch(() => {});
@@ -96,7 +105,10 @@ export default function TabsNavigator() {
   }, [navigation, user?.uid]);
 
   return (
+    <>
+    <NotificationPrimer />
     <Tab.Navigator
+      initialRouteName={initialTab}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
@@ -108,7 +120,7 @@ export default function TabsNavigator() {
           height: 84,
           paddingTop: 9,
           paddingBottom: 14,
-          shadowColor: '#2A2622',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.06,
           shadowRadius: 14,
           shadowOffset: { width: 0, height: -4 },
@@ -181,7 +193,7 @@ export default function TabsNavigator() {
                 },
               ]}
             >
-              <Icon source="camera-outline" color={theme.colors.onPrimary} size={25} />
+              <Icon source="camera-outline" color={theme.colors.onPrimary} size={iconSize.nav} />
             </TouchableOpacity>
           ),
         }}
@@ -204,5 +216,6 @@ export default function TabsNavigator() {
         }}
       />
     </Tab.Navigator>
+    </>
   );
 }

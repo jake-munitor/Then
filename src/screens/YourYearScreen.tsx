@@ -14,6 +14,7 @@ import { AuthContext } from '../store/AuthContext';
 import { goBackOrHome } from '../utils/navigation';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 import { formatMemoryDate } from '../utils/dates';
 
@@ -114,11 +115,11 @@ export default function YourYearScreen({ route, navigation }: Props) {
   return (
     <Screen contentStyle={{ paddingBottom: 96 }}>
       <View style={{ paddingHorizontal: 22, paddingTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: 44 }}>
-          <Icon source="chevron-left" color={colors.textPrimary} size={25} />
+        <Pressable onPress={() => goBackOrHome(navigation)} accessibilityRole="button" accessibilityLabel="Go back" style={{ width: layout.touchTarget, minHeight: layout.touchTarget, justifyContent: 'center' }}>
+          <Icon source="chevron-left" color={colors.textPrimary} size={iconSize.nav} />
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Icon source="lock-outline" color={colors.textFaint} size={13} />
+          <Icon source="lock-outline" color={colors.textFaint} size={iconSize.inline} />
           <Text style={{ color: colors.textFaint, fontFamily: fonts.bodyRegular, fontSize: 12 }}>Private to you</Text>
         </View>
       </View>
@@ -153,7 +154,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
                 accessibilityState={{ selected }}
                 accessibilityLabel={`Show ${option}`}
                 style={{
-                  minHeight: 34,
+                  minHeight: 36,
                   justifyContent: 'center',
                   paddingHorizontal: 14,
                   borderRadius: radius.pill,
@@ -199,7 +200,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
                       paddingBottom: 20,
                       borderRadius: radius.print,
                       backgroundColor: colors.polaroid,
-                      shadowColor: '#785A46',
+                      shadowColor: colors.shadow,
                       shadowOpacity: 0.08,
                       shadowRadius: 24,
                       shadowOffset: { width: 0, height: 8 },
@@ -260,7 +261,7 @@ export default function YourYearScreen({ route, navigation }: Props) {
                         gap: 13,
                       })}
                     >
-                      <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: '#785A46', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
+                      <View style={{ width: 54, height: 54, borderRadius: radius.print, backgroundColor: colors.polaroid, padding: 4, shadowColor: colors.shadow, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
                         <FilteredMomentImage
                           uri={moment.imageUrl}
                           filter={moment.photoFilter}

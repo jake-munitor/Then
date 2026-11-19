@@ -20,7 +20,9 @@ import { subscribePublicUsers, updateThenSettings } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { goBackOrHome } from '../utils/navigation';
 import { colors } from '../theme/colors';
+import { dialogStyle } from '../theme/theme';
 import { fonts } from '../theme/fonts';
+import { layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RollSettings'>;
@@ -186,10 +188,16 @@ export default function RollSettingsScreen({ navigation }: Props) {
 
   return (
     <Screen contentStyle={{ gap: 20, paddingHorizontal: 18, paddingTop: 20, paddingBottom: 40 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 42 }}>
-        <Text numberOfLines={1} onPress={() => goBackOrHome(navigation)} style={{ width: 82, color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
-          ‹ Your roll
-        </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: layout.headerHeight }}>
+        <Pressable
+          onPress={() => goBackOrHome(navigation)}
+          accessibilityRole="button"
+          style={{ width: 82, minHeight: layout.touchTarget, justifyContent: 'center' }}
+        >
+          <Text numberOfLines={1} style={{ color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14 }}>
+            ‹ Your roll
+          </Text>
+        </Pressable>
         <Text
           numberOfLines={1}
           maxFontSizeMultiplier={1.2}
@@ -197,9 +205,15 @@ export default function RollSettingsScreen({ navigation }: Props) {
         >
           Settings
         </Text>
-        <Text numberOfLines={1} onPress={saveProfile} style={{ width: 82, textAlign: 'right', color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
-          Done
-        </Text>
+        <Pressable
+          onPress={saveProfile}
+          accessibilityRole="button"
+          style={{ width: 82, minHeight: layout.touchTarget, justifyContent: 'center' }}
+        >
+          <Text numberOfLines={1} style={{ textAlign: 'right', color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
+            Done
+          </Text>
+        </Pressable>
       </View>
 
       {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
@@ -366,7 +380,7 @@ export default function RollSettingsScreen({ navigation }: Props) {
       </Text>
 
       <Portal>
-        <Dialog visible={showDeleteAccount} onDismiss={() => setShowDeleteAccount(false)}>
+        <Dialog style={dialogStyle} visible={showDeleteAccount} onDismiss={() => setShowDeleteAccount(false)}>
           <Dialog.Title>Delete your account?</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -405,7 +419,7 @@ function SettingsGroup({ label, children }: { label: string; children: React.Rea
       <View
         style={{
           borderRadius: radius.lg,
-          shadowColor: '#2A2622',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.05,
           shadowRadius: 14,
           shadowOffset: { width: 0, height: 5 },

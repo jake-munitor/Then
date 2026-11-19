@@ -164,7 +164,7 @@ function MiniPolaroid({
         paddingBottom: 19,
         borderRadius: radius.print,
         backgroundColor: colors.polaroid,
-        shadowColor: '#785A46',
+        shadowColor: colors.shadow,
         shadowOpacity: 0.12,
         shadowRadius: 28,
         shadowOffset: { width: 0, height: 5 },

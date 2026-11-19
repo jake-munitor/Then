@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import { Icon, Text } from 'react-native-paper';
 
 import {
@@ -12,11 +12,13 @@ import type { Moment, PublicUser } from '../services/types';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 import { formatMemoryDate } from '../utils/dates';
 import DateStamp from './DateStamp';
 import FilteredMomentImage from './FilteredMomentImage';
 import { PillButton } from './DesignPrimitives';
+import PolaroidFrame, { paperVariant, PrintShadow } from './PolaroidFrame';
 
 type Props = {
   moment: Moment;
@@ -109,44 +111,8 @@ function MomentCard({
   };
 
   return (
-    <View
-      style={{
-        width: cardWidth,
-        alignSelf: 'center',
-        marginBottom: 22,
-        borderRadius: radius.print,
-        // Lauren's July 2026 spec: y8 / blur24 / 8%, soft and close to the card.
-        shadowColor: '#785A46',
-        shadowOpacity: 0.08,
-        shadowRadius: 24,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 3,
-      }}
-    >
-      <View
-        testID="moment-frame"
-        style={{
-          backgroundColor: colors.polaroid,
-          borderColor: 'rgba(120, 90, 70, 0.05)',
-          borderWidth: 1,
-          borderRadius: radius.print,
-          overflow: 'hidden',
-          paddingTop: 14,
-          paddingHorizontal: 14,
-          paddingBottom: 16,
-        }}
-      >
-        {/* Lauren's July 2026 spec: nearly imperceptible soft-light grain on
-            the card surface. The blend lives on the wrapper View (RN types
-            don't expose mixBlendMode on ImageStyle). The photo renders above
-            this layer, so the grain never touches it. */}
-        <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { mixBlendMode: 'soft-light' }]}>
-          <Image
-            source={require('../../assets/paper-texture.png')}
-            resizeMode="cover"
-            style={[StyleSheet.absoluteFillObject, { opacity: 0.02 }]}
-          />
-        </View>
+    <PrintShadow style={{ width: cardWidth, alignSelf: 'center', marginBottom: 22 }}>
+      <PolaroidFrame testID="moment-frame" variant={paperVariant(moment.id)}>
         <Pressable
           onPress={() => onPress?.(moment)}
           disabled={!onPress}
@@ -159,7 +125,7 @@ function MomentCard({
               borderRadius: radius.printPhoto,
               backgroundColor: colors.photoBg,
               overflow: 'hidden',
-              borderColor: 'rgba(243, 237, 228, 0.75)',
+              borderColor: colors.photoMatBorder,
               borderWidth: 1,
             }}
           >
@@ -226,7 +192,7 @@ function MomentCard({
             </Text>
           </Pressable>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingBottom: 6 }}>
             <ActionIcon
               icon={kept ? 'heart' : 'heart-outline'}
               active={kept}
@@ -277,12 +243,12 @@ function MomentCard({
             {(onReport || onBlock) ? (
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {onReport ? (
-                  <PillButton variant="secondary" icon="flag-outline" onPress={() => onReport(moment)} style={{ flex: 1, minHeight: 40 }}>
+                  <PillButton variant="secondary" icon="flag-outline" onPress={() => onReport(moment)} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                     Report
                   </PillButton>
                 ) : null}
                 {onBlock ? (
-                  <PillButton variant="danger" icon="account-cancel-outline" onPress={() => onBlock(moment)} style={{ flex: 1, minHeight: 40 }}>
+                  <PillButton variant="danger" icon="account-cancel-outline" onPress={() => onBlock(moment)} style={{ flex: 1, minHeight: layout.buttonHeightCompact }}>
                     Block
                   </PillButton>
                 ) : null}
@@ -290,10 +256,14 @@ function MomentCard({
             ) : null}
           </View>
         ) : null}
-      </View>
-    </View>
+      </PolaroidFrame>
+    </PrintShadow>
   );
 }
+
+// The glyph stays small and quiet; hitSlop grows the tap area to 44pt tall
+// and fills the gap to the neighbouring action.
+const ACTION_HIT_SLOP = { top: 9, bottom: 9, left: 8, right: 8 };
 
 function ActionIcon({
   icon,
@@ -317,9 +287,10 @@ function ActionIcon({
       disabled={disabled || !onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
+      hitSlop={ACTION_HIT_SLOP}
       style={({ pressed }) => ({
-        minWidth: count ? 32 : 22,
-        minHeight: 26,
+        minWidth: count ? 38 : 28,
+        minHeight: layout.touchTarget - ACTION_HIT_SLOP.top - ACTION_HIT_SLOP.bottom,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
@@ -327,7 +298,7 @@ function ActionIcon({
         opacity: disabled ? 0.48 : pressed ? 0.65 : 1,
       })}
     >
-      <Icon source={icon} color={tint} size={20} />
+      <Icon source={icon} color={tint} size={iconSize.action} />
       {typeof count === 'number' ? (
         <Text style={{ color: tint, fontFamily: fonts.bodySemiBold, fontSize: 11 }}>{count}</Text>
       ) : null}

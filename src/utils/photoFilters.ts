@@ -18,7 +18,7 @@ export const PHOTO_FILTER_OPTIONS: PhotoFilterOption[] = [
     label: 'Normal',
     swatch: {
       backgroundColor: '#DDD1BF',
-      accentColor: '#FFFDF7',
+      accentColor: '#F8F5EF',
       borderColor: '#B5A792',
     },
   },

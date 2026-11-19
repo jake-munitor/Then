@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
 import {
   DefaultTheme,
@@ -12,6 +12,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 
 import { db, firebaseInitError, isFirebaseConfigured } from '../firebase/firebase';
 import { AuthContext } from '../store/AuthContext';
+import { OnboardingGateContext } from '../store/OnboardingGate';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import AuthScreen from '../screens/AuthScreen';
@@ -31,7 +32,7 @@ import { getLastNotificationURL, subscribeNotificationURLs } from '../services/p
 import { launchBreadcrumb, navigationIntegration } from '../services/telemetry';
 import { withTimeout } from '../utils/async';
 import TabsNavigator from './TabsNavigator';
-import type { RootStackParamList } from './types';
+import type { RootStackParamList, TabsParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -119,11 +120,39 @@ export default function AppNavigator({ onReady }: AppNavigatorProps) {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [profileLoading, setProfileLoading] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [initialTab, setInitialTab] = useState<keyof TabsParamList>('FeedTab');
+  // The uid that finished onboarding in this session. The server has already
+  // accepted that profile, so a late snapshot still saying "not completed"
+  // is stale and must not bounce the person back into onboarding.
+  const finishedUidRef = useRef<string | null>(null);
+
+  // The final onboarding button used to call navigation.replace('MainTabs')
+  // - but MainTabs is not in the navigator until onboardingCompleted flips,
+  // and that flip waited on the Firestore snapshot. The replace failed
+  // silently, the button re-enabled, and nothing happened for seconds (a
+  // field user tapped it five times). The screen now reports success here and
+  // the navigator swaps at once.
+  const finishOnboarding = useCallback(
+    (firstTab: keyof TabsParamList) => {
+      const uid = user?.uid;
+      if (!uid) return;
+      finishedUidRef.current = uid;
+      setInitialTab(firstTab);
+      setOnboardingCompleted(true);
+      setProfileLoading(false);
+      launchBreadcrumb('onboarding finished', { firstTab });
+      void cacheOnboarding(uid, true);
+    },
+    [user?.uid],
+  );
+  const onboardingGate = useMemo(() => ({ finishOnboarding, initialTab }), [finishOnboarding, initialTab]);
 
   useEffect(() => {
     if (!user?.uid || !db) {
       setProfileLoading(false);
       setOnboardingCompleted(false);
+      setInitialTab('FeedTab');
+      finishedUidRef.current = null;
       return;
     }
     const uid = user.uid;
@@ -159,8 +188,12 @@ export default function AppNavigator({ onReady }: AppNavigatorProps) {
           (Boolean(profile?.onboardingCompleted) || hasExistingProfileBasics);
         clearTimeout(timeout);
         if (!active) return;
-        setOnboardingCompleted(completed);
         setProfileLoading(false);
+        if (!completed && finishedUidRef.current === uid) {
+          launchBreadcrumb('stale profile snapshot ignored after onboarding');
+          return;
+        }
+        setOnboardingCompleted(completed);
         launchBreadcrumb('profile snapshot received', { onboardingCompleted: completed });
         void cacheOnboarding(uid, completed);
       },
@@ -169,8 +202,9 @@ export default function AppNavigator({ onReady }: AppNavigatorProps) {
         // recoverable, rather than holding the launch screen.
         clearTimeout(timeout);
         if (!active) return;
-        setOnboardingCompleted(false);
         setProfileLoading(false);
+        if (finishedUidRef.current === uid) return;
+        setOnboardingCompleted(false);
         launchBreadcrumb('profile snapshot errored, falling through to onboarding');
       },
     );
@@ -196,6 +230,7 @@ export default function AppNavigator({ onReady }: AppNavigatorProps) {
   }
 
   return (
+    <OnboardingGateContext.Provider value={onboardingGate}>
     <NavigationContainer
       ref={navigationRef}
       // Rendered while getInitialURL resolves; without it the container shows
@@ -252,5 +287,6 @@ export default function AppNavigator({ onReady }: AppNavigatorProps) {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </OnboardingGateContext.Provider>
   );
 }

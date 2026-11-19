@@ -57,7 +57,42 @@ export async function setAppBadgeCount(count: number) {
   await Notifications.setBadgeCountAsync(Math.max(0, count)).catch(() => {});
 }
 
-export async function registerForPushNotifications() {
+export type PushPermission = 'granted' | 'undetermined' | 'denied';
+
+/** Where iOS stands, without asking anything. */
+export async function getPushPermission(): Promise<PushPermission> {
+  if (Platform.OS === 'web') return 'denied';
+  const Notifications = await loadNotifications();
+  if (!Notifications) return 'denied';
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status === 'granted') return 'granted';
+    return status === 'undetermined' ? 'undetermined' : 'denied';
+  } catch {
+    return 'denied';
+  }
+}
+
+/**
+ * What to do about permission, given where iOS stands. Kept pure so the rule
+ * is testable: the native module itself cannot be loaded under Jest.
+ *  - 'register': already allowed, just register the token.
+ *  - 'ask': show the system dialog (only ever when `prompt` was passed).
+ *  - 'skip': do nothing. This is the answer on a plain app open for anyone
+ *    who has not been asked yet, so the one-time dialog is never spent early.
+ */
+export function pushPermissionAction(status: string, prompt: boolean): 'register' | 'ask' | 'skip' {
+  if (status === 'granted') return 'register';
+  return prompt ? 'ask' : 'skip';
+}
+
+/**
+ * Registers this device for pushes. By default it never shows the system
+ * permission dialog - it only registers a token if permission was already
+ * granted. Pass `prompt: true` to ask, and only from NotificationPrimer,
+ * after the person has said yes to our own question (see pushPrimer.ts).
+ */
+export async function registerForPushNotifications(options: { prompt?: boolean } = {}) {
   if (Platform.OS === 'web') return;
 
   const Notifications = await loadNotifications();
@@ -79,8 +114,9 @@ export async function registerForPushNotifications() {
   }
 
   const existing = await Notifications.getPermissionsAsync();
-  const finalStatus =
-    existing.status === 'granted' ? existing.status : (await Notifications.requestPermissionsAsync()).status;
+  const action = pushPermissionAction(existing.status, Boolean(options.prompt));
+  if (action === 'skip') return;
+  const finalStatus = action === 'ask' ? (await Notifications.requestPermissionsAsync()).status : existing.status;
   if (finalStatus !== 'granted') return;
 
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;

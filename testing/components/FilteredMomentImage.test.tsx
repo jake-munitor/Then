@@ -35,13 +35,36 @@ describe('FilteredMomentImage', () => {
       const { unmount } = render(
         <FilteredMomentImage uri="https://example.com/photo.jpg" filter={filter} testID={`photo-${filter}`} />,
       );
-
-      const graded = screen.UNSAFE_getAllByType(require('react-native').View).some((node: any) => {
-        const style = StyleSheet.flatten(node.props.style);
-        return Array.isArray(style?.filter) && style.filter.length > 0;
-      });
-
+      const graded = screen.queryAllByTestId(new RegExp(`^photo-${filter}-grade-`)).length > 0;
       expect(graded).toBe(filter !== 'normal');
+      unmount();
+    }
+  });
+
+  /**
+   * iOS React Native applies only brightness and opacity from `filter`; it
+   * drops sepia, saturate, contrast and hue-rotate without a warning. The
+   * tones were once built on those and so did almost nothing on an iPhone.
+   * The grade must stay on blend layers, which iOS does render.
+   */
+  it('builds the grade from low-alpha blend layers, never from the filter style', () => {
+    for (const filter of PHOTO_FILTER_VALUES) {
+      const { unmount } = render(
+        <FilteredMomentImage uri="https://example.com/photo.jpg" filter={filter} testID={`photo-${filter}`} />,
+      );
+      const usesFilterStyle = screen.UNSAFE_getAllByType(require('react-native').View).some((node: any) => {
+        return StyleSheet.flatten(node.props.style)?.filter !== undefined;
+      });
+      expect(usesFilterStyle).toBe(false);
+
+      for (const layer of screen.queryAllByTestId(new RegExp(`^photo-${filter}-grade-`))) {
+        const style = StyleSheet.flatten(layer.props.style);
+        expect(style.mixBlendMode).toBeTruthy();
+        const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\)/.exec(style.backgroundColor)?.[1]);
+        // Capped so a failed blend could never cover the photo.
+        expect(alpha).toBeGreaterThan(0);
+        expect(alpha).toBeLessThanOrEqual(0.5);
+      }
       unmount();
     }
   });

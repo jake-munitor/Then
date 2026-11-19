@@ -166,14 +166,32 @@ What is already done, for the record:
 - `testing/jest.setup.ts` renders `expo-image` as an RN `Image`, so existing
   style/testID assertions are untouched.
 
-**The remaining risk is visual and no test can catch it.** The four photo tones are
-graded with the RN `filter` primitive on a wrapper `View`, and expo-image
-composites through its own native view. Check `normal`, `film`, `sunfade` and
-`coolFlash` by eye on a device before submitting. If they look wrong, reverting
-that one component to RN `Image` is JS-only and ships over OTA — the native module
-just sits unused, no new build needed.
+**The remaining risk is visual and no test can catch it.** expo-image composites
+through its own native view, and the photo tones are blend layers laid over the
+image (see below). Check `normal`, `film`, `sunfade` and `coolFlash` by eye on a
+device before submitting. If they look wrong, reverting that one component to RN
+`Image` is JS-only and ships over OTA - the native module just sits unused, no new
+build needed.
+
+### Photo tones on iOS (learned 2026-11)
+
+iOS React Native applies only `brightness` and `opacity` from the `filter` style.
+It drops `sepia`, `saturate`, `contrast` and `hueRotate` with no warning. The tones
+were built on those from July to November 2026, so on every iPhone they did almost
+nothing. They are now flat `mixBlendMode` layers in `FilteredMomentImage.tsx`,
+fitted numerically to the designed looks. **Never grade with `filter` again** -
+`testing/components/FilteredMomentImage.test.tsx` fails if it comes back. Any
+change to a tone needs a look on a real iPhone; the web preview renders `filter`
+in full and will mislead you.
 
 ### Other work waiting on a build
+
+- **Read the invite code from the clipboard on first open.** The invite web page
+  has a "Copy code" button and onboarding has a field to paste it into, so this
+  works by hand today. Reading the clipboard automatically needs `expo-clipboard`,
+  a native module that is not in build 27. Add it with the next build, then offer
+  the copied code on the onboarding invite step. Do not add the dependency before
+  then: it changes the fingerprint and stops OTA updates reaching build 27.
 
 Nothing else, currently. The archive-grid virtualization (`RollScreen.tsx` maps
 into a `ScrollView`) is **JS-only and can ship over OTA at any time** — it does not

@@ -12,6 +12,7 @@ import { Icon, Text } from 'react-native-paper';
 
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { iconSize, layout } from '../theme/layout';
 import { radius } from '../theme/radius';
 
 type AvatarProps = {
@@ -69,8 +70,8 @@ function avatarStyle(size: number) {
     height: size,
     borderRadius: size / 2,
     borderWidth: 1.5,
-    borderColor: colors.white,
-    shadowColor: '#2A2622',
+    borderColor: colors.surface,
+    shadowColor: colors.shadow,
     shadowOpacity: 0.17,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
@@ -153,7 +154,7 @@ export function ScreenHeader({
 
   return (
     <View style={{ width: '100%', gap: 7, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 18 }}>
-      <View style={{ minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ minHeight: layout.headerHeight, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, alignItems: 'flex-start' }}>{titleNode}</View>
         {right}
         {avatarUrl || onAvatarPress ? (
@@ -230,7 +231,7 @@ export function PillButton({
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         {
-          minHeight: 48,
+          minHeight: layout.buttonHeight,
           borderRadius: radius.pill,
           paddingHorizontal: 18,
           alignItems: 'center',
@@ -241,7 +242,7 @@ export function PillButton({
           borderWidth: primary ? 0 : 1,
           borderColor: colors.borderInset,
           opacity: disabled ? 0.56 : pressed ? 0.78 : 1,
-          shadowColor: primary ? colors.primary : '#2A2622',
+          shadowColor: primary ? colors.primary : colors.shadow,
           shadowOpacity: primary ? 0.28 : 0,
           shadowRadius: primary ? 16 : 0,
           shadowOffset: { width: 0, height: 7 },
@@ -250,7 +251,7 @@ export function PillButton({
         style,
       ]}
     >
-      {icon ? <Icon source={icon} color={foreground} size={17} /> : null}
+      {icon ? <Icon source={icon} color={foreground} size={iconSize.small} /> : null}
       <Text style={{ color: foreground, fontFamily: fonts.bodySemiBold, fontSize: 14.5 }}>{children}</Text>
     </Pressable>
   );
@@ -286,9 +287,9 @@ export function Toggle({
           width: 22,
           height: 22,
           borderRadius: 11,
-          backgroundColor: colors.white,
+          backgroundColor: colors.surface,
           alignSelf: value ? 'flex-end' : 'flex-start',
-          shadowColor: '#2A2622',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.12,
           shadowRadius: 3,
           shadowOffset: { width: 0, height: 1 },
@@ -332,7 +333,7 @@ export function SegmentedControl<T extends string>({
             onPress={() => onChange(option.value)}
             style={({ pressed }) => ({
               flex: 1,
-              minHeight: 34,
+              minHeight: layout.touchTarget - 8,
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: radius.pill,
@@ -376,9 +377,9 @@ export function IconCircleButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => ({
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: layout.touchTarget,
+        height: layout.touchTarget,
+        borderRadius: layout.touchTarget / 2,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.surface,
@@ -387,7 +388,7 @@ export function IconCircleButton({
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Icon source={icon} color={colors.textMuted} size={21} />
+      <Icon source={icon} color={colors.textMuted} size={iconSize.action} />
     </Pressable>
   );
 }
@@ -412,7 +413,7 @@ export function Thumb({
           borderRadius: radius.md,
           overflow: 'hidden',
           backgroundColor: colors.photoBg,
-          borderColor: 'rgba(243, 237, 228, 0.75)',
+          borderColor: colors.photoMatBorder,
           borderWidth: 1,
         },
         style,

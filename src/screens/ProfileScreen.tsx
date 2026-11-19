@@ -23,6 +23,7 @@ import type { PublicUser } from '../services/types';
 import { fetchPublicUser, fetchPublicUserByHandle } from '../services/users';
 import { AuthContext } from '../store/AuthContext';
 import { colors } from '../theme/colors';
+import { dialogStyle } from '../theme/theme';
 import { fonts } from '../theme/fonts';
 import { radius } from '../theme/radius';
 import { initialsFromName } from '../utils/formatters';
@@ -171,13 +172,13 @@ export default function ProfileScreen({ route, navigation }: Props) {
         {loading ? (
           <EmptyState title="Opening profile" message="Looking for this Then profile." />
         ) : !profile ? (
-          <EmptyState title="Profile unavailable" message="This link may be old, private, or misspelled." />
+          <EmptyState title="Can't find this person" message="The link may be old, private, or misspelled." />
         ) : (
           <View
             style={{
               width: '100%',
               borderRadius: radius.lg,
-              shadowColor: '#2A2622',
+              shadowColor: colors.shadow,
               shadowOpacity: 0.07,
               shadowRadius: 18,
               shadowOffset: { width: 0, height: 7 },
@@ -189,7 +190,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
               {profile.avatarUrl ? (
                 <Image
                   source={{ uri: profile.avatarUrl }}
-                  style={{ width: 96, height: 96, borderRadius: 999, borderColor: 'rgba(243, 237, 228, 0.9)', borderWidth: 2, backgroundColor: colors.photoBg }}
+                  style={{ width: 96, height: 96, borderRadius: 999, borderColor: colors.surface, borderWidth: 2, backgroundColor: colors.photoBg }}
                 />
               ) : (
                 <View
@@ -255,7 +256,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
       </View>
 
       <Portal>
-        <Dialog visible={requesting} onDismiss={() => setRequesting(false)}>
+        <Dialog style={dialogStyle} visible={requesting} onDismiss={() => setRequesting(false)}>
           <Dialog.Title>Add friend</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
@@ -269,7 +270,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
             <Button onPress={submitRequest} loading={busy} disabled={busy || !context.trim()}>Send</Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={reporting} onDismiss={() => setReporting(false)}>
+        <Dialog style={dialogStyle} visible={reporting} onDismiss={() => setReporting(false)}>
           <Dialog.Title>Report profile?</Dialog.Title>
           <Dialog.Content>
             <TextInput label="context" value={reportContext} onChangeText={setReportContext} maxLength={1000} multiline disabled={busy} />
@@ -280,7 +281,7 @@ export default function ProfileScreen({ route, navigation }: Props) {
             <Button onPress={submitReport} loading={busy} disabled={busy}>Report</Button>
           </Dialog.Actions>
         </Dialog>
-        <Dialog visible={blocking} onDismiss={() => setBlocking(false)}>
+        <Dialog style={dialogStyle} visible={blocking} onDismiss={() => setBlocking(false)}>
           <Dialog.Title>Block this person?</Dialog.Title>
           <Dialog.Content>
             <Text style={{ color: colors.textSecondary }}>
