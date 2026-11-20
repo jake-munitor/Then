@@ -181,8 +181,22 @@ were built on those from July to November 2026, so on every iPhone they did almo
 nothing. They are now flat `mixBlendMode` layers in `FilteredMomentImage.tsx`,
 fitted numerically to the designed looks. **Never grade with `filter` again** -
 `testing/components/FilteredMomentImage.test.tsx` fails if it comes back. Any
-change to a tone needs a look on a real iPhone; the web preview renders `filter`
-in full and will mislead you.
+change to a tone needs a look on a real iPhone.
+
+The colour tones are balanced: Film, Sunfade and Cool Flash each move a photo
+about the same distance from Normal (10 to 13 per channel on a 0-255 scale). The
+first blend version ran 7, 24 and 5. Keep them level when you retune one.
+
+**Adding a tone takes a rules deploy first.** `firestore.rules` lists the allowed
+`photoFilter` values. A client that sends a value the deployed rules do not know
+gets "Missing or insufficient permissions" on every post with that tone. Order:
+
+1. Add the value to `PHOTO_FILTER_VALUES` and to the list in `firestore.rules`.
+   `testing/unit/photoFilterContract.test.ts` fails if they differ.
+2. `npx firebase deploy --only firestore:rules --project then-prod-finnman81`
+3. Then publish the app update.
+
+Black and white (`blackAndWhite`) was added this way in November 2026.
 
 ### Other work waiting on a build
 

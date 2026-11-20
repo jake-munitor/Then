@@ -138,7 +138,7 @@ describe('MomentCard', () => {
       },
     });
 
-    expect(screen.getByTestId('moment-photo-image-filter-sunfade-peach-wash')).toBeTruthy();
+    expect(screen.getByTestId('moment-photo-image-filter-sunfade-light-leak')).toBeTruthy();
   });
 
   it('gives each action a 44pt tap area without enlarging the glyph', () => {

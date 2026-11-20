@@ -29,7 +29,7 @@ describe('DevelopingPhoto', () => {
     // The real, graded photo is mounted from the first frame - the effect is
     // layers on top of it, never a different image.
     expect(screen.getByTestId('developing-image')).toBeTruthy();
-    expect(screen.getByTestId('developing-image-filter-film-amber-wash')).toBeTruthy();
+    expect(screen.getByTestId('developing-image-filter-film-soft-edge')).toBeTruthy();
   });
 
   it('reveals the finished photo at once on tap', () => {

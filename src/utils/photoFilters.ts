@@ -1,4 +1,4 @@
-export const PHOTO_FILTER_VALUES = ['normal', 'film', 'sunfade', 'coolFlash'] as const;
+export const PHOTO_FILTER_VALUES = ['normal', 'film', 'sunfade', 'coolFlash', 'blackAndWhite'] as const;
 
 export type PhotoFilter = (typeof PHOTO_FILTER_VALUES)[number];
 
@@ -47,6 +47,15 @@ export const PHOTO_FILTER_OPTIONS: PhotoFilterOption[] = [
       backgroundColor: '#CBDDDD',
       accentColor: '#517789',
       borderColor: '#9CB8BA',
+    },
+  },
+  {
+    value: 'blackAndWhite',
+    label: 'Black & white',
+    swatch: {
+      backgroundColor: '#DAD9D5',
+      accentColor: '#3B3A38',
+      borderColor: '#B4B2AC',
     },
   },
 ];

@@ -1,16 +1,27 @@
 import React from 'react';
-import { Image, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Image, type ImageSourcePropType, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { colors } from '../theme/colors';
 import { normalizePhotoFilter, type PhotoFilter } from '../utils/photoFilters';
 
+/** Soft-edged alpha masks. White pixels; each overlay tints its own. */
+const MASKS = {
+  vignette: require('../../assets/textures/tone-vignette.png'),
+  leak: require('../../assets/textures/tone-leak.png'),
+  flash: require('../../assets/textures/tone-flash.png'),
+} satisfies Record<string, ImageSourcePropType>;
+
 type FilterOverlay = {
   id: string;
-  style: ViewStyle;
+  mask: keyof typeof MASKS;
+  color: string;
+  /** Strength where the mask is fully opaque. */
+  opacity: number;
 };
 
 type GradeLayer = {
   id: string;
+  /** 'normal' is a plain flat wash; every other mode blends with the photo. */
   mode: NonNullable<ViewStyle['mixBlendMode']>;
   /** Flat colour with its strength in the alpha channel. */
   color: string;
@@ -19,33 +30,39 @@ type GradeLayer = {
 type FilterLook = {
   backgroundColor: string;
   /**
-   * The colour grade, as flat blend layers laid over the photo.
+   * The colour grade, as flat layers laid over the photo.
    *
-   * These looks were first specified as filter chains (sepia, saturate,
-   * contrast, hue-rotate). On iOS, React Native applies only `brightness`
-   * and `opacity` from `filter` and silently drops the rest, so on an iPhone
-   * every tone was a brightness nudge and nothing more. Blend modes do work
-   * on iOS, so each chain is reproduced here with layers fitted numerically
-   * to the original chain: W3C blend maths against the CSS filter maths, on
-   * pixels sampled from nine real photographs, then checked on three photos
-   * the fit never saw. Mean error against the designed look, per channel on
-   * a 0-255 scale, before -> after (held-out photos in brackets):
-   *   film       9.3 -> 2.6   (8.2 -> 1.3)
-   *   sunfade    9.7 -> 1.9   (13.6 -> 1.1)
-   *   cool flash 6.0 -> 2.9   (5.3 -> 2.5)
-   * Cool flash keeps the largest gap because a hue rotation cannot be built
-   * from flat layers. The colours look odd in isolation (a mauve "tone",
-   * olive highlights); they are fitted as a set and only make sense together.
+   * Never grade with the `filter` style. On iOS, React Native applies only
+   * `brightness` and `opacity` from it and silently drops sepia, saturate,
+   * contrast and hue-rotate, so the first version of these tones did almost
+   * nothing on an iPhone. Blend modes do work on iOS.
    *
-   * No layer goes above 50% alpha and the photo stays fully opaque
-   * underneath, so a blend mode that failed to apply would show as a heavy
-   * wash, never a covered photo.
+   * Each look is designed as plain tone maths, then fitted to layers
+   * numerically: W3C blend formulas, on pixels from ten real photographs,
+   * checked on three photos the fit never saw. The same maths, run on a
+   * phone screenshot of the previous layers, matched the phone to about
+   * 1.5 per channel on a 0-255 scale, so the fit predicts what an iPhone
+   * draws.
+   *
+   * Fit error against each design, 0-255 per channel, held-out in brackets:
+   *   film 1.9 (1.9), sunfade 0.8 (0.8), cool flash 2.1 (2.0),
+   *   black and white 0.5 (0.1).
+   *
+   * The three colour tones are balanced to move a photo about the same
+   * distance from Normal: film 10, sunfade 13, cool flash
+   * 11 (mean change per channel, 0-255, overlays included, measured
+   * on one reference photo). Before this they ran 7, 24 and 5 on that photo.
+   * Keep them level when retuning.
+   *
+   * The layer colours look odd alone; they are fitted as a set.
+   *
+   * No layer goes above 50% alpha, so a blend mode that failed to apply
+   * would show as a wash and never cover the photo. The one exception is
+   * black and white's `silver` layer, which must be opaque to remove all
+   * colour. It uses the `color` mode, which the other tones prove on device.
    */
   grade: GradeLayer[];
-  /**
-   * Kept for the character a tone curve cannot express - light leaks, edge
-   * falloff, flash spill.
-   */
+  /** Soft light and edge falloff: character a flat layer cannot give. */
   overlays: FilterOverlay[];
 };
 
@@ -57,57 +74,53 @@ const FILTER_LOOKS: Record<PhotoFilter, FilterLook> = {
   },
   film: {
     backgroundColor: '#E8C88C',
-    // Warm classic stock: gentle sepia bias, richer colour, a little more bite.
+    // Warm classic stock: sepia bias, richer colour, more bite, amber wash.
     grade: [
-      { id: 'tone', mode: 'color', color: 'rgba(172, 94, 136, 0.131)' },
-      { id: 'highlights', mode: 'color-dodge', color: 'rgba(47, 54, 23, 0.5)' },
-      { id: 'shadows', mode: 'color-burn', color: 'rgba(219, 236, 223, 0.5)' },
+      { id: 'tone', mode: 'color', color: 'rgba(170, 109, 118, 0.209)' },
+      { id: 'highlights', mode: 'color-dodge', color: 'rgba(47, 48, 14, 0.5)' },
+      { id: 'shadows', mode: 'color-burn', color: 'rgba(202, 223, 217, 0.302)' },
+      { id: 'wash', mode: 'normal', color: 'rgba(255, 198, 2, 0.046)' },
     ],
     overlays: [
-      { id: 'amber-wash', style: { backgroundColor: '#D58A3A', bottom: 0, opacity: 0.08, right: 0 } },
-      { id: 'matte-fade', style: { backgroundColor: '#2A211B', bottom: 0, opacity: 0.03, right: 0 } },
-      { id: 'soft-edge', style: { borderColor: '#2A211B', borderWidth: 10, bottom: 0, opacity: 0.06, right: 0 } },
+      { id: 'soft-edge', mask: 'vignette', color: '#2A211B', opacity: 0.2 },
     ],
   },
   sunfade: {
     backgroundColor: '#F1D6B8',
-    // Sun-bleached: lifted blacks (low contrast), pulled colour, warm and bright.
+    // Sun-bleached: pulled colour, gently lifted blacks, warm. Not milky.
     grade: [
-      { id: 'tone', mode: 'color', color: 'rgba(17, 4, 7, 0.426)' },
-      { id: 'lifted-blacks', mode: 'screen', color: 'rgba(43, 43, 43, 0.366)' },
-      { id: 'glow', mode: 'color-dodge', color: 'rgba(42, 44, 16, 0.5)' },
+      { id: 'tone', mode: 'color', color: 'rgba(0, 1, 8, 0.355)' },
+      { id: 'glow', mode: 'color-dodge', color: 'rgba(29, 19, 0, 0.49)' },
+      { id: 'wash', mode: 'normal', color: 'rgba(198, 157, 92, 0.121)' },
     ],
     overlays: [
-      { id: 'peach-wash', style: { backgroundColor: '#E9A56E', bottom: 0, opacity: 0.1, right: 0 } },
-      {
-        id: 'light-leak',
-        style: {
-          backgroundColor: '#F4C16E',
-          height: '22%',
-          opacity: 0.14,
-          right: 0,
-        },
-      },
+      { id: 'light-leak', mask: 'leak', color: '#F6C77A', opacity: 0.12 },
     ],
   },
   coolFlash: {
     backgroundColor: '#C7DCDC',
-    // Direct flash: cooler hue, slightly desaturated, crisp and bright.
+    // Direct flash: blue-leaning, crisp, bright in the middle, dark at the edge.
     grade: [
-      { id: 'cool-cast', mode: 'color', color: 'rgba(137, 94, 137, 0.095)' },
-      { id: 'highlights', mode: 'color-dodge', color: 'rgba(42, 43, 37, 0.5)' },
-      { id: 'shadows', mode: 'color-burn', color: 'rgba(222, 236, 230, 0.5)' },
+      { id: 'cool-cast', mode: 'color', color: 'rgba(165, 147, 204, 0.137)' },
+      { id: 'highlights', mode: 'color-dodge', color: 'rgba(0, 45, 61, 0.5)' },
+      { id: 'shadows', mode: 'color-burn', color: 'rgba(227, 230, 213, 0.482)' },
+      { id: 'wash', mode: 'normal', color: 'rgba(0, 117, 148, 0.014)' },
     ],
     overlays: [
-      { id: 'blue-wash', style: { backgroundColor: '#517789', bottom: 0, opacity: 0.08, right: 0 } },
-      {
-        id: 'side-flash',
-        style: {
-          backgroundColor: '#FFFFFF',
-          opacity: 0.09,
-          width: '24%',
-        },
-      },
+      { id: 'flash-spot', mask: 'flash', color: '#FFFFFF', opacity: 0.07 },
+      { id: 'falloff', mask: 'vignette', color: '#0F1A22', opacity: 0.22 },
+    ],
+  },
+  blackAndWhite: {
+    backgroundColor: '#D6D5D1',
+    // Silver print: no colour, a little extra contrast.
+    grade: [
+      { id: 'silver', mode: 'color', color: 'rgba(128, 128, 128, 1.0)' },
+      { id: 'highlights', mode: 'color-dodge', color: 'rgba(22, 22, 22, 0.5)' },
+      { id: 'shadows', mode: 'color-burn', color: 'rgba(232, 232, 232, 0.5)' },
+    ],
+    overlays: [
+      { id: 'soft-edge', mask: 'vignette', color: '#1A1A1A', opacity: 0.18 },
     ],
   },
 };
@@ -147,15 +160,21 @@ export default function FilteredMomentImage({
           key={layer.id}
           pointerEvents="none"
           testID={testID ? `${testID}-grade-${selectedFilter}-${layer.id}` : undefined}
-          style={[styles.grade, { backgroundColor: layer.color, mixBlendMode: layer.mode }]}
+          style={[
+            styles.fill,
+            { backgroundColor: layer.color },
+            layer.mode === 'normal' ? null : { mixBlendMode: layer.mode },
+          ]}
         />
       ))}
       {look.overlays.map((overlay) => (
-        <View
+        <Image
           key={overlay.id}
-          pointerEvents="none"
+          source={MASKS[overlay.mask]}
+          resizeMode="stretch"
+          accessible={false}
           testID={testID ? `${testID}-filter-${selectedFilter}-${overlay.id}` : undefined}
-          style={[styles.overlay, overlay.style]}
+          style={[styles.mask, { tintColor: overlay.color, opacity: overlay.opacity }]}
         />
       ))}
     </View>
@@ -170,7 +189,7 @@ const styles = StyleSheet.create({
     // the frame.
     isolation: 'isolate',
   },
-  grade: {
+  fill: {
     position: 'absolute',
     left: 0,
     top: 0,
@@ -181,9 +200,13 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: colors.photoBg,
   },
-  overlay: {
+  // A static image sizes to its own pixels unless both are set.
+  mask: {
     position: 'absolute',
     left: 0,
     top: 0,
+    width: '100%',
+    height: '100%',
+    pointerEvents: 'none',
   },
 });

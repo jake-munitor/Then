@@ -5,6 +5,7 @@ describe('photo filters', () => {
     expect(normalizePhotoFilter('film')).toBe('film');
     expect(normalizePhotoFilter('sunfade')).toBe('sunfade');
     expect(normalizePhotoFilter('coolFlash')).toBe('coolFlash');
+    expect(normalizePhotoFilter('blackAndWhite')).toBe('blackAndWhite');
   });
 
   it('maps the retired classic filter to film', () => {

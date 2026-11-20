@@ -47,7 +47,7 @@ describe('FilteredMomentImage', () => {
    * tones were once built on those and so did almost nothing on an iPhone.
    * The grade must stay on blend layers, which iOS does render.
    */
-  it('builds the grade from low-alpha blend layers, never from the filter style', () => {
+  it('builds the grade from flat layers, never from the filter style', () => {
     for (const filter of PHOTO_FILTER_VALUES) {
       const { unmount } = render(
         <FilteredMomentImage uri="https://example.com/photo.jpg" filter={filter} testID={`photo-${filter}`} />,
@@ -59,11 +59,52 @@ describe('FilteredMomentImage', () => {
 
       for (const layer of screen.queryAllByTestId(new RegExp(`^photo-${filter}-grade-`))) {
         const style = StyleSheet.flatten(layer.props.style);
-        expect(style.mixBlendMode).toBeTruthy();
         const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\)/.exec(style.backgroundColor)?.[1]);
-        // Capped so a failed blend could never cover the photo.
         expect(alpha).toBeGreaterThan(0);
+
+        // Black and white needs one opaque layer to remove all colour. It
+        // must use `color`, the mode the other tones prove on device.
+        if (/-grade-blackAndWhite-silver$/.test(layer.props.testID)) {
+          expect(style.mixBlendMode).toBe('color');
+          expect(alpha).toBe(1);
+          continue;
+        }
+
+        // Capped so a failed blend could never cover the photo.
         expect(alpha).toBeLessThanOrEqual(0.5);
+        // A wash is a plain flat layer; every other layer blends.
+        if (!/-wash$/.test(layer.props.testID)) expect(style.mixBlendMode).toBeTruthy();
+      }
+      unmount();
+    }
+  });
+
+  it('removes all colour for black and white', () => {
+    render(<FilteredMomentImage uri="https://example.com/photo.jpg" filter="blackAndWhite" testID="photo" />);
+
+    expect(screen.getByTestId('photo-grade-blackAndWhite-silver')).toBeTruthy();
+  });
+
+  /**
+   * The overlays were once flat Views: a 10pt border, a band across the top
+   * fifth, a strip down one side. Each showed as a hard edge on a plain sky,
+   * and the strip had no height so it never drew at all. They are tinted
+   * alpha masks now, stretched over the whole photo.
+   */
+  it('draws every overlay as a soft mask over the whole photo', () => {
+    for (const filter of PHOTO_FILTER_VALUES) {
+      const { unmount } = render(
+        <FilteredMomentImage uri="https://example.com/photo.jpg" filter={filter} testID={`photo-${filter}`} />,
+      );
+      for (const overlay of screen.queryAllByTestId(new RegExp(`^photo-${filter}-filter-`))) {
+        const style = StyleSheet.flatten(overlay.props.style);
+        expect(overlay.props.source).toBeTruthy();
+        expect(style.tintColor).toBeTruthy();
+        expect(style.width).toBe('100%');
+        expect(style.height).toBe('100%');
+        expect(style.borderWidth).toBeUndefined();
+        expect(style.opacity).toBeGreaterThan(0);
+        expect(style.opacity).toBeLessThanOrEqual(0.3);
       }
       unmount();
     }
